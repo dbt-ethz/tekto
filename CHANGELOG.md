@@ -13,6 +13,9 @@ before 1.0, breaking changes bump the minor version. See
   sits beside the chevron any more, and the row is as high as the viewer header, one band
   across the app. An app that declares no control has no panel at all — no column, no rail,
   no chevron — and the view takes the whole width; the panel appears with its first content.
+  A folded panel takes no room either (it used to leave a rail down the whole height): the
+  chevron that brings it back sits in the view's top left corner, where the viewer header
+  moves its own content aside.
 
 - **Hidden line is a drawing on white paper, in a dark app too.** It used to fill the faces
   with the view's background and draw the creases in a fixed dark grey: on a dark view, faint

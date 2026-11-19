@@ -49,7 +49,7 @@ test("an automatic width fits the longest label on one line, with nothing cut of
 });
 
 for (const slug of ["panel-tabs", "mesh-factory", "site-editor"]) {
-  test(`the chevron at the panel's corner folds and unfolds it (${slug})`, async ({ page }) => {
+  test(`the chevron folds the panel away entirely and brings it back (${slug})`, async ({ page }) => {
     await open(page, slug);
     await page.evaluate(() => { for (const k of Object.keys(localStorage)) if (k.startsWith("tekto.panel")) localStorage.removeItem(k); });
     await page.reload();
@@ -62,7 +62,15 @@ for (const slug of ["panel-tabs", "mesh-factory", "site-editor"]) {
 
     await fold.click();
     await expect(fold).toHaveAttribute("aria-expanded", "false");
-    await expect.poll(async () => (await canvas.boundingBox())!.x).toBeLessThan(40);   // the slim rail is left
+    await expect.poll(async () => (await canvas.boundingBox())!.x).toBe(0);            // no rail: the view has the whole width
+    // The chevron is in the view's corner now, and the viewer header's own content starts beside it.
+    const c = (await fold.boundingBox())!;
+    expect(c.x).toBeLessThan(10);
+    const header = page.locator("#app [data-tekto-viewer-header]");
+    if (await header.count()) {
+      const left = await header.evaluate((el) => parseFloat(getComputedStyle(el).paddingLeft));
+      expect(left).toBeGreaterThanOrEqual(c.x + c.width);
+    }
 
     await fold.click();
     await expect(fold).toHaveAttribute("aria-expanded", "true");

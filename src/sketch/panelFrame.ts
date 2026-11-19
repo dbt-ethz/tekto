@@ -2,11 +2,13 @@
  * The frame of the control panel, the same in `sketch`, `sketch2d` and `appShell`.
  *
  * The panel is the first column of its root's grid. Its top row is the frame's: the panel's
- * name on the left and, at the right, the chevron that folds it to a slim rail; the controls
+ * name on the left and, at the right, the chevron that folds the panel away; the controls
  * start below it, so nothing of the app's ever sits beside the chevron. The row is as high as
  * the viewer's header, so the two read as one band across the app. The panel's right edge
  * drags to resize it (double-click: back to the default), and with `width: "auto"` it is as
- * wide as its controls need. A dragged width and the folded state are remembered per
+ * wide as its controls need. Folded, the panel takes no room at all: the view has the whole
+ * width, and the chevron that brings the panel back sits in the view's top left corner (in
+ * the viewer header, which moves its own content aside for it). A dragged width and the folded state are remembered per
  * `storageKey`. A panel with nothing in it is not there at all: no column, no row, no
  * chevron, and the view has the whole width — until the app puts something in it.
  */
@@ -14,8 +16,18 @@ import type { Theme } from "../gui/theme";
 
 /** Narrowest and widest panel, dragged or automatic. */
 const MIN_WIDTH = 180, MAX_WIDTH = 800;
-/** What a folded panel leaves: room for the chevron that unfolds it. */
-const RAIL = 28;
+/** What the chevron of a folded panel takes of the viewer header's left end. */
+const FOLDED_INSET = 32;
+
+/** A folded panel's chevron lies over the view's corner: the viewer header keeps that corner free. */
+function ensureFoldedStyle(): void {
+  if (document.getElementById("tekto-panel-folded")) return;
+  const style = document.createElement("style");
+  style.id = "tekto-panel-folded";
+  style.textContent = `[data-tekto-panel=folded] [data-tekto-viewer-header]{padding-left:${FOLDED_INSET}px !important}`
+    + `[data-tekto-panel=folded] [data-tekto-shading-bar]:not([data-tekto-viewer-header]){margin-left:${FOLDED_INSET - 6}px}`;
+  document.head.appendChild(style);
+}
 /** The height of the panel's top row: the viewer header's (`VIEWER_HEADER_H`). */
 export const PANEL_TOP_H = 34;
 
@@ -106,7 +118,7 @@ export function panelFrame(o: PanelFrameOptions): PanelFrame {
   top.appendChild(name);
   panelEl.style.marginTop = `${PANEL_TOP_H}px`;
 
-  // The chevron: at the right of the top row, and on the rail when folded.
+  // The chevron: at the right of the top row, and in the view's top left corner when folded.
   const chevron = document.createElement("button");
   chevron.type = "button";
   chevron.dataset.tektoPanelFold = "";
@@ -122,16 +134,18 @@ export function panelFrame(o: PanelFrameOptions): PanelFrame {
   const isEmpty = () => !panelEl.textContent?.trim() && !panelEl.querySelector("input,button,select,textarea,canvas,svg,img");
   let empty = isEmpty();
 
+  ensureFoldedStyle();
   const apply = () => {
-    root.style.gridTemplateColumns = `${empty ? 0 : folded ? RAIL : width}px 1fr`;
+    root.style.gridTemplateColumns = `${empty || folded ? 0 : width}px 1fr`;
     root.dataset.tektoPanel = empty ? "none" : folded ? "folded" : "open";
     panelEl.style.display = folded || empty ? "none" : "";
-    top.style.display = chevron.style.display = empty ? "none" : "flex";
-    top.style.width = `${folded ? RAIL : width}px`;
-    name.style.display = folded ? "none" : "";
+    chevron.style.display = empty ? "none" : "flex";
+    top.style.display = empty || folded ? "none" : "flex";
+    top.style.width = `${width}px`;
+    chevron.style.zIndex = folded ? "30" : "11";       // folded: over the viewer header (and ✎ Markup's layer)
     handle.style.display = folded || empty ? "none" : "";
     handle.style.left = `${width - 3}px`;
-    chevron.style.left = `${folded ? 4 : width - 26}px`;
+    chevron.style.left = `${folded ? 6 : width - 26}px`;
     chevron.textContent = folded ? "›" : "‹";
     chevron.title = folded ? "Show the panel" : "Hide the panel";
     chevron.setAttribute("aria-label", chevron.title);

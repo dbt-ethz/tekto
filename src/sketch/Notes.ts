@@ -6,7 +6,7 @@
  *
  * A `NotesLayer` draws the notes over the view from any camera: their strokes, and a numbered
  * pin each. A pin opens the note, with "Go to view" (the camera it was drawn from) and
- * "Delete". Markup's "Keep as notes" turns marks into notes (`markup(…, { notes })`,
+ * "Delete". Markup's "Pin notes to the model" turns marks into notes (`markup(…, { notes })`,
  * `appShell({ notes: doc })`).
  *
  * A note is also how a person tells an agent what to change: it is open until someone marks
@@ -158,7 +158,7 @@ export class NotesLayer {
     this.doc.update(this.collection, id, (n: Note) => ({ ...n, status: "open" }), { label: "Reopen note" });
   }
 
-  /** Keep several notes as one undo step ("Keep as notes"). Returns their ids. */
+  /** Keep several notes as one undo step ("Pin notes to the model"). Returns their ids. */
   keep(notes: readonly Note[]): string[] {
     return this.doc.transact(notes.length > 1 ? "Add notes" : "Add note", () => notes.map((n) => this.doc.add(this.collection, n)));
   }

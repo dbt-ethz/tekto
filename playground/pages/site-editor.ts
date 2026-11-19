@@ -31,7 +31,7 @@ export default function (container: HTMLElement) {
     title: "Site Editor",
     container,
     units: "m",                 // a site in metres: the section reads in metres
-    // Notes that live with the model: ✎ Markup → "Keep as notes" keeps marks in the doc's
+    // Notes that live with the model: ✎ Markup → "Pin notes to the model" keeps marks in the doc's
     // `notes` collection (saved, undoable, shared), pinned in the view.
     notes: doc,
     // A site wants a sense of scale: a ground ruled in metres that fades out, fitted to the blocks.

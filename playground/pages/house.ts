@@ -13,7 +13,7 @@
  *                 stairs, slabs, spaces), coloured by the .mtl downloaded with it
  *   agentDoc      an agent reads and edits the records (`__tekto.doc`, or from outside through
  *                 the dev server: `tools/mcp.mjs`), each patch one undo step, answered with the issues
- *   notes         ✎ Markup: draw on the house, Save — the marks become notes with the model
+ *   notes         ✎ Markup: draw on the house, "Pin notes to the model" — the marks become notes with the model
  *                 (pinned, saved, undoable). An agent lists the open notes (`tekto_notes`), makes
  *                 the change, and resolves each with what it did; the pin turns grey
  *   ?empty        start on an empty site (the Empty site button does the same, undoably)

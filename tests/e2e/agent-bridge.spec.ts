@@ -99,7 +99,7 @@ test("appShell has ✎ Markup: a loop drawn on the view resolves to the objects 
   for (let a = 0; a <= Math.PI * 2 + 0.2; a += 0.2) await page.mouse.move(at.x + R * Math.cos(a), at.y + R * Math.sin(a));
   await page.mouse.up();
   // The note field opens at the mark; Enter there keeps the mark (Esc on the overlay would close Markup).
-  const note = page.getByPlaceholder("note for 1…");
+  const note = page.getByPlaceholder("Mark 1: what should change here?");
   await expect(note).toBeFocused();
   await note.fill("thicker slabs");
   await note.press("Enter");

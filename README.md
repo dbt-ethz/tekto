@@ -460,7 +460,7 @@ wherever it is changed (`renderer.onProjection`).
 
 ## Markup — instructions for an AI, drawn on the view
 
-Every 3D `sketch()` has a **✎ Markup** button in the viewport corner. Draw on the view, give each mark a short note, write an overall instruction and press **Save** (⌘S). The capture is a bundle an agent can read:
+Every 3D `sketch()` has a **✎ Markup** button in the viewport corner. Draw on the view, give each mark a short note, write a general instruction if you have one and press **Save for Claude** (⌘S). The capture is a bundle an agent can read:
 
 ```
 .tekto/markup/<stamp>-<sketch>/     (and a copy in .tekto/markup/latest/)
@@ -487,7 +487,7 @@ import tektoMarkup from "tekto/markup-vite";
 export default { plugins: [tektoMarkup()] };
 ```
 
-Without the plugin, Save downloads the three files instead. Turn the button off with `sketch(fn, { markup: false })`.
+Without the plugin, the button downloads the three files instead. Turn the button off with `sketch(fn, { markup: false })`.
 
 ### A program as its steps
 
@@ -522,7 +522,7 @@ The House page ([playground/pages/house.ts](playground/pages/house.ts)) shares i
 
 Tested with a fresh agent and only that brief: a 144 m² house in two patches, with doors, windows, a U stair to the landing and a gable roof.
 
-**Notes are how you tell it what to change.** In an app with notes (`appShell({ notes: doc })`), ✎ Markup's **Save** keeps each mark as a note with the model — pinned where it was drawn, naming the records it touches, saved, undoable, and on a shared document visible to everyone. A note is open until it is done. The agent sees how many are open (`tekto_info`), lists them (`tekto_notes`), makes the change, and resolves each with what it did (`tekto_note_resolve`) or asks back (`tekto_note_reply`); the note's card shows the answer, its pin turns grey, and Reopen brings it back. Every step is yours to undo. While the agent works, a chip at the top of the page names it and what it is doing, and with `PresenceBar` on a shared document everyone sees its badge beside the person whose window it works through. With several tabs open, `TEKTO_PAGE=house` (or `"page"` in a relay call) picks the one whose URL or title contains it. An app with its own UI shares its notes layer with `agentDoc(doc, { notes: layer })`.
+**Notes are how you tell it what to change.** In an app with notes (`appShell({ notes: doc })`), ✎ Markup's **Pin notes to the model** (and **Save for Claude**) keeps each mark as a note with the model — pinned where it was drawn, naming the records it touches, saved, undoable, and on a shared document visible to everyone. A note is open until it is done. The agent sees how many are open (`tekto_info`), lists them (`tekto_notes`), makes the change, and resolves each with what it did (`tekto_note_resolve`) or asks back (`tekto_note_reply`); the note's card shows the answer, its pin turns grey, and Reopen brings it back. Every step is yours to undo. While the agent works, a chip at the top of the page names it and what it is doing, and with `PresenceBar` on a shared document everyone sees its badge beside the person whose window it works through. With several tabs open, `TEKTO_PAGE=house` (or `"page"` in a relay call) picks the one whose URL or title contains it. An app with its own UI shares its notes layer with `agentDoc(doc, { notes: layer })`.
 
 ## Shared editing — several people (and agents) on one model
 

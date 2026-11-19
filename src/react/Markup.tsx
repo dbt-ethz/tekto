@@ -5,7 +5,7 @@ import type { Scene } from "../scene/Scene";
 import { markup, type MarkupRenderer } from "../sketch/Markup";
 import type { NotesLayer } from "../sketch/Notes";
 
-/** ✎ Markup over a renderer's view while mounted (`markup()`): `<Markup scene={scene} renderer={renderer} title="7DHouse" />`; pass `notes` (a `notesLayer`) to offer "Keep as notes". */
+/** ✎ Markup over a renderer's view while mounted (`markup()`): `<Markup scene={scene} renderer={renderer} title="7DHouse" />`; pass `notes` (a `notesLayer`) to offer "Pin notes to the model". */
 export function Markup({ scene, renderer, title, context, notes, author }: {
   scene: Scene; renderer: MarkupRenderer; title?: string; context?: () => Record<string, unknown>;
   notes?: NotesLayer; author?: string;

@@ -66,6 +66,13 @@ before 1.0, breaking changes bump the minor version. See
   no menu bar; its keys work. The playground's House, Site Editor, Framed Floor, Roofs and
   Drawing Sheet pages moved their File and History buttons from the sidebar into the menus.
 
+- **✎ Markup's bar says what it is for.** Its first line is a sentence on what to do next
+  (draw, type what should change at the mark, where the marks go), and the buttons say what
+  they act on: **Undo mark**, **Clear marks**, **Pin notes to the model** (was "Keep as
+  notes") and **Save for Claude** (was "Save"). The box in the bar is the "general
+  instruction, not tied to a mark", a mark's own box asks "what should change here?". The
+  buttons that need a mark are greyed out until there is one. No API change.
+
 - **The viewer's tools in every 3D view.** The viewer header (a strip across the top of the
   view with icons for the render style, lighting, ambient occlusion, sun, section, overlays and
   snapshot, ✎ Markup at its end) and the axis widget with the zoom column under it are now the

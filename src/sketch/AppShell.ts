@@ -94,8 +94,8 @@ export interface AppShellConfig<S extends ParamSchema = ParamSchema> {
    */
   statusCollapsed?: boolean;
   /** Notes that live with the model: the doc whose `notes` collection keeps them (or
-   *  `{ doc, collection, author }`). Markup then offers "Keep as notes" (and Save keeps the
-   *  marks as notes too), the notes are drawn over the view with a pin each (`app.notes`), and
+   *  `{ doc, collection, author }`). Markup then offers "Pin notes to the model" (and "Save for Claude"
+   *  pins the marks as notes too), the notes are drawn over the view with a pin each (`app.notes`), and
    *  an agent lists, answers and resolves them (`__tekto.notes`). */
   notes?: Doc<any> | { doc: Doc<any>; collection?: string; author?: string };
   /** The axis widget (default on, top right under the viewer header): click an axis for a plan

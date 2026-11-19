@@ -369,7 +369,7 @@ export class ShadingBar {
     return this.lighting.sunAltitude() > 20 ? "noon" : site.hour < 12 ? "morning" : "sunset";
   }
 
-  /** The Date sun's fields under the sun popover's row: place, latitude and longitude, date, hour. */
+  /** The Date sun's fields under the sun popover's row: place, latitude and longitude, north, date, hour. */
   private sunControls(pop: HTMLDivElement): void {
     ensureSliderStyle(document);
     const form = document.createElement("div");
@@ -404,13 +404,21 @@ export class ShadingBar {
     const lon = field("input", "Longitude, east positive", "number");
     lat.step = lon.step = "0.01";
     [lat.min, lat.max, lon.min, lon.max] = ["-85", "85", "-180", "180"];
+    const north = field("input", "North: degrees clockwise from the model's +Y axis (up on the plan)", "range");
+    [north.min, north.max, north.step] = ["0", "360", "1"];
     const date = field("input", "Date", "date");
     const time = field("input", "Time of day (standard time)", "range");
     [time.min, time.max, time.step] = ["0", "24", "0.25"];
-    time.className = "tekto-slider";
-    time.style.cssText = "flex:1;width:0;min-width:40px;--tekto-track:rgba(255,255,255,.18);--tekto-thumb:#e8ebf0;";
-    const clock = document.createElement("span");
-    clock.style.cssText = "flex:0 0 38px;text-align:right;color:#e8ebf0;font:11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;";
+    const value = () => {
+      const v = document.createElement("span");
+      v.style.cssText = "flex:0 0 38px;text-align:right;color:#e8ebf0;font:11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;";
+      return v;
+    };
+    for (const slider of [time, north]) {
+      slider.className = "tekto-slider";
+      slider.style.cssText = "flex:1;width:0;min-width:40px;--tekto-track:rgba(255,255,255,.18);--tekto-thumb:#e8ebf0;";
+    }
+    const clock = value(), bearing = value();
     const readout = document.createElement("span");
     readout.dataset.tektoSunReadout = "";
     readout.style.cssText = "flex:1;white-space:nowrap;";
@@ -421,6 +429,7 @@ export class ShadingBar {
     now.style.cssText = `${FIELD}cursor:pointer;padding:0 9px;`;
     line("Place", place);
     line("Lat", lat, lon);
+    line("North", north, bearing);
     line("Date", date);
     line("Time", time, clock);
     const foot = document.createElement("div");
@@ -450,6 +459,7 @@ export class ShadingBar {
     lon.addEventListener("change", moved);
     date.addEventListener("change", () => { if (date.value) apply({ date: date.value }); });
     time.addEventListener("input", () => apply({ hour: Number(time.value) }));
+    north.addEventListener("input", () => apply({ north: Number(north.value) % 360 }));
     now.addEventListener("click", () => apply(sunNow(this.sunState)));
 
     const set = (el: HTMLInputElement | HTMLSelectElement, value: string) => { if (document.activeElement !== el && el.value !== value) el.value = value; };
@@ -465,6 +475,9 @@ export class ShadingBar {
       set(date, site.date);
       set(time, String(site.hour));
       clock.textContent = hhmm(site.hour);
+      const turned = ((site.north ?? 0) % 360 + 360) % 360;
+      set(north, String(turned));
+      bearing.textContent = `${Math.round(turned)}°`;
       const s = sunFor(site), deg = (r: number) => Math.round(r * 180 / Math.PI), tz = sunTimeZone(site);
       readout.textContent = `${s.isDaytime ? `Alt ${deg(s.altitude)}° · Az ${deg(s.azimuth)}°` : "Below the horizon"} · UTC${tz < 0 ? "−" : "+"}${Math.abs(tz)}`;
       if (!shown && this.openPop === pop) this.placePop(pop);          // wider now: keep it inside the header

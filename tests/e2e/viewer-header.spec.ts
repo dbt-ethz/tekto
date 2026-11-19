@@ -182,6 +182,16 @@ test("the sun for a date and a place is in the sun popover, not in the shell's b
   await header.getByLabel("Time of day (standard time)").fill("19");
   expect(await altitude()).toBeLessThan(noon - 40);
 
+  // North turned a quarter (north along +X): the same sky, the light from another side of the model.
+  const north = () => page.evaluate(() => {
+    const r = (window as any).__tekto.owner.renderer;
+    return r.sunSite.north as number | undefined;
+  });
+  expect(await north()).toBeUndefined();
+  await header.getByLabel(/^North:/).fill("90");
+  expect(await north()).toBe(90);
+  await expect(header.locator("[data-tekto-sun-readout]")).toContainText("Alt");   // the compass reading is the same
+
   // Another place: its coordinates, and its own time.
   await header.getByLabel("Place", { exact: true }).selectOption("Tokyo");
   await expect(header.getByLabel("Latitude, north positive")).toHaveValue("35.68");

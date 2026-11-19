@@ -28,6 +28,19 @@ describe("the sun for a date and a place", () => {
     expect(morning.direction.x).toBeGreaterThan(0.5);
   });
 
+  it("turns with the model's north: the compass stays, the direction in the model moves", () => {
+    const site = { ...zurich, date: "2026-06-21", hour: 12.5 };
+    const plain = sunFor(site), turned = sunFor({ ...site, north: 90 });   // north along +X
+    expect(turned.azimuth).toBe(plain.azimuth);                              // still in the south
+    expect(turned.altitude).toBe(plain.altitude);
+    expect(plain.direction.y).toBeLessThan(-0.35);                           // south is −Y
+    expect(turned.direction.x).toBeCloseTo(plain.direction.y, 6);            // south is now −X
+    expect(turned.direction.y).toBeCloseTo(-plain.direction.x, 6);
+    expect(turned.direction.z).toBe(plain.direction.z);
+    const full = sunFor({ ...site, north: 360 });
+    expect(full.direction.x).toBeCloseTo(plain.direction.x, 9);
+  });
+
   it("takes the time zone from the longitude when none is given", () => {
     expect(sunTimeZone({ longitude: 8.55 })).toBe(1);
     expect(sunTimeZone({ longitude: -74 })).toBe(-5);

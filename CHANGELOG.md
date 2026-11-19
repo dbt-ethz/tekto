@@ -8,8 +8,10 @@ before 1.0, breaking changes bump the minor version. See
 
 - **The sun by date and place is in the viewer's sun menu.** The sun button of the viewer
   header (and of the corner shading bar) has a fourth choice beside Morning, Noon and Sunset:
-  Date, which opens a place (24 cities, or a latitude and longitude), a day, an hour and Now
-  under the row, with the sun's altitude and azimuth. It lights the model as the named suns
+  Date, which opens a place (24 cities, or a latitude and longitude), the model's north, a
+  day, an hour and Now under the row, with the sun's altitude and azimuth. North is CAD's
+  "true north": degrees clockwise from the model's +Y axis (up on the plan) to north, 0 by
+  default (`north` on the site). It lights the model as the named suns
   do (Studio, the light following the sun, so the evening and the night come with the hour),
   and it is in every 3D view: `sketch`, `appShell`, a bare `ThreeRenderer`. In code:
   `renderer.setSunAt({ latitude, longitude, date: "2026-06-21", hour: 17 })` and

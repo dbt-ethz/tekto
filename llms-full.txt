@@ -389,7 +389,7 @@ Types: `AddWallSystemOptions`, `Adjacency`, `AdjacencyOptions`, `Axis`, `Balloon
   members: el, show(), select(), stepOfObject(), isOpen, pendingMarks, dispose()
 - `studioLights` (function): Studio lighting's lights, and whether the frame is tone-mapped.
 - `SUN_PLACES` (const): The places the sun menu offers (standard time: no summer time).
-- `sunFor` (function): Where the sun stands for a site: altitude, azimuth and the direction toward it (Z-up).
+- `sunFor` (function): Where the sun stands for a site: altitude and azimuth (a compass bearing, from true north), and the direction toward it in the model (Z-up), turned by the site's `north`.
 - `surfaceAppearance` (function): How a mode paints a surface whose own colour is `base`.
 - `SVGRenderer` (class, experimental): Draws a `Scene`'s points, segments, polylines, polygons, circles and meshes as SVG, projected onto one plane (`xz` by default), and redraws on every scene change.
   members: render(), setViewBox(), dispose()

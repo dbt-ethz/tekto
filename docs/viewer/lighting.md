@@ -26,6 +26,8 @@ app.renderer.setSunPreset("sunset");                  // "morning" | "noon" | "s
 
 // The sun for a date, an hour and a place, as the sun menu's "Date" sets it (Studio, day or night)
 app.renderer.setSunAt({ latitude: 47.37, longitude: 8.55, date: "2026-06-21", hour: 17 });
+// ...in a model whose north is not +Y: `north` is degrees clockwise from +Y (up on the plan) to north
+app.renderer.setSunAt({ latitude: 47.37, longitude: 8.55, date: "2026-06-21", hour: 17, north: 30 });
 
 // Or only its direction, computed yourself: Zurich, midsummer, 11:30 UTC
 const sun = SunPosition.compute({ date: new Date(Date.UTC(2026, 5, 21, 11, 30)), latitude: 47.37, longitude: 8.55 });

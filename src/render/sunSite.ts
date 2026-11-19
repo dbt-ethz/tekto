@@ -3,6 +3,7 @@
  * named suns (`renderer.setSunAt`). Pure: no scene, no DOM.
  */
 import { SunPosition, type SunPositionResult } from "../core/solar/SunPosition";
+import { Vec3 } from "../core/math/vectors";
 
 /** A place, a date and an hour of the day for the sun (`renderer.setSunAt`). */
 export interface SunSite {
@@ -18,6 +19,12 @@ export interface SunSite {
   date: string;
   /** The hour of the day, 0 to 24, in the place's standard time (13.5 is 13:30). */
   hour: number;
+  /**
+   * Where north is in the model, as CAD tools' "true north": degrees clockwise from the
+   * model's +Y axis (up on the plan) to north. 0 (the default): +Y is north, +X east.
+   * 90: north points along +X, to the right on the plan.
+   */
+  north?: number;
 }
 
 /** A place the sun menu offers: where it is, and its standard time ahead of UTC. */
@@ -56,13 +63,20 @@ export function sunTimeZone(site: Pick<SunSite, "longitude" | "timeZone">): numb
   return site.timeZone ?? Math.round(site.longitude / 15);
 }
 
-/** Where the sun stands for a site: altitude, azimuth and the direction toward it (Z-up). */
+/**
+ * Where the sun stands for a site: altitude and azimuth (a compass bearing, from true north),
+ * and the direction toward it in the model (Z-up), turned by the site's `north`.
+ */
 export function sunFor(site: SunSite): SunPositionResult {
   const [y, m, d] = site.date.split("-").map(Number);
   if (![y, m, d].every(Number.isFinite)) throw new Error(`sunFor: date "${site.date}" is not "YYYY-MM-DD"`);
   const utc = site.hour - sunTimeZone(site);
   const date = new Date(Date.UTC(y, m - 1, d, 0, Math.round(utc * 60)));   // minutes carry over midnight
-  return SunPosition.compute({ date, latitude: site.latitude, longitude: site.longitude });
+  const sun = SunPosition.compute({ date, latitude: site.latitude, longitude: site.longitude });
+  if (!site.north) return sun;
+  // East and north of the compass, laid on the model's axes: north is `north`° clockwise from +Y.
+  const a = site.north * Math.PI / 180, { x: e, y: n, z } = sun.direction;
+  return { ...sun, direction: new Vec3(e * Math.cos(a) + n * Math.sin(a), n * Math.cos(a) - e * Math.sin(a), z) };
 }
 
 /** An hour of the day as "HH:MM" (13.5 → "13:30"). */

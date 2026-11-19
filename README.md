@@ -328,7 +328,7 @@ Two presets, switchable in the viewer header:
 
 Flat is tuned for a dark page: a dim blue sky, so colours read darker and cooler. An app whose colours are a key beside the model sets `flatLighting: "plain"` on the renderer (`appShell({ renderer: { flatLighting: "plain" } })`): a white sky under which a face turned to it shows its own colour.
 
-The sun is set in the viewer header's sun menu: Morning, Noon, Sunset, or Date — a place (a city, or latitude and longitude), a day and an hour, with Studio's light following it into the evening and the night. In code: `renderer.setSunPreset("sunset")`, `renderer.setSunAt({ latitude: 47.37, longitude: 8.55, date: "2026-06-21", hour: 17 })`, or a direction of your own (`SunPosition.compute({ date, latitude, longitude })` → `setSunDirection(direction)`). Inside a sketch, `lab.setSunDirection(dir)` lets the sketch override per-frame (animated daily cycles, etc.).
+The sun is set in the viewer header's sun menu: Morning, Noon, Sunset, or Date — a place (a city, or latitude and longitude), the model's north (degrees clockwise from +Y, as a CAD tool's true north), a day and an hour, with Studio's light following it into the evening and the night. In code: `renderer.setSunPreset("sunset")`, `renderer.setSunAt({ latitude: 47.37, longitude: 8.55, date: "2026-06-21", hour: 17 })`, or a direction of your own (`SunPosition.compute({ date, latitude, longitude })` → `setSunDirection(direction)`). Inside a sketch, `lab.setSunDirection(dir)` lets the sketch override per-frame (animated daily cycles, etc.).
 
 ### Flat vs smooth shading
 

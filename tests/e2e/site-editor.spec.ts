@@ -73,7 +73,7 @@ test("save writes the document as JSON; a snapshot names the records", async ({ 
   await open(page);
   const [dl] = await Promise.all([
     page.waitForEvent("download"),
-    page.getByRole("button", { name: "Save JSON" }).click(),
+    page.getByRole("button", { name: "File", exact: true }).click().then(() => page.getByRole("menuitem", { name: "Save JSON" }).click()),
   ]);
   expect(dl.suggestedFilename()).toMatch(/^site-\d{8}-\d{4}\.json$/);
   expect(await dl.failure()).toBeNull();

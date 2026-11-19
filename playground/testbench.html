@@ -28,6 +28,8 @@
     }
     #topbar select:hover, #topbar button:hover { border-color: #38d9a9; }
     #topbar button:disabled, #topbar button[hidden] { display: none; }
+    #topbar #app-menus button { border: 0; }
+    #topbar #app-menus:empty, #topbar #app-menus:empty + .sep, body.embed #app-menus, body.embed #menu-sep { display: none; }
     #topbar .label {
       font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
       color: #7a80a0;
@@ -119,6 +121,10 @@
     <a id="docs-link" class="link" target="_blank" rel="noopener" title="What this page shows, in the docs" hidden>Docs</a>
     <a id="source-link" class="link" target="_blank" rel="noopener" title="This page's code: one function">Source</a>
 
+    <!-- The running app's menu bar (File, Edit, View, its own): each app mounts it here. -->
+    <span class="sep" id="menu-sep"></span>
+    <span id="app-menus" data-tekto-menu-slot></span>
+
     <span class="spacer"></span>
 
     <div id="sun-menu">
@@ -153,17 +159,6 @@
       </div>
     </div>
 
-    <span class="sep"></span>
-
-    <div id="export-menu">
-      <button id="export-btn" hidden title="Export current sketch">Export &#x25BE;</button>
-      <div id="export-list" class="menu-list" hidden></div>
-    </div>
-    <div id="import-menu">
-      <button id="import-btn" hidden title="Import data into current sketch">Import &#x25BE;</button>
-      <div id="import-list" class="menu-list" hidden></div>
-      <input type="file" id="import-file" hidden />
-    </div>
   </header>
 
   <div id="app"></div>

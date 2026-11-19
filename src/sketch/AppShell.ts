@@ -48,6 +48,8 @@ import { StepsPanel, type StepMark } from "./StepsPanel";
 import { Commands, viewCommands } from "../gui/Commands";
 import { viewerToolbar, type TopBarOptions } from "./ViewerToolbar";
 import { panelFrame, type PanelFrame } from "./panelFrame";
+import { menuBar, menuSlot } from "../gui/MenuBar";
+import { ParamHistory } from "../gui/ParamHistory";
 import { VIEWER_HEADER_H, type ViewerTools } from "../render/ShadingBar";
 import { NotesLayer, type Note } from "./Notes";
 import type { Doc } from "../collab/Doc";
@@ -287,7 +289,9 @@ export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppS
 
   const params = new ParamStore(config.params);
   let frame: PanelFrame | null = null;
-  const panel = new ControlPanel({ store: params, theme: t, tabs: config.tabs, onRender: () => frame?.fit() });
+  // Undo for the params (Edit ▸ Undo); an app with a document declares its own `edit.undo` over it.
+  const history = new ParamHistory(params);
+  const panel = new ControlPanel({ store: params, theme: t, tabs: config.tabs, onRender: () => frame?.fit(), onCommit: () => history.commit() });
 
   const groups = config.groups ?? { Parameters: Object.keys(config.params) };
   const items: ControlItem[] = [];
@@ -325,8 +329,13 @@ export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppS
 
   // ── Commands: the view's from the start, keys bound while the app is mounted ──
   const commands = new Commands();
+  commands.add(history.commands());
   commands.add(viewCommands(renderer));
   const unbindKeys = commands.bindKeys();
+  // The menu bar, from the commands: in the title bar, or in the slot of a shell that has its own.
+  const menuHost = menuSlot(showHeader ? header : null);
+  const menus = menuHost ? menuBar(commands, { theme: t }) : null;
+  if (menus) menuHost!.appendChild(menus.el);
 
   // ── Top bar: lighting · render mode · camera · cut · sun (the viewer toolbar) ──
   const toolbar = !config.topBar ? null
@@ -427,6 +436,7 @@ export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppS
       bridge.dispose();
       unbindKeys();
       toolbar?.dispose();
+      menus?.dispose();
       notes?.dispose();
       panel.dispose();
       renderer.dispose();

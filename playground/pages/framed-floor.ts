@@ -68,13 +68,11 @@ export default function (container: HTMLElement) {
       gap: { type: "float", min: 0, max: 0.4, default: 0.1, step: 0.02, label: "Gap (U)" },
       plates: { type: "bool", default: false, label: "Sheathing + ceiling" },
       callouts: { type: "bool", default: true, label: "Callouts", display: true },
-      ifc: { type: "button", label: "Export IFC", action: () => exportIfc() },
     },
     groups: {
       Floor: ["spacing", "northSouth"],
       Stair: ["shape", "turn", "structure", "landingDepth", "gap"],
       Show: ["plates", "callouts"],
-      File: ["ifc"],
     },
   });
 
@@ -120,6 +118,8 @@ export default function (container: HTMLElement) {
       objects: [`members/${ids[Math.floor(ids.length / 2)]}`],
     }));
   }
+
+  app.commands.add({ id: "file.export.ifc", label: "Export IFC", group: "File", run: () => exportIfc() });   // File ▸ Export IFC
 
   function exportIfc() {
     if (!slab || !stair) return;

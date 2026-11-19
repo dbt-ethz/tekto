@@ -26,6 +26,10 @@ export { getTheme } from "./gui/theme";
 export type { Theme, UiStyle } from "./gui/theme";
 // Commands: what an app can do, with its keys — run by key, listed for a palette, run by agents.
 export { Commands, keyMatches, formatKeys, viewCommands } from "./gui/Commands";
+// The menu bar (File, Edit, View, the app's own) drawn from an app's commands; undo over a ParamStore.
+export { menuBar, menuSlot } from "./gui/MenuBar";
+export type { MenuBarOptions } from "./gui/MenuBar";
+export { ParamHistory } from "./gui/ParamHistory";
 export type { Command, CommandInfo, ViewControl } from "./gui/Commands";
 // A cube per render mode, drawn the way the mode draws: for a mode switch.
 export { viewModeIconShapes, viewModeIconSvg, VIEW_MODE_ICON_SVG, VIEW_MODE_ICON_CORNERS } from "./gui/viewModeIcons";

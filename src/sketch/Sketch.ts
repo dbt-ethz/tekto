@@ -46,7 +46,9 @@ import { ParamStore } from "../gui/Params";
 import { ControlPanel, ControlItem, PanelButton, CustomRow, ExtraTab } from "../gui/ControlPanel";
 import { getTheme, Theme } from "../gui/theme";
 import { ThreeRenderer } from "../render/ThreeRenderer";
-import { buildSketchLayout, renderFileMenus } from "./sketchLayout";
+import { buildSketchLayout, fileCommands } from "./sketchLayout";
+import { menuBar, menuSlot } from "../gui/MenuBar";
+import { ParamHistory } from "../gui/ParamHistory";
 import { panelFrame, type PanelFrame } from "./panelFrame";
 import { Commands, viewCommands, type Command } from "../gui/Commands";
 import { meshHandle, flatMeshHandle, pointHandle, lineHandle, polylineHandle, shapeHandle } from "./handles";
@@ -260,8 +262,9 @@ export class SketchInstance {
   /** Notes on steps on their way into a snapshot (`saveStepMarks`). */
   private _stepMarks: StepMark[] = [];
   // Export ▾ / Import ▾ in the sketch's own header (a shell's top bar does it otherwise).
-  private _fileMenusEl: HTMLElement | null = null;
-  private _fileMenusSig = "";
+  private _menuHost: HTMLElement | null = null;
+  private _menuBar: { el: HTMLElement; dispose(): void } | null = null;
+  private history = new ParamHistory(this.store);
   private _trackSource = false;
   private _srcById = new Map<string, string>();
   private separatorCount = 0;
@@ -334,8 +337,13 @@ export class SketchInstance {
       if (!this._running && ((e.type === "scene:renderMode" && this._readsStyle.has("renderMode"))
         || (e.type === "scene:lightingMode" && this._readsStyle.has("lightingMode")))) this.runSketch();
     });
+    // Edit ▸ Undo / Redo over the controls' values (a sketch may declare its own `edit.undo`).
+    this.commands.add(this.history.commands());
     this.commands.add(viewCommands(this.renderer));
     this._unbindCommandKeys = this.commands.bindKeys();
+    // The menu bar, from the commands: in the title bar, or in the slot of a shell that has its own.
+    const slot = menuSlot(this._menuHost);
+    if (slot) { this._menuBar = menuBar(this.commands, { theme: this.theme }); slot.appendChild(this._menuBar.el); }
     this.wireInput();
     this.runSketch();
     this.startLoop();
@@ -347,7 +355,7 @@ export class SketchInstance {
   private buildDOM() {
     this.theme = getTheme(this.config.theme);
     const layout = buildSketchLayout(this.container, this.config, this.theme);
-    this._fileMenusEl = layout.fileMenusEl;
+    this._menuHost = layout.menuHost;
     this.panelEl = layout.panelEl;
     this.viewportEl = layout.viewportEl;
     this.viewportWrap = layout.viewportWrap;
@@ -361,6 +369,7 @@ export class SketchInstance {
       theme: t,
       getButtons: () => this.buttons,
       onCommit: (key) => {
+        this.history.commit();              // a finished change: one undo step
         if (this.isDisplayChange(key)) this.runDisplayPass();
         else this.commitRun();
       },
@@ -645,6 +654,7 @@ export class SketchInstance {
       if (!usedParams.has(key)) this.layerTrees.delete(key);
     }
     this.refreshLocks();
+    this.history.adopt();                   // controls declared by this run start from their value
 
     // Only rebuild panel DOM when the control structure changes
     // (params/buttons added/removed), not on value-only changes.
@@ -875,13 +885,13 @@ export class SketchInstance {
       registerExport(opts) {
         self.exports.set(opts.name, { ...opts });
         for (const l of self._exportListeners) l();
-        self.renderFileMenus();
+        self.syncFileCommands();
       },
 
       registerImport(opts) {
         self.imports.set(opts.name, { ...opts });
         for (const l of self._importListeners) l();
-        self.renderFileMenus();
+        self.syncFileCommands();
       },
 
       // ── Geometry Builders ──
@@ -1561,13 +1571,11 @@ export class SketchInstance {
     };
   }
 
-  /** Rebuild the header's Export / Import menus when the registered names change. */
-  private renderFileMenus() {
-    if (!this._fileMenusEl) return;
-    const sig = [...this.exports.keys()].join("\u0000") + "|" + [...this.imports.keys()].join("\u0000");
-    if (sig === this._fileMenusSig) return;
-    this._fileMenusSig = sig;
-    renderFileMenus(this._fileMenusEl, this.getExports(), this.getImports(), this.theme);
+  /** File ▸ Import … / Export …: a command per registered entry, replaced when the entries change. */
+  private _fileCommandsOff: (() => void) | null = null;
+  private syncFileCommands() {
+    this._fileCommandsOff?.();
+    this._fileCommandsOff = this.commands.add(fileCommands(this.getExports(), this.getImports()));
   }
 
   /** The current value of every control, keyed for `setParams` — save it to reopen a design. */
@@ -1577,7 +1585,11 @@ export class SketchInstance {
    * Set controls by label ("Radius"), "Group:Label" or key — e.g. the object `getParams()`
    * returned — and re-run once. Reports names it could not apply instead of dropping them.
    */
-  setParams(values: Record<string, unknown>) { return this.store.setByName(values); }
+  setParams(values: Record<string, unknown>) {
+    const result = this.store.setByName(values);
+    this.history.commit();                  // set from code or by an agent: an undo step like any other
+    return result;
+  }
 
   /** Destroy the sketch and clean up */
   dispose() {
@@ -1585,6 +1597,7 @@ export class SketchInstance {
     this.markup?.dispose();
     this.bridge?.dispose();
     this._unbindCommandKeys?.();
+    this._menuBar?.dispose();
     if (this._boundKeyDown) window.removeEventListener("keydown", this._boundKeyDown);
     if (this._boundKeyUp) window.removeEventListener("keyup", this._boundKeyUp);
     this._boundKeyDown = null;

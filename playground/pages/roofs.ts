@@ -34,11 +34,9 @@ export default function (container: HTMLElement) {
       overhang: { type: "float", min: 0, max: 1.5, default: 0.6, step: 0.05, label: "Eaves overhang" },
       gableOverhang: { type: "float", min: 0, max: 1.5, default: 0.3, step: 0.05, label: "Gable overhang" },
       thickness: { type: "float", min: 0.1, max: 0.5, default: 0.3, step: 0.01, label: "Build-up" },
-      ifc: { type: "button", label: "Export IFC", action: () => exportIfc() },
     },
     groups: {
       Roof: ["kind", "pitch", "overhang", "gableOverhang", "thickness"],
-      File: ["ifc"],
     },
   });
 
@@ -59,6 +57,8 @@ export default function (container: HTMLElement) {
     const area = roof.planes().reduce((s, p) => s + p.area, 0);
     app.status(`${roof.kind} · ridge +${roof.ridgeHeight().toFixed(2)} m · ${area.toFixed(1)} m² of roof · ${roof.gables(WALL).length} gable infills`);
   });
+
+  app.commands.add({ id: "file.export.ifc", label: "Export IFC", group: "File", run: () => exportIfc() });   // File ▸ Export IFC
 
   function exportIfc() {
     if (!roof) return;

@@ -6,10 +6,10 @@
  *   • Sun ▾ (right) — the sun for a date and a place, for 3D sketch pages.
  *     The render style, lighting, section and overlays are in each view's
  *     own header (the viewer tools), the same in every tekto app.
- *   • Export / Import menus (right) — populated dynamically from
- *     `lab.registerExport(...)` / `lab.registerImport(...)` calls made
- *     by the currently-mounted sketch. Buttons hide when nothing is
- *     registered.
+ *   • A slot for the running app's menu bar (File, Edit, View, and the
+ *     app's own), which each app builds from its commands and mounts here:
+ *     `<span data-tekto-menu-slot>`. Exports and imports a sketch registers
+ *     (`lab.registerExport` / `registerImport`) are in its File menu.
  *
  * Each page module just exports `default(container)` and is mounted
  * into `#app`. The shell tags `#app` with `data-shell="testbench"` so
@@ -17,7 +17,7 @@
  * 44 px title bar collapses into the top bar's page chooser.
  */
 
-import { SunPosition, SketchInstance, Sketch2DInstance, download } from "../src";
+import { SunPosition, SketchInstance, Sketch2DInstance } from "../src";
 
 // ─── Cities (lat, lon, standard-time UTC offset) ────────────────────
 
@@ -214,18 +214,11 @@ const sun: SunState = (() => {
   };
 })();
 function persistSun() { localStorage.setItem(SUN_KEY, JSON.stringify(sun)); }
-let exportsUnsub:  (() => void) | null = null;
-let importsUnsub:  (() => void) | null = null;
 
 // ─── DOM refs ───────────────────────────────────────────────────────
 
 const app             = document.getElementById("app") as HTMLDivElement;
 const pageChooser     = document.getElementById("page-chooser") as HTMLSelectElement;
-const exportBtn       = document.getElementById("export-btn") as HTMLButtonElement;
-const exportList      = document.getElementById("export-list") as HTMLDivElement;
-const importBtn       = document.getElementById("import-btn") as HTMLButtonElement;
-const importList      = document.getElementById("import-list") as HTMLDivElement;
-const importFileInput = document.getElementById("import-file") as HTMLInputElement;
 const sunBtn          = document.getElementById("sun-btn") as HTMLButtonElement;
 const sunPopover      = document.getElementById("sun-popover") as HTMLDivElement;
 const sunCity         = document.getElementById("sun-city") as HTMLSelectElement;
@@ -286,61 +279,6 @@ pageChooser.addEventListener("change", () => {
   loadPage(slug);
 });
 
-// ─── Export / Import menus ──────────────────────────────────────────
-
-function rebuildExportMenu() {
-  const items = as3D()?.getExports() ?? [];
-  exportList.innerHTML = "";
-  if (items.length === 0) { exportBtn.hidden = true; exportList.hidden = true; return; }
-  exportBtn.hidden = false;
-  for (const it of items) {
-    const b = document.createElement("button");
-    b.className = "item";
-    b.textContent = it.name;
-    b.title = `Download as ${it.fileName}`;
-    b.addEventListener("click", async () => {
-      exportList.hidden = true;
-      // download() keeps the URL alive past the click; revoking it at once truncates large files.
-      download(await it.handler(), it.fileName, it.mimeType ? { type: it.mimeType } : {});
-    });
-    exportList.appendChild(b);
-  }
-}
-exportBtn.addEventListener("click", (e) => {
-  e.stopPropagation();
-  exportList.hidden = !exportList.hidden;
-  importList.hidden = true;
-});
-
-function rebuildImportMenu() {
-  const items = as3D()?.getImports() ?? [];
-  importList.innerHTML = "";
-  if (items.length === 0) { importBtn.hidden = true; importList.hidden = true; return; }
-  importBtn.hidden = false;
-  for (const it of items) {
-    const b = document.createElement("button");
-    b.className = "item";
-    b.textContent = it.name;
-    b.addEventListener("click", () => {
-      importList.hidden = true;
-      importFileInput.accept = it.accept ?? "";
-      importFileInput.onchange = async () => {
-        const f = importFileInput.files?.[0];
-        if (!f) return;
-        await it.handler(f);
-        importFileInput.value = ""; // reset so picking the same file re-fires
-      };
-      importFileInput.click();
-    });
-    importList.appendChild(b);
-  }
-}
-importBtn.addEventListener("click", (e) => {
-  e.stopPropagation();
-  importList.hidden = !importList.hidden;
-  exportList.hidden = true;
-});
-
 // ─── Sun popover + computation ──────────────────────────────────────
 
 for (let i = 0; i < CITIES.length; i++) {
@@ -397,8 +335,6 @@ function applySun() {
 sunBtn.addEventListener("click", (e) => {
   e.stopPropagation();
   sunPopover.hidden = !sunPopover.hidden;
-  exportList.hidden = true;
-  importList.hidden = true;
 });
 
 sunCity.addEventListener("change", () => {
@@ -439,8 +375,6 @@ applySun();
 
 // Hide menus on outside click.
 document.addEventListener("click", () => {
-  exportList.hidden = true;
-  importList.hidden = true;
   sunPopover.hidden = true;
 });
 sunPopover.addEventListener("click", (e) => e.stopPropagation());
@@ -453,8 +387,6 @@ async function loadPage(slug: string) {
   if (!entry) { console.warn(`Unknown page: ${slug}`); return; }
 
   // Drop subscriptions from the previous sketch (if any).
-  exportsUnsub?.(); exportsUnsub = null;
-  importsUnsub?.(); importsUnsub = null;
 
   if (currentSketch) {
     currentSketch.dispose();
@@ -473,14 +405,6 @@ async function loadPage(slug: string) {
     const s3d = as3D();
     setShellMode(!s3d); // the sun is for 3D sketch pages
     document.body.classList.toggle("own-bar", !s3d); // a 2D or appShell page: nothing of the shell's bar applies
-    if (s3d) {
-      // Subscribe to the sketch's export/import registrations and re-render
-      // the menus whenever the sketch (re)registers an entry.
-      exportsUnsub = s3d.onExportsChange(rebuildExportMenu);
-      importsUnsub = s3d.onImportsChange(rebuildImportMenu);
-    }
-    rebuildExportMenu();
-    rebuildImportMenu();
     applySun(); // push current sun direction to the fresh sketch (3D only)
   } catch (e) {
     console.error(`Failed to load page "${slug}":`, e);

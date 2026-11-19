@@ -40,6 +40,9 @@ import { ParamStore, ParamDef } from "../gui/Params";
 import { ControlPanel, ControlItem, PanelButton } from "../gui/ControlPanel";
 import { getTheme, type UiStyle } from "../gui/theme";
 import { panelFrame, type PanelFrame } from "./panelFrame";
+import { Commands } from "../gui/Commands";
+import { menuBar, menuSlot } from "../gui/MenuBar";
+import { ParamHistory } from "../gui/ParamHistory";
 import type { Reactive, SliderOpts, SelectOpts } from "./SketchTypes";
 import { installAgentBridge, plainBundle, type AgentBridge } from "./AgentBridge";
 import type { MarkupCaptureOptions } from "./Markup";
@@ -208,6 +211,11 @@ export class Sketch2DInstance {
   // Param model: values in the ParamStore, placement in `items` — rendered
   // by the shared ControlPanel.
   private store: ParamStore = new ParamStore({});
+  /** What the sketch can do, with its keys: Undo and Redo over its controls, to begin with. */
+  readonly commands = new Commands();
+  private history = new ParamHistory(this.store);
+  private menus: { el: HTMLElement; dispose(): void } | null = null;
+  private unbindKeys: (() => void) | null = null;
   private panel!: ControlPanel;
   private items = new Map<string, ControlItem>();
   private buttons: PanelButton[] = [];
@@ -259,6 +267,7 @@ export class Sketch2DInstance {
       owner: this,
       harness: "sketch2d",
       store: this.store,
+      commands: this.commands,
       snapshot: (opts?: MarkupCaptureOptions) => plainBundle({
         ...opts,
         title: this.config.title ?? "sketch2d",
@@ -294,6 +303,7 @@ export class Sketch2DInstance {
       font-family:${t.font};
     `;
 
+    let menuHost: HTMLElement | null = null;
     if (showHeader) {
       const header = document.createElement("div");
       header.style.cssText = `
@@ -308,7 +318,15 @@ export class Sketch2DInstance {
           background:${t.hoverBg};color:${t.accent}">2D</span>
       `;
       root.appendChild(header);
+      menuHost = header;
     }
+
+    // Edit ▸ Undo / Redo over the controls, by key in every style; the menu bar in the title
+    // bar or a shell's slot (a paper figure has neither).
+    this.commands.add(this.history.commands());
+    this.unbindKeys = this.commands.bindKeys();
+    const slot = paper ? null : menuSlot(menuHost);
+    if (slot) { this.menus = menuBar(this.commands, { theme: t }); slot.appendChild(this.menus.el); }
 
     // Panel
     this.panelEl = document.createElement("div");
@@ -330,6 +348,7 @@ export class Sketch2DInstance {
       theme: t,
       getButtons: () => this.buttons,
       onAction: () => this.scheduleRerun(),
+      onCommit: () => this.history.commit(),   // a finished change: one undo step
       tabs: this.config.tabs,
       onRender: () => frame?.fit(),
     });
@@ -463,6 +482,7 @@ export class Sketch2DInstance {
       this._prevFingerprint = fingerprint;
       this.panel.render([...this.items.values()]);
     }
+    this.history.adopt();                   // controls declared by this run start from their value
     // Logs pushed by the sketch BODY are the persistent baseline; logs pushed
     // inside draw()/animate() are per-frame and reset each frame (see loop).
     this._baseLogCount = this.logs.length;
@@ -630,6 +650,8 @@ export class Sketch2DInstance {
   dispose() {
     this.disposed = true;
     this.bridge?.dispose();
+    this.unbindKeys?.();
+    this.menus?.dispose();
     this.panel.dispose();
     this.container.innerHTML = "";
   }

@@ -1,7 +1,7 @@
 /**
- * The frame of a 3D sketch, and its Export / Import menus.
+ * The frame of a 3D sketch, and the File menu's entries for its exports and imports.
  *
- * A grid: an optional title bar (the sketch's name, LIVE, and the menus on the right —
+ * A grid: an optional title bar (the sketch's name, LIVE, and the menu bar —
  * suppressed inside a shell that has its own bar), the control panel on the left (the sketch
  * gives it its `panelFrame`: resize, fold, automatic width) and the viewport with its log
  * overlay. The sketch mounts its ControlPanel and renderer into it.
@@ -9,11 +9,12 @@
 import type { Theme } from "../gui/theme";
 import { download } from "../io/download";
 import type { SketchConfig, ExportRegistration, ImportRegistration } from "./SketchTypes";
+import type { Command } from "../gui/Commands";
 
 export interface SketchLayout {
   root: HTMLElement;
-  /** Where the Export / Import menus go — null without a title bar (a shell shows them). */
-  fileMenusEl: HTMLElement | null;
+  /** Where the menu bar goes — null without a title bar (a shell has a slot for it). */
+  menuHost: HTMLElement | null;
   panelEl: HTMLElement;
   viewportEl: HTMLElement;
   /** The viewport's container: the 3D view, overlays laid over it, the log overlay. */
@@ -34,7 +35,7 @@ export function buildSketchLayout(container: HTMLElement, config: SketchConfig, 
   const showHeader = config.showHeader ?? !inShell;
   const headerRow = showHeader ? "44px " : "";
 
-  let fileMenusEl: HTMLElement | null = null;
+  let menuHost: HTMLElement | null = null;
 
   // Root
   const root = document.createElement("div");
@@ -62,9 +63,9 @@ export function buildSketchLayout(container: HTMLElement, config: SketchConfig, 
       <span style="font-size:9px;padding:2px 6px;border-radius:3px;
         background:${t.hoverBg};color:${t.accent}">LIVE</span>
     `;
-    fileMenusEl = document.createElement("div");
-    fileMenusEl.style.cssText = "margin-left:auto;display:flex;gap:8px;position:relative;";
-    header.appendChild(fileMenusEl);
+    menuHost = document.createElement("div");
+    menuHost.style.cssText = "display:flex;align-items:center;margin-left:8px;";
+    header.appendChild(menuHost);
     root.appendChild(header);
   }
 
@@ -112,64 +113,30 @@ export function buildSketchLayout(container: HTMLElement, config: SketchConfig, 
     container.style.overflow = "hidden";
   }
   container.appendChild(root);
-  return { root, fileMenusEl, panelEl, viewportEl, viewportWrap: vpWrap, logEl, headerHeight: showHeader ? 44 : 0 };
+  return { root, menuHost, panelEl, viewportEl, viewportWrap: vpWrap, logEl, headerHeight: showHeader ? 44 : 0 };
 }
 
 /**
- * Export ▾ / Import ▾ in the sketch's own header, from `lab.registerExport/registerImport`.
- * Without a header (inside a shell) the shell's top bar shows them instead. Rebuilt only
- * when the registered names change, not on every re-run.
+ * The File menu's entries for what a sketch registered (`lab.registerExport/registerImport`):
+ * a command each, so the menu bar lists them and an agent can run them.
  */
-export function renderFileMenus(host: HTMLElement, exports: ExportRegistration[], imports: ImportRegistration[], t: Theme): void {
-  host.innerHTML = "";
-  const menu = (label: string, items: { name: string; title?: string; run: () => void | Promise<void> }[]) => {
-    if (!items.length) return;
-    const wrap = document.createElement("div");
-    wrap.style.cssText = "position:relative;";
-    const btn = document.createElement("button");
-    btn.textContent = `${label} ▾`;
-    btn.style.cssText = `font:12px ${t.font};padding:4px 10px;border-radius:4px;cursor:pointer;
-      background:${t.panelBg};color:${t.text};border:1px solid ${t.controlBorder};`;
-    const list = document.createElement("div");
-    list.style.cssText = `position:absolute;right:0;top:calc(100% + 4px);min-width:180px;z-index:30;display:none;
-      background:${t.panelBg};border:1px solid ${t.controlBorder};border-radius:6px;padding:4px;box-shadow:0 4px 16px rgba(0,0,0,.3);`;
-    for (const it of items) {
-      const b = document.createElement("button");
-      b.textContent = it.name;
-      if (it.title) b.title = it.title;
-      b.style.cssText = `display:block;width:100%;text-align:left;font:12px ${t.font};padding:6px 10px;border:0;border-radius:4px;
-        background:transparent;color:${t.text};cursor:pointer;`;
-      b.addEventListener("mouseenter", () => { b.style.background = t.hoverBg; });
-      b.addEventListener("mouseleave", () => { b.style.background = "transparent"; });
-      b.addEventListener("click", async () => {
-        list.style.display = "none";
-        try { await it.run(); } catch (e) { console.error(`tekto ${label.toLowerCase()} "${it.name}":`, e); }
-      });
-      list.appendChild(b);
-    }
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const open = list.style.display === "none";
-      for (const l of host.querySelectorAll<HTMLElement>("[data-tekto-menu]")) l.style.display = "none";
-      list.style.display = open ? "block" : "none";
-    });
-    list.dataset.tektoMenu = "";
-    document.addEventListener("click", () => { list.style.display = "none"; });
-    wrap.append(btn, list);
-    host.appendChild(wrap);
-  };
-  menu("Export", exports.map(it => ({
-    name: it.name, title: `Download as ${it.fileName}`,
-    run: async () => download(await it.handler(), it.fileName, it.mimeType ? { type: it.mimeType } : {}),
-  })));
-  menu("Import", imports.map(it => ({
-    name: it.name,
-    run: () => {
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = it.accept ?? "";
-      input.onchange = async () => { const f = input.files?.[0]; if (f) await it.handler(f); };
-      input.click();
-    },
-  })));
+export function fileCommands(exports: ExportRegistration[], imports: ImportRegistration[]): Command[] {
+  const slug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const verb = (v: string, name: string) => (new RegExp(`^${v}\\b`, "i").test(name) ? name : `${v} ${name}`);
+  return [
+    ...imports.map((it): Command => ({
+      id: `file.import.${slug(it.name)}`, label: verb("Import", it.name), group: "File",
+      run: () => {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = it.accept ?? "";
+        input.onchange = async () => { const f = input.files?.[0]; if (f) await it.handler(f); };
+        input.click();
+      },
+    })),
+    ...exports.map((it): Command => ({
+      id: `file.export.${slug(it.name)}`, label: verb("Export", it.name), group: "File",
+      run: async () => download(await it.handler(), it.fileName, it.mimeType ? { type: it.mimeType } : {}),
+    })),
+  ];
 }

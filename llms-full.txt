@@ -356,6 +356,8 @@ Types: `AddWallSystemOptions`, `Adjacency`, `AdjacencyOptions`, `Axis`, `Balloon
 - `layoutLabels` (function): Stack labels into the left and right margins without overlapping.
 - `lightBalance` (function): Sun and sky intensity for a mode.
 - `markup` (function): ✎ Markup in any app: the button and the drawing overlay `sketch()` and `appShell()` have, mounted over a renderer's view, for an app that builds its own UI (React, a custom page).
+- `menuBar` (function): The menu bar of an app, from its commands.
+- `menuSlot` (function): Where a harness mounts its menu bar: its own title bar, or, inside a shell with a bar of its own (the playground), the shell's slot — any element marked `data-tekto-menu-slot`.
 - `modeBackground` (function): The page a mode is drawn on.
 - `NavGizmo` (class): The axis widget in a viewport corner, drawn as SVG: click an axis ball to look down it, drag to orbit, double-click to snap to the nearest axis, toggle perspective/ortho.
   members: setProjection(), update(), setVisible(), el, dispose()
@@ -365,6 +367,8 @@ Types: `AddWallSystemOptions`, `Adjacency`, `AdjacencyOptions`, `Axis`, `Balloon
   members: collection, list(), add(), describe(), reply(), resolve(), reopen(), keep(), remove(), goTo(), setVisible(), visible, dispose()
 - `orbitFor` (function): Where the camera sits to look down `direction`, which points from the subject towards the camera.
 - `orthoFrustum` (function): The orthographic frustum that frames what a perspective camera would see at the same distance, so switching projection changes the drawing convention and not the subject.
+- `ParamHistory` (class): Undo / redo over a `ParamStore`'s values.
+  members: adopt(), commit(), canUndo(), canRedo(), undo(), redo(), commands()
 - `polylinesToSVG` (function): Projected runs (from `extractVisiblePolylines`) as SVG text: one `<polyline>` per run, v flipped so up is up on paper, viewBox = `bounds` plus padding, in model units.
 - `PresenceBar` (class): Who is online in a `SharedStore` document: a connection dot, one badge per person, and a Sign in / Sign out button.
   members: el, destroy(), render()
@@ -377,7 +381,7 @@ Types: `AddWallSystemOptions`, `Adjacency`, `AdjacencyOptions`, `Axis`, `Balloon
 - `sketch` (function): One function = one interactive 3D app.
 - `sketch2d` (function): One function = one interactive 2D canvas app, p5-style: controls in the panel, a `draw` callback with the canvas context, pointer events.
 - `Sketch2DInstance` (class): What `sketch2d()` returns: the running 2D sketch, with `getParams` / `setParams` to save and restore its controls and `dispose()` to tear it down.
-  members: getParams(), setParams(), dispose()
+  members: commands, getParams(), setParams(), dispose()
 - `SketchInstance` (class): What `sketch()` returns: the running 3D sketch, driven from outside by its host (the testbench shell) — render mode, lighting, sun, section, the registered exports and imports.
   members: commands, exports, imports, enablePicking(), setGizmoMode(), setSelected(), registerDragHandle(), setHandleSelected(), selectedHandle, activeDragHandle, setSlider(), rerun(), requestRender(), setRenderMode(), overlay(), setSection(), setLightingMode(), setEnvironment(), setEnvironmentSource(), setFog(), setExposure(), setEnvironmentBackground(), setEnvironmentRotation(), addExternalObject(), removeExternalObject(), setStudioMaterial(), setHelpersVisible(), setShadowGroundVisible(), setSunDirection(), getExports(), getImports(), onExportsChange(), onImportsChange(), getParams(), setParams(), dispose()
 - `standardOrbit` (function): Where the camera sits for a named view, as three.js spherical angles: phi from +Y, theta around Y from +Z towards +X.
@@ -396,7 +400,7 @@ Types: `AddWallSystemOptions`, `Adjacency`, `AdjacencyOptions`, `Axis`, `Balloon
 - `viewModeIconShapes` (function): What to draw for a render mode, back to front.
 - `viewModeIconSvg` (function): A render mode's icon as SVG markup, for a DOM app: `button.innerHTML = viewModeIconSvg("ghost")`.
 
-Types: `AgentDocApi`, `AgentDocOptions`, `AgentIssue`, `AgentNotes`, `AmbientOcclusionOptions`, `AnimateFn`, `Appearance`, `AppShellConfig`, `AppShellInstance`, `CalloutItem`, `CalloutOptions`, `Command`, `CommandInfo`, `ControlItem`, `ControlPanelConfig`, `CustomRow`, `DrawFn`, `DrawSheetOptions`, `DxfEdgeOptions`, `DxfMeshOptions`, `DxfSegment`, `DxfView`, `DxfWorkerRequest`, `DxfWriteOptions`, `ExportRegistration`, `ExtraTab`, `FlatLighting`, `IconShape`, `IdBufferOptions`, `ImportRegistration`, `Lab`, `Lab2D`, `LayerColumns`, `LayerMap`, `LayerNode`, `LayerState`, `LayerTree`, `LayoutOptions`, `LineHandle`, `MarkKind`, `MarkupBundle`, `MarkupCaptureOptions`, `MarkupObjectRef`, `MarkupRenderer`, `MeshHandle`, `NavGizmoOptions`, `Note`, `NoteInfo`, `NoteReply`, `NotesRenderer`, `PanelButton`, `PickInfo`, `Placement`, `Pointer2D`, `PointerFn`, `PointHandle`, `PresenceBarOptions`, `ProjectedSegment`, `Reactive`, `SelectOpts`, `ShadingBarCorner`, `ShadingBarPlacement`, `ShapeHandle`, `ShapeMode`, `SheetCanvasOptions`, `SheetTransform`, `Sketch2DConfig`, `Sketch2DFn`, `SketchConfig`, `SliderOpts`, `StepMark`, `StepsPanelOptions`, `StudioLighting`, `SunPreset`, `SVGOptions`, `SVGRendererConfig`, `Theme`, `ThreeRendererConfig`, `TopBarOptions`, `UiStyle`, `ViewControl`, `ViewerTools`, `ViewMode`, `VisibilityOptions`, `VisibilityResult`, `VisibilityView`
+Types: `AgentDocApi`, `AgentDocOptions`, `AgentIssue`, `AgentNotes`, `AmbientOcclusionOptions`, `AnimateFn`, `Appearance`, `AppShellConfig`, `AppShellInstance`, `CalloutItem`, `CalloutOptions`, `Command`, `CommandInfo`, `ControlItem`, `ControlPanelConfig`, `CustomRow`, `DrawFn`, `DrawSheetOptions`, `DxfEdgeOptions`, `DxfMeshOptions`, `DxfSegment`, `DxfView`, `DxfWorkerRequest`, `DxfWriteOptions`, `ExportRegistration`, `ExtraTab`, `FlatLighting`, `IconShape`, `IdBufferOptions`, `ImportRegistration`, `Lab`, `Lab2D`, `LayerColumns`, `LayerMap`, `LayerNode`, `LayerState`, `LayerTree`, `LayoutOptions`, `LineHandle`, `MarkKind`, `MarkupBundle`, `MarkupCaptureOptions`, `MarkupObjectRef`, `MarkupRenderer`, `MenuBarOptions`, `MeshHandle`, `NavGizmoOptions`, `Note`, `NoteInfo`, `NoteReply`, `NotesRenderer`, `PanelButton`, `PickInfo`, `Placement`, `Pointer2D`, `PointerFn`, `PointHandle`, `PresenceBarOptions`, `ProjectedSegment`, `Reactive`, `SelectOpts`, `ShadingBarCorner`, `ShadingBarPlacement`, `ShapeHandle`, `ShapeMode`, `SheetCanvasOptions`, `SheetTransform`, `Sketch2DConfig`, `Sketch2DFn`, `SketchConfig`, `SliderOpts`, `StepMark`, `StepsPanelOptions`, `StudioLighting`, `SunPreset`, `SVGOptions`, `SVGRendererConfig`, `Theme`, `ThreeRendererConfig`, `TopBarOptions`, `UiStyle`, `ViewControl`, `ViewerTools`, `ViewMode`, `VisibilityOptions`, `VisibilityResult`, `VisibilityView`
 
 ## tekto/2d — sketch2d and the 2D geometry a first sketch needs — no three.js
 
@@ -422,7 +426,7 @@ Types: `AgentDocApi`, `AgentDocOptions`, `AgentIssue`, `AgentNotes`, `AmbientOcc
   members: name, entities, options, polyline(), line(), rect(), circle(), arc(), fill(), text(), dim(), radius(), leader(), level(), segments(), sheetRef
 - `sketch2d` (function): One function = one interactive 2D canvas app, p5-style: controls in the panel, a `draw` callback with the canvas context, pointer events.
 - `Sketch2DInstance` (class): What `sketch2d()` returns: the running 2D sketch, with `getParams` / `setParams` to save and restore its controls and `dispose()` to tear it down.
-  members: getParams(), setParams(), dispose()
+  members: commands, getParams(), setParams(), dispose()
 - `stampName` (function): "stair.dxf" → "stair-20261013-1542.dxf": a timestamp before the extension.
 - `Vec2` (class): Immutable 2D vector or point (metres; plan coordinates are x, y): fields are readonly and every op returns a new Vec2, so write `p = p.add(d)`.
   members: static zero(), static one(), static unitX(), static unitY(), static fromAngle(), static fromArray(), add(), sub(), mul(), div(), neg(), dot(), cross(), len(), lenSq(), normalize(), distTo(), distSqTo(), lerp(), angle(), angleTo(), rotate(), perp(), almostEqual(), toArray(), toVec3(), toString(), clone(), toJSON(), static fromJSON()

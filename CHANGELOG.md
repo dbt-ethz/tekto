@@ -6,6 +6,21 @@ before 1.0, breaking changes bump the minor version. See
 
 ## Unreleased
 
+- **A menu bar, and Undo in every app.** `sketch`, `sketch2d` and `appShell` now show a menu
+  bar drawn from the app's commands: File, Edit and View first, then the app's own menus, each
+  command in the menu its `group` names (`app.commands.add({ id: "file.save", label: "Save
+  JSON", keys: "Mod+S", group: "File", run })`, `lab.command(…)`), with its keys beside it and
+  greyed while it cannot run. It sits in the title bar, or in the slot of a shell that has a
+  bar of its own (an element marked `data-tekto-menu-slot`, as the playground's); `menuBar(
+  commands)` and `menuSlot` are exported for an app with its own chrome. Exports and imports
+  registered with `lab.registerExport` / `registerImport` are File items and commands
+  (`file.export.ifc`); the sketch's own Export ▾ / Import ▾ buttons are gone. Edit ▸ Undo and
+  Redo (Mod+Z, Shift+Mod+Z) work over the controls of every app (`ParamHistory`: one step per
+  finished change, a slider drag is one); an app with a `Doc` declares `edit.undo` over its
+  document as before, which replaces it. A 2D sketch has `commands` now. The paper style shows
+  no menu bar; its keys work. The playground's House, Site Editor, Framed Floor, Roofs and
+  Drawing Sheet pages moved their File and History buttons from the sidebar into the menus.
+
 - **The viewer's tools in every 3D view.** The viewer header (a strip across the top of the
   view with icons for the render style, lighting, ambient occlusion, sun, section, overlays and
   snapshot, ✎ Markup at its end) and the axis widget with the zoom column under it are now the

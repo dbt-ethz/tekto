@@ -307,9 +307,9 @@ export interface Lab {
   once(fn: () => void): void;
 
   /**
-   * Register an "Export ▾" item for the host shell (testbench / app)
-   * to surface in its top-bar Export menu. The handler returns a `Blob`
-   * (or a Promise of one); the shell handles the download.
+   * Register something the sketch can export: it is listed in the menu bar's
+   * File menu ("Export IFC") and as a command (`file.export.ifc`). The handler
+   * returns a `Blob` (or a Promise of one); the download is done for it.
    *
    * Idempotent across sketch re-runs (re-registering the same `name`
    * just refreshes the handler closure).

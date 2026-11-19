@@ -96,7 +96,7 @@ export function buildSketchLayout(container: HTMLElement, config: SketchConfig, 
   logEl.style.cssText = `
     position:absolute; bottom:12px; left:12px;
     padding:8px 12px; border-radius:6px;
-    background:rgba(37,37,38,.92); backdrop-filter:blur(8px);
+    background:rgba(30,30,30,.92); backdrop-filter:blur(8px);
     font-size:11px; line-height:1.7; color:#a8a8a8;
     pointer-events:none; max-width:300px;
     border:1px solid rgba(255,255,255,.1);

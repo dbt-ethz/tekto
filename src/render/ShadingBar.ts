@@ -150,7 +150,7 @@ export class ShadingBar {
     if (isHeader) {
       // Above the ✎ Markup drawing layer (z 20–22), so its Done stays in reach while drawing.
       this.root.style.cssText = `position:absolute;top:0;left:0;right:0;height:${VIEWER_HEADER_H}px;box-sizing:border-box;z-index:23;`
-        + "display:flex;align-items:center;gap:2px;padding:0 6px;background:rgba(37,37,38,.96);"
+        + "display:flex;align-items:center;gap:2px;padding:0 6px;background:rgba(30,30,30,.96);"
         + "border-bottom:1px solid rgba(255,255,255,.08);user-select:none;";
       this.root.dataset.tektoViewerHeader = "";
       const slot = () => { const d = document.createElement("div"); d.style.cssText = "display:flex;align-items:center;gap:6px;"; return d; };
@@ -163,11 +163,11 @@ export class ShadingBar {
       this.nav = document.createElement("div");
       this.nav.dataset.tektoNavColumn = "";
       this.nav.style.cssText = "position:absolute;z-index:5;display:flex;flex-direction:column;gap:2px;padding:3px;border-radius:7px;"
-        + "background:rgba(37,37,38,.9);border:1px solid rgba(255,255,255,.08);user-select:none;";
+        + "background:rgba(30,30,30,.9);border:1px solid rgba(255,255,255,.08);user-select:none;";
       host.appendChild(this.nav);
     } else {
       this.root.style.cssText = `position:absolute;${v}:10px;${h}:10px;z-index:5;display:flex;align-items:center;gap:2px;`
-        + "padding:3px;border-radius:7px;background:rgba(37,37,38,.9);border:1px solid rgba(255,255,255,.08);"
+        + "padding:3px;border-radius:7px;background:rgba(30,30,30,.9);border:1px solid rgba(255,255,255,.08);"
         + "box-shadow:0 2px 8px rgba(0,0,0,.3);user-select:none;";
       this.root.append(this.full, this.flat);
     }
@@ -309,7 +309,7 @@ export class ShadingBar {
   private popover(v: string, h: string): HTMLDivElement {
     const pop = document.createElement("div");
     pop.style.cssText = `position:absolute;${v === "top" ? "top" : "bottom"}:calc(100% + 6px);${h}:0;display:none;gap:2px;`
-      + "padding:4px;border-radius:7px;background:rgba(45,45,46,.98);border:1px solid rgba(255,255,255,.08);"
+      + "padding:4px;border-radius:7px;background:rgba(37,37,38,.98);border:1px solid rgba(255,255,255,.08);"
       + "box-shadow:0 4px 14px rgba(0,0,0,.4);";
     this.root.appendChild(pop);
     return pop;

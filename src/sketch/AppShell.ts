@@ -240,7 +240,7 @@ export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppS
   statusEl.style.cssText = `
     position:absolute; bottom:12px; left:12px;
     border-radius:6px;
-    background:rgba(37,37,38,.92); backdrop-filter:blur(8px);
+    background:rgba(30,30,30,.92); backdrop-filter:blur(8px);
     font-size:11px; line-height:1.7; color:${t.textDim};
     pointer-events:none; max-width:340px;
     border:1px solid rgba(255,255,255,.1);

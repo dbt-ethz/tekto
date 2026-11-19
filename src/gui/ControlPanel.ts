@@ -108,9 +108,9 @@ export function ensureSliderStyle(doc: Document): void {
   el.id = SLIDER_STYLE_ID;
   el.textContent = `
     .tekto-slider{-webkit-appearance:none;appearance:none;background:transparent;cursor:pointer;height:16px;outline:none;padding:0;}
-    .tekto-slider::-webkit-slider-runnable-track{height:4px;background:var(--tekto-track,#4a4a4a);}
+    .tekto-slider::-webkit-slider-runnable-track{height:4px;background:var(--tekto-track,#444444);}
     .tekto-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:7px;height:14px;margin-top:-5px;border-radius:0;background:var(--tekto-thumb,#ffffff);}
-    .tekto-slider::-moz-range-track{height:4px;background:var(--tekto-track,#4a4a4a);}
+    .tekto-slider::-moz-range-track{height:4px;background:var(--tekto-track,#444444);}
     .tekto-slider::-moz-range-thumb{width:7px;height:14px;border-radius:0;border:none;background:var(--tekto-thumb,#ffffff);}
   `;
   doc.head.appendChild(el);

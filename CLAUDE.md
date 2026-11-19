@@ -142,7 +142,8 @@ When you need a constant for tuning (e.g., "this taper margin should be ~0.5 m")
 ## GUI defaults (sketch2d / lab panels)
 
 The dark theme is neutral GREY, as an editor's (VS Code): chrome (panels, bars,
-menus, the viewer header) `#252526`, the view behind it almost black `#0b0b0b`,
+the viewer header) `#1e1e1e`, its menus and popovers a step lighter `#252526`, the view
+behind it almost black `#0b0b0b`,
 borders and text grey — no blue-black, no navy. Never write those hex values in a
 harness or an app: read `getTheme()`. Panel chrome is WHITE on it: white slider accents and value
 labels, white toggle tracks (dark knob when ON), plain white title — NO green

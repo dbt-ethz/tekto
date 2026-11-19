@@ -7,7 +7,7 @@ before 1.0, breaking changes bump the minor version. See
 ## Unreleased
 
 - **The dark theme is grey, not blue.** Panels, bars, menus and the viewer header are a neutral
-  dark grey (`#252526`, as an editor's dark theme), with grey borders and text; the view behind
+  dark grey (`#1e1e1e`, as an editor's dark theme), with grey borders and text; the view behind
   them (a 3D view, a 2D canvas) is darker still, almost black (`#0b0b0b`, was the navy
   `#0a0b14`), and its grid lines are grey. `getTheme()` returns the new colours, so an app
   that reads the theme follows; an app that set `background: 0x0a0b14` itself keeps it. No

@@ -107,8 +107,8 @@ export function syncInfoPanel(
     infoPanelEl.style.cssText = `
       position:absolute; top:46px; left:12px; z-index:4;
       min-width:220px; max-width:300px;
-      background:#252526; color:#cccccc;
-      border:1px solid #383838; border-radius:6px;
+      background:#1e1e1e; color:#cccccc;
+      border:1px solid #303030; border-radius:6px;
       padding:10px 12px;
       font-family:'IBM Plex Mono', ui-monospace, monospace; font-size:11px;
       box-shadow:0 4px 12px rgba(0,0,0,.3);
@@ -184,7 +184,7 @@ export function makeSelectRow(
   lbl.textContent = labelText;
   lbl.style.cssText = "color:#7a80a0;flex-shrink:0;min-width:60px;";
   const sel = document.createElement("select");
-  sel.style.cssText = "flex:1;background:#1e1e1e;color:#cccccc;border:1px solid #4a4a4a;border-radius:3px;padding:2px 4px;font-family:inherit;font-size:11px;";
+  sel.style.cssText = "flex:1;background:#141414;color:#cccccc;border:1px solid #444444;border-radius:3px;padding:2px 4px;font-family:inherit;font-size:11px;";
   for (const opt of options) {
     const o = document.createElement("option");
     o.value = opt; o.textContent = opt; if (opt === current) o.selected = true;

@@ -46,16 +46,16 @@ export interface Theme {
 const DARK: Theme = {
   isDark: true,
   bg: "#0b0b0b",
-  panelBg: "#252526",
-  popupBg: "#2d2d2e",
-  border: "#383838",
-  controlBorder: "#4a4a4a",
+  panelBg: "#1e1e1e",
+  popupBg: "#252526",
+  border: "#303030",
+  controlBorder: "#444444",
   text: "#cccccc",
   textDim: "#a8a8a8",
   textFaint: "#808080",
   accent: "#ffffff",
   hoverBg: "rgba(255,255,255,.08)",
-  fieldBg: "#1e1e1e",
+  fieldBg: "#141414",
   font: "'IBM Plex Mono',ui-monospace,monospace",
 };
 

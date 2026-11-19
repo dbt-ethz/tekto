@@ -413,7 +413,7 @@ const panelStyle: CSSProperties = {
   padding: 12,
   background: "rgba(14, 15, 26, 0.95)",
   borderRadius: 8,
-  border: "1px solid #2d2d2e",
+  border: "1px solid #252526",
   color: "#c8cad8",
   fontFamily: "'DM Sans', sans-serif",
   fontSize: 13,

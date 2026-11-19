@@ -6,6 +6,18 @@ before 1.0, breaking changes bump the minor version. See
 
 ## Unreleased
 
+- **The sun by date and place is in the viewer's sun menu.** The sun button of the viewer
+  header (and of the corner shading bar) has a fourth choice beside Morning, Noon and Sunset:
+  Date, which opens a place (24 cities, or a latitude and longitude), a day, an hour and Now
+  under the row, with the sun's altitude and azimuth. It lights the model as the named suns
+  do (Studio, the light following the sun, so the evening and the night come with the hour),
+  and it is in every 3D view: `sketch`, `appShell`, a bare `ThreeRenderer`. In code:
+  `renderer.setSunAt({ latitude, longitude, date: "2026-06-21", hour: 17 })` and
+  `renderer.sunSite`; `sunFor(site)`, `SUN_PLACES` and the `SunSite` type are exported. Hours
+  are the place's standard time (no summer time). The place last chosen is remembered. The
+  playground's own Sun dropdown in its top bar is gone, and with it the sun it pushed into
+  every sketch page on load: a page starts with the renderer's default sun.
+
 - **The dark theme is grey, not blue.** Panels, bars, menus and the viewer header are a neutral
   dark grey (`#1e1e1e`, as an editor's dark theme), with grey borders and text; the view behind
   them (a 3D view, a 2D canvas) is darker still, almost black (`#0b0b0b`, was the navy

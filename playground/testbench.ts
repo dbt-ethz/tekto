@@ -3,9 +3,8 @@
  *
  * The shell provides:
  *   • Page chooser (left of the top bar) — categorised dropdown.
- *   • Sun ▾ (right) — the sun for a date and a place, for 3D sketch pages.
- *     The render style, lighting, section and overlays are in each view's
- *     own header (the viewer tools), the same in every tekto app.
+ *     The render style, lighting, sun, section and overlays are in each
+ *     view's own header (the viewer tools), the same in every tekto app.
  *   • A slot for the running app's menu bar (File, Edit, View, and the
  *     app's own), which each app builds from its commands and mounts here:
  *     `<span data-tekto-menu-slot>`. Exports and imports a sketch registers
@@ -17,44 +16,14 @@
  * 44 px title bar collapses into the top bar's page chooser.
  */
 
-import { SunPosition, SketchInstance, Sketch2DInstance } from "../src";
-
-// ─── Cities (lat, lon, standard-time UTC offset) ────────────────────
-
-interface City { name: string; lat: number; lon: number; tz: number; }
-const CITIES: City[] = [
-  { name: "Zurich",        lat:  47.37, lon:   8.55, tz: +1 },
-  { name: "Berlin",        lat:  52.52, lon:  13.40, tz: +1 },
-  { name: "Paris",         lat:  48.86, lon:   2.35, tz: +1 },
-  { name: "London",        lat:  51.51, lon:  -0.13, tz:  0 },
-  { name: "Madrid",        lat:  40.42, lon:  -3.70, tz: +1 },
-  { name: "Rome",          lat:  41.90, lon:  12.50, tz: +1 },
-  { name: "Stockholm",     lat:  59.33, lon:  18.07, tz: +1 },
-  { name: "Reykjavik",     lat:  64.13, lon: -21.95, tz:  0 },
-  { name: "Moscow",        lat:  55.76, lon:  37.62, tz: +3 },
-  { name: "Dubai",         lat:  25.27, lon:  55.30, tz: +4 },
-  { name: "Mumbai",        lat:  19.08, lon:  72.88, tz: +5.5 },
-  { name: "Singapore",     lat:   1.35, lon: 103.82, tz: +8 },
-  { name: "Beijing",       lat:  39.90, lon: 116.41, tz: +8 },
-  { name: "Tokyo",         lat:  35.68, lon: 139.69, tz: +9 },
-  { name: "Sydney",        lat: -33.87, lon: 151.21, tz: +10 },
-  { name: "Honolulu",      lat:  21.31, lon:-157.86, tz: -10 },
-  { name: "Anchorage",     lat:  61.22, lon:-149.90, tz: -9 },
-  { name: "San Francisco", lat:  37.77, lon:-122.42, tz: -8 },
-  { name: "Mexico City",   lat:  19.43, lon: -99.13, tz: -6 },
-  { name: "Chicago",       lat:  41.88, lon: -87.63, tz: -6 },
-  { name: "New York",      lat:  40.71, lon: -74.01, tz: -5 },
-  { name: "Buenos Aires",  lat: -34.61, lon: -58.38, tz: -3 },
-  { name: "São Paulo",     lat: -23.55, lon: -46.63, tz: -3 },
-  { name: "Cape Town",     lat: -33.92, lon:  18.42, tz: +2 },
-];
+import { SketchInstance, Sketch2DInstance } from "../src";
 
 // ─── Page registry ──────────────────────────────────────────────────
 
 /**
  * What a page hands back. The shell only ever needs to be able to tear it
  * down, so a page that owns its own renderer (an appShell page does) is welcome
- * here too; the sun and render-mode controls key off `as3D()` and no-op for it.
+ * here too.
  */
 type MountedPage = SketchInstance | Sketch2DInstance | { dispose(): void };
 
@@ -184,61 +153,20 @@ const PAGES = new Map(GROUPS.flatMap(g => g.pages.map(p => [p.slug, p] as const)
 
 // ─── State ──────────────────────────────────────────────────────────
 
-// A page is either a 3D Sketch or a 2D Sketch2D. The top-bar's render/lighting/
-// sun/export controls only apply to the 3D one; `as3D()` returns the current
-// sketch only when it's a 3D SketchInstance, so those controls no-op for 2D.
+// A page is a 3D Sketch, a 2D Sketch2D, or an app of its own. `as3D()` returns the
+// current page only when it is a 3D SketchInstance.
 let currentSketch: MountedPage | null = null;
 function as3D(): SketchInstance | null {
   return currentSketch instanceof SketchInstance ? currentSketch : null;
 }
 let currentPage = "";
 
-const SUN_KEY = "tekto.sun";
-interface SunState {
-  cityIdx: number; // -1 = custom
-  lat: number; lon: number; tz: number;
-  dateISO: string;  // YYYY-MM-DD (date part only)
-  hour: number;     // local hours (0..24)
-}
-const sun: SunState = (() => {
-  try {
-    const stored = JSON.parse(localStorage.getItem(SUN_KEY) ?? "");
-    if (stored && typeof stored.lat === "number") return stored;
-  } catch { /* ignore */ }
-  const today = new Date();
-  return {
-    cityIdx: 0, // Zurich
-    lat: CITIES[0].lat, lon: CITIES[0].lon, tz: CITIES[0].tz,
-    dateISO: today.toISOString().slice(0, 10),
-    hour: 13.5,
-  };
-})();
-function persistSun() { localStorage.setItem(SUN_KEY, JSON.stringify(sun)); }
-
 // ─── DOM refs ───────────────────────────────────────────────────────
 
 const app             = document.getElementById("app") as HTMLDivElement;
 const pageChooser     = document.getElementById("page-chooser") as HTMLSelectElement;
-const sunBtn          = document.getElementById("sun-btn") as HTMLButtonElement;
-const sunPopover      = document.getElementById("sun-popover") as HTMLDivElement;
-const sunCity         = document.getElementById("sun-city") as HTMLSelectElement;
-const sunLat          = document.getElementById("sun-lat") as HTMLInputElement;
-const sunLon          = document.getElementById("sun-lon") as HTMLInputElement;
-const sunTz           = document.getElementById("sun-tz") as HTMLInputElement;
-const sunDate         = document.getElementById("sun-date") as HTMLInputElement;
-const sunTime         = document.getElementById("sun-time") as HTMLInputElement;
-const sunAltAz        = document.getElementById("sun-altaz") as HTMLSpanElement;
-const sunBtnLabel     = document.getElementById("sun-btn-label") as HTMLSpanElement;
-const sunNowBtn       = document.getElementById("sun-now") as HTMLButtonElement;
-const sunMenu         = document.getElementById("sun-menu") as HTMLElement;
 const docsLink        = document.getElementById("docs-link") as HTMLAnchorElement;
 const sourceLink      = document.getElementById("source-link") as HTMLAnchorElement;
-
-// The sun for a date and a place applies to 3D sketch pages only. (The render style, the
-// lighting, the section and the rest are in each view's own header, the same in every app.)
-function setShellMode(is2D: boolean) {
-  sunMenu.style.display = is2D ? "none" : "";
-}
 
 // Tag the container so sketches can detect they're inside a shell and
 // suppress their internal header (see SketchConfig.showHeader).
@@ -279,106 +207,6 @@ pageChooser.addEventListener("change", () => {
   loadPage(slug);
 });
 
-// ─── Sun popover + computation ──────────────────────────────────────
-
-for (let i = 0; i < CITIES.length; i++) {
-  const opt = document.createElement("option");
-  opt.value = String(i);
-  opt.textContent = CITIES[i].name;
-  sunCity.appendChild(opt);
-}
-const customOpt = document.createElement("option");
-customOpt.value = "-1"; customOpt.textContent = "Custom";
-sunCity.appendChild(customOpt);
-
-function hhmmFromHour(h: number): string {
-  const hh = Math.floor(h);
-  const mm = Math.round((h - hh) * 60);
-  return `${hh.toString().padStart(2, "0")}:${mm.toString().padStart(2, "0")}`;
-}
-
-/** Push the current `sun` state into the inputs (one-way sync). */
-function syncSunInputs() {
-  sunCity.value = String(sun.cityIdx);
-  sunLat.value  = sun.lat.toFixed(2);
-  sunLon.value  = sun.lon.toFixed(2);
-  sunTz.value   = sun.tz.toFixed(1);
-  sunDate.value = sun.dateISO;
-  sunTime.value = sun.hour.toFixed(2);
-  sunTime.title = hhmmFromHour(sun.hour);
-}
-
-/** Recompute sun direction, push to the current sketch, update the top-bar label. */
-function applySun() {
-  // Compose UTC instant from `sun.dateISO` + `sun.hour` + `sun.tz`.
-  const [y, m, d] = sun.dateISO.split("-").map(Number);
-  const utcHours  = sun.hour - sun.tz;
-  const utcMs     = Date.UTC(y, (m || 1) - 1, d || 1) + utcHours * 3600_000;
-  const result = SunPosition.compute({
-    date: new Date(utcMs),
-    latitude:  sun.lat,
-    longitude: sun.lon,
-  });
-  const altDeg = (result.altitude * 180 / Math.PI);
-  const azDeg  = (result.azimuth  * 180 / Math.PI);
-  const label  = result.isDaytime
-    ? `${altDeg.toFixed(0)}° / ${azDeg.toFixed(0)}°`
-    : "night";
-  sunBtnLabel.textContent = label;
-  sunAltAz.textContent = result.isDaytime
-    ? `Alt ${altDeg.toFixed(1)}°  ·  Az ${azDeg.toFixed(1)}°  ·  ${hhmmFromHour(sun.hour)}`
-    : `Below horizon at ${hhmmFromHour(sun.hour)}`;
-  const s3d = as3D();
-  if (result.isDaytime && s3d) s3d.setSunDirection(result.direction);
-}
-
-sunBtn.addEventListener("click", (e) => {
-  e.stopPropagation();
-  sunPopover.hidden = !sunPopover.hidden;
-});
-
-sunCity.addEventListener("change", () => {
-  const idx = Number(sunCity.value);
-  if (idx >= 0) {
-    const c = CITIES[idx];
-    sun.cityIdx = idx; sun.lat = c.lat; sun.lon = c.lon; sun.tz = c.tz;
-  } else {
-    sun.cityIdx = -1;
-  }
-  syncSunInputs(); persistSun(); applySun();
-});
-function onCustomLatLonTz() {
-  sun.lat = parseFloat(sunLat.value);
-  sun.lon = parseFloat(sunLon.value);
-  sun.tz  = parseFloat(sunTz.value);
-  sun.cityIdx = -1; sunCity.value = "-1";
-  persistSun(); applySun();
-}
-sunLat.addEventListener("change", onCustomLatLonTz);
-sunLon.addEventListener("change", onCustomLatLonTz);
-sunTz .addEventListener("change", onCustomLatLonTz);
-sunDate.addEventListener("change", () => { sun.dateISO = sunDate.value; persistSun(); applySun(); });
-sunTime.addEventListener("input",  () => { sun.hour = parseFloat(sunTime.value); persistSun(); applySun(); });
-
-sunNowBtn.addEventListener("click", () => {
-  const now = new Date();
-  sun.dateISO = now.toISOString().slice(0, 10);
-  // Approximate local-hour using the user's selected TZ (not the system
-  // TZ — keeps the answer consistent with the chosen city).
-  const utcH = now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
-  sun.hour = ((utcH + sun.tz) % 24 + 24) % 24;
-  syncSunInputs(); persistSun(); applySun();
-});
-
-syncSunInputs();
-applySun();
-
-// Hide menus on outside click.
-document.addEventListener("click", () => {
-  sunPopover.hidden = true;
-});
-sunPopover.addEventListener("click", (e) => e.stopPropagation());
-
 // ─── Page loading ───────────────────────────────────────────────────
 
 async function loadPage(slug: string) {
@@ -402,10 +230,7 @@ async function loadPage(slug: string) {
     const mod = await entry.load();
     if (currentPage !== slug) return; // user already navigated away
     currentSketch = mod.default(app);
-    const s3d = as3D();
-    setShellMode(!s3d); // the sun is for 3D sketch pages
-    document.body.classList.toggle("own-bar", !s3d); // a 2D or appShell page: nothing of the shell's bar applies
-    applySun(); // push current sun direction to the fresh sketch (3D only)
+    document.body.classList.toggle("own-bar", !as3D()); // a 2D or appShell page: nothing of the shell's bar applies
   } catch (e) {
     console.error(`Failed to load page "${slug}":`, e);
     app.innerHTML = `<div style="color:#ff6b6b;padding:40px;font-family:monospace">

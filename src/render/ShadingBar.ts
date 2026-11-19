@@ -1,7 +1,7 @@
 /**
  * The shading bar: a small strip of icons in a corner of the 3D view, as Blender has one in
  * its viewport header. The render style (solid, wireframe, hidden line, ghost), the lighting
- * (Flat, Studio) and the sun (Morning, Noon, Sunset). The renderer draws it in its own view,
+ * (Flat, Studio) and the sun (Morning, Noon, Sunset, or a date and a place). The renderer draws it in its own view,
  * so an app only switches it on (`shadingBar: true`); it follows changes made in code. In a
  * strict-2D view (orbit rotation off) it is the 2D palette instead: the hand (drag the view along),
  * zoom in, zoom out, zoom to bounds.
@@ -14,6 +14,7 @@ import type { Lighting } from "./Lighting";
 import type { Marks } from "./Marks";
 import type { AmbientOcclusion } from "./AmbientOcclusion";
 import { ensureSliderStyle } from "../gui/ControlPanel";
+import { SUN_PLACES, hhmm, sunFor, sunNow, sunTimeZone, type SunSite } from "./sunSite";
 
 const svg = (body: string) =>
   `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" `
@@ -32,6 +33,8 @@ export const SHADING_ICONS = {
   noon: svg(`<circle cx="12" cy="12" r="4"/><path d="${RAYS}"/>`),
   morning: HORIZON("M9 5.5 12 2.5l3 3"),
   sunset: HORIZON("M9 6.5l3 3 3-3"),
+  // The sun for a date: a calendar sheet.
+  date: svg(`<rect x="4" y="5.5" width="16" height="14" rx="1.5"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/>`),
   // Ambient occlusion: two faces meeting, darkened into the corner.
   ao: svg(`<path d="M5 4v15h15"/><path d="M5 9.5v9.5h9.5A9.5 9.5 0 0 0 5 9.5z" fill="currentColor" fill-opacity="0.5" stroke="none"/>`),
   // Overlays: two overlapping rings, as Blender draws it.
@@ -56,6 +59,8 @@ const ZOOM_STEP = 1.25;
 
 const MODES: [RenderMode, string][] = [["solid", "Solid"], ["wireframe", "Wireframe"], ["hiddenline", "Hidden line"], ["ghost", "Ghost"]];
 const LIGHTS: [LightingMode, string][] = [["flat", "Flat lighting"], ["studio", "Studio lighting: soft shadows"]];
+/** Where the sun menu remembers the place last chosen. */
+const SUN_PLACE_KEY = "tekto.sunPlace";
 const SUNS: [SunPreset, string][] = [["morning", "Morning"], ["noon", "Noon"], ["sunset", "Sunset"]];
 
 /** What the bar asks of its renderer beyond the parts: overlays, framing, zooming, a snapshot,
@@ -94,7 +99,7 @@ export interface ViewerTools {
   modes?: boolean;
   /** Flat / Studio lighting, and ambient occlusion beside it. */
   light?: boolean;
-  /** The sun: morning, noon, sunset. */
+  /** The sun: morning, noon, sunset, or a date, an hour and a place. */
   sun?: boolean;
   /** The section through the model. */
   section?: boolean;
@@ -192,18 +197,30 @@ export class ShadingBar {
     group(sunAndSection, () => {
       if (tools.sun !== false) {
         const sunPop = this.popover(v, h);
-        const sun = this.button(SHADING_ICONS.noon, "Sun: morning, noon, sunset", () => this.openPop === sunPop, () => this.toggle(sunPop));
+        sunPop.style.flexDirection = "column";
+        const row = document.createElement("div");
+        row.style.cssText = "display:flex;gap:2px;";
+        sunPop.appendChild(row);
+        const sun = this.button(SHADING_ICONS.noon, "Sun: morning, noon, sunset, or a date and a place", () => this.openPop === sunPop, () => this.toggle(sunPop));
         this.openers.set(sunPop, sun);
-        this.paints.push(() => { sun.innerHTML = SHADING_ICONS[this.lighting.currentSunPreset ?? "noon"]; });
-        for (const [preset, label] of SUNS) {
-          const b = this.button(`${SHADING_ICONS[preset]}<span style="font:500 9.5px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${label}</span>`,
-            `${label}: Studio, the light following the sun`, () => this.lighting.currentSunPreset === preset,
-            () => { this.lighting.sunPreset(preset); this.toggle(null); }, sunPop);
+        this.paints.push(() => { sun.innerHTML = SHADING_ICONS[this.sunIcon()]; });
+        const tile = (b: HTMLButtonElement) => {
           b.style.width = "54px";
           b.style.height = "42px";
           b.style.flexDirection = "column";
           b.style.gap = "4px";
+        };
+        const caption = (label: string) => `<span style="font:500 9.5px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${label}</span>`;
+        for (const [preset, label] of SUNS) {
+          tile(this.button(`${SHADING_ICONS[preset]}${caption(label)}`,
+            `${label}: Studio, the light following the sun`, () => this.lighting.currentSunPreset === preset,
+            () => { this.lighting.sunPreset(preset); this.toggle(null); }, row));
         }
+        // The fourth sun: a date, an hour and a place (its fields open under the row).
+        tile(this.button(`${SHADING_ICONS.date}${caption("Date")}`,
+          "Date: the sun for a date, an hour and a place", () => !!this.lighting.currentSunSite,
+          () => this.lighting.sunAt(this.sunState), row));
+        this.sunControls(sunPop);
       }
 
       // The section: which way it cuts, where (a slider in metres), which side stays.
@@ -320,12 +337,138 @@ export class ShadingBar {
     const next = pop && this.openPop !== pop ? pop : null;
     if (this.openPop) this.openPop.style.display = "none";
     if (next) next.style.display = "flex";
-    const opener = next && this.header ? this.openers.get(next) : undefined;
-    if (next && opener) {   // in the header: under its button, kept inside the header's width
-      next.style.left = `${Math.max(0, Math.min(opener.offsetLeft, this.root.clientWidth - next.offsetWidth - 4))}px`;
-    }
     this.openPop = next;
+    if (next) this.placePop(next);
     this.paint();
+  }
+
+  /** In the header: a popover under its button, kept inside the header's width. */
+  private placePop(pop: HTMLDivElement): void {
+    const opener = this.header ? this.openers.get(pop) : undefined;
+    if (opener) pop.style.left = `${Math.max(0, Math.min(opener.offsetLeft, this.root.clientWidth - pop.offsetWidth - 4))}px`;
+  }
+
+  // ── The sun for a date and a place ──────────────────────────────────────────────────────
+  /** What the Date sun's fields hold: the place last chosen (remembered), today, 13:30. */
+  private sunState: SunSite = (() => {
+    const z = SUN_PLACES[0];
+    let place: Partial<SunSite> = { place: z.name, latitude: z.latitude, longitude: z.longitude, timeZone: z.timeZone };
+    try {
+      const stored = JSON.parse(localStorage.getItem(SUN_PLACE_KEY) ?? "null");
+      if (stored && Number.isFinite(stored.latitude) && Number.isFinite(stored.longitude)) {
+        place = { place: stored.place, latitude: stored.latitude, longitude: stored.longitude, timeZone: stored.timeZone };
+      }
+    } catch { /* no storage: Zurich */ }
+    return { ...place, date: new Date().toISOString().slice(0, 10), hour: 13.5 } as SunSite;
+  })();
+
+  /** The sun button's icon: the named sun, or for a date the one nearest its hour. */
+  private sunIcon(): "morning" | "noon" | "sunset" {
+    const site = this.lighting.currentSunSite;
+    if (!site) return this.lighting.currentSunPreset ?? "noon";
+    return this.lighting.sunAltitude() > 20 ? "noon" : site.hour < 12 ? "morning" : "sunset";
+  }
+
+  /** The Date sun's fields under the sun popover's row: place, latitude and longitude, date, hour. */
+  private sunControls(pop: HTMLDivElement): void {
+    ensureSliderStyle(document);
+    const form = document.createElement("div");
+    form.dataset.tektoSunDate = "";
+    form.style.cssText = "display:none;flex-direction:column;gap:6px;padding:6px 4px 4px;margin-top:2px;"
+      + "border-top:1px solid rgba(255,255,255,.1);color:rgba(232,235,240,.72);"
+      + "font:11px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;";
+    const FIELD = "box-sizing:border-box;height:22px;min-width:0;padding:0 5px;border:1px solid rgba(255,255,255,.14);"
+      + "border-radius:4px;background:#141414;color:#e8ebf0;font:inherit;color-scheme:dark;";
+    const line = (label: string, ...controls: HTMLElement[]) => {
+      const l = document.createElement("div");
+      l.style.cssText = "display:flex;align-items:center;gap:6px;";
+      const name = document.createElement("span");
+      name.textContent = label;
+      name.style.cssText = "flex:0 0 38px;";
+      l.append(name, ...controls);
+      form.appendChild(l);
+    };
+    const field = <K extends "input" | "select">(tag: K, label: string, type?: string): HTMLElementTagNameMap[K] => {
+      const f = document.createElement(tag);
+      if (type) (f as HTMLInputElement).type = type;
+      f.setAttribute("aria-label", label);
+      f.title = label;
+      f.style.cssText = `${FIELD}flex:1;`;
+      return f;
+    };
+
+    const place = field("select", "Place");
+    for (const p of SUN_PLACES) place.add(new Option(p.name, p.name));
+    place.add(new Option("Other", ""));
+    const lat = field("input", "Latitude, north positive", "number");
+    const lon = field("input", "Longitude, east positive", "number");
+    lat.step = lon.step = "0.01";
+    [lat.min, lat.max, lon.min, lon.max] = ["-85", "85", "-180", "180"];
+    const date = field("input", "Date", "date");
+    const time = field("input", "Time of day (standard time)", "range");
+    [time.min, time.max, time.step] = ["0", "24", "0.25"];
+    time.className = "tekto-slider";
+    time.style.cssText = "flex:1;width:0;min-width:40px;--tekto-track:rgba(255,255,255,.18);--tekto-thumb:#e8ebf0;";
+    const clock = document.createElement("span");
+    clock.style.cssText = "flex:0 0 38px;text-align:right;color:#e8ebf0;font:11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;";
+    const readout = document.createElement("span");
+    readout.dataset.tektoSunReadout = "";
+    readout.style.cssText = "flex:1;white-space:nowrap;";
+    const now = document.createElement("button");
+    now.type = "button";
+    now.textContent = "Now";
+    now.title = "Today, at this hour";
+    now.style.cssText = `${FIELD}cursor:pointer;padding:0 9px;`;
+    line("Place", place);
+    line("Lat", lat, lon);
+    line("Date", date);
+    line("Time", time, clock);
+    const foot = document.createElement("div");
+    foot.style.cssText = "display:flex;align-items:center;gap:6px;padding-top:2px;";
+    foot.append(readout, now);
+    form.appendChild(foot);
+    pop.appendChild(form);
+
+    const apply = (change: Partial<SunSite>) => {
+      this.sunState = { ...this.sunState, ...change };
+      const { place: name, latitude, longitude, timeZone } = this.sunState;
+      try { localStorage.setItem(SUN_PLACE_KEY, JSON.stringify({ place: name, latitude, longitude, timeZone })); } catch { /* not remembered */ }
+      this.lighting.sunAt(this.sunState);
+      this.paint();
+    };
+    const num = (el: HTMLInputElement, fallback: number) => {
+      const v = Number(el.value);
+      return el.value === "" || !Number.isFinite(v) ? fallback : Math.min(Number(el.max), Math.max(Number(el.min), v));
+    };
+    place.addEventListener("change", () => {
+      const p = SUN_PLACES.find((q) => q.name === place.value);
+      if (p) apply({ place: p.name, latitude: p.latitude, longitude: p.longitude, timeZone: p.timeZone });
+      else apply({ place: undefined, timeZone: undefined });           // the hour by the longitude
+    });
+    const moved = () => apply({ place: undefined, timeZone: undefined, latitude: num(lat, this.sunState.latitude), longitude: num(lon, this.sunState.longitude) });
+    lat.addEventListener("change", moved);
+    lon.addEventListener("change", moved);
+    date.addEventListener("change", () => { if (date.value) apply({ date: date.value }); });
+    time.addEventListener("input", () => apply({ hour: Number(time.value) }));
+    now.addEventListener("click", () => apply(sunNow(this.sunState)));
+
+    const set = (el: HTMLInputElement | HTMLSelectElement, value: string) => { if (document.activeElement !== el && el.value !== value) el.value = value; };
+    this.paints.push(() => {
+      const site = this.lighting.currentSunSite;
+      const shown = form.style.display !== "none";
+      form.style.display = site ? "flex" : "none";
+      if (!site) return;
+      this.sunState = { ...site };                                     // also when set in code (renderer.setSunAt)
+      set(place, site.place && SUN_PLACES.some((p) => p.name === site.place) ? site.place : "");
+      set(lat, site.latitude.toFixed(2));
+      set(lon, site.longitude.toFixed(2));
+      set(date, site.date);
+      set(time, String(site.hour));
+      clock.textContent = hhmm(site.hour);
+      const s = sunFor(site), deg = (r: number) => Math.round(r * 180 / Math.PI), tz = sunTimeZone(site);
+      readout.textContent = `${s.isDaytime ? `Alt ${deg(s.altitude)}° · Az ${deg(s.azimuth)}°` : "Below the horizon"} · UTC${tz < 0 ? "−" : "+"}${Math.abs(tz)}`;
+      if (!shown && this.openPop === pop) this.placePop(pop);          // wider now: keep it inside the header
+    });
   }
 
   /** The section popover's controls, kept in step with the cut however it was set. */

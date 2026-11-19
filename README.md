@@ -311,15 +311,15 @@ Walls stand on their storey's elevation and run up to the underside of the floor
 
 The playground's testbench ([playground/testbench.html](playground/testbench.html) + [.ts](playground/testbench.ts)) is also a *template* for custom apps. Three reusable pieces:
 
-- **Top-bar** with global controls — page chooser (categorised dropdown), render mode (solid / wireframe / hidden-line / ghost), Cut (a section along Z, X or Y, and where), lighting preset (Flat / Studio with PBR + soft shadows + ACES tonemapping), Sun popover (city / lat-lon / date / hour / `Now` button), Export ▾ and Import ▾ menus populated dynamically from the current sketch.
+- **Top-bar** — the page chooser (categorised dropdown), links to the page's docs and source, and a slot (`data-tekto-menu-slot`) where the running app mounts its menu bar (File, Edit, View and its own, from its commands). The view's own tools (render style, lighting, sun, section, overlays, snapshot) are not in it: they are in each 3D view's header, the same in every app.
 - **`SketchConfig.showHeader`** — set `false` (or auto-detected when the container has `data-shell="…"`) to suppress the sketch's internal title bar so the shell's top bar becomes the single source of page identity.
-- **`lab.registerExport({ name, fileName, handler })`** / **`lab.registerImport({ name, accept, handler })`** — sketches register handlers; the shell discovers them via `SketchInstance.getExports/getImports` + `onExportsChange/onImportsChange` and shows menu items automatically.
+- **`lab.registerExport({ name, fileName, handler })`** / **`lab.registerImport({ name, accept, handler })`** — sketches register handlers; they appear as items of the File menu.
 
 A custom app can either copy the relevant blocks out of `testbench.html` / `testbench.ts` and adapt them, or use the testbench unchanged and add its own pages under `playground/pages/`.
 
 ## Lighting presets
 
-Two presets, switchable from the top bar's *Light* dropdown (persisted in `localStorage`):
+Two presets, switchable in the viewer header:
 
 | Mode | Materials | Shadows | Tonemapping | Best for |
 |---|---|---|---|---|
@@ -328,7 +328,7 @@ Two presets, switchable from the top bar's *Light* dropdown (persisted in `local
 
 Flat is tuned for a dark page: a dim blue sky, so colours read darker and cooler. An app whose colours are a key beside the model sets `flatLighting: "plain"` on the renderer (`appShell({ renderer: { flatLighting: "plain" } })`): a white sky under which a face turned to it shows its own colour.
 
-The sun direction is driven from the top-bar Sun popover (`SunPosition.compute({ date, latitude, longitude })` → `SketchInstance.setSunDirection(direction)`). Inside a sketch, `lab.setSunDirection(dir)` lets the sketch override per-frame (animated daily cycles, etc.).
+The sun is set in the viewer header's sun menu: Morning, Noon, Sunset, or Date — a place (a city, or latitude and longitude), a day and an hour, with Studio's light following it into the evening and the night. In code: `renderer.setSunPreset("sunset")`, `renderer.setSunAt({ latitude: 47.37, longitude: 8.55, date: "2026-06-21", hour: 17 })`, or a direction of your own (`SunPosition.compute({ date, latitude, longitude })` → `setSunDirection(direction)`). Inside a sketch, `lab.setSunDirection(dir)` lets the sketch override per-frame (animated daily cycles, etc.).
 
 ### Flat vs smooth shading
 

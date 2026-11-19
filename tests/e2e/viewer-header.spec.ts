@@ -114,7 +114,7 @@ test("in a strict-2D view the column has the hand: on, a left drag moves the vie
 test("a header popover opens under its button; Markup's Done stays in reach while drawing", async ({ page }) => {
   const errors = await open(page);
   const header = page.locator("[data-tekto-viewer-header]");
-  const sun = header.getByRole("button", { name: "Sun: morning, noon, sunset" });
+  const sun = header.getByRole("button", { name: /^Sun:/ });
   await sun.click();
   const morning = header.getByRole("button", { name: /^Morning/ });   // the popover's first preset
   await expect(morning).toBeVisible();
@@ -152,5 +152,50 @@ test("one row, in order: the view's tools, who is here (shared editing), ✎ Mar
       expect(b.y + b.height).toBeLessThanOrEqual(h.y + h.height);
     }
   }
+  expect(errors).toEqual([]);
+});
+
+test("the sun for a date and a place is in the sun popover, not in the shell's bar", async ({ page }) => {
+  const errors = await open(page);
+  await expect(page.locator("#topbar #sun-btn")).toHaveCount(0);
+  const header = page.locator("[data-tekto-viewer-header]");
+  const site = () => page.evaluate(() => (window as any).__tekto.owner.renderer.sunSite);
+  const altitude = () => page.evaluate(() => (window as any).__tekto.owner.renderer.sunAltitude as number);
+  expect(await site()).toBeNull();
+
+  await header.getByRole("button", { name: /^Sun:/ }).click();
+  const fields = header.locator("[data-tekto-sun-date]");
+  await expect(fields).toBeHidden();                             // the three named suns alone, until Date is chosen
+  const date = header.getByRole("button", { name: /^Date:/ });
+  await date.click();
+  await expect(fields).toBeVisible();                            // and the popover stays open
+  await expect(date).toHaveAttribute("aria-pressed", "true");
+  expect(await site()).toMatchObject({ place: "Zurich", latitude: 47.37, hour: 13.5 });
+  expect(await page.evaluate(() => (window as any).__tekto.owner.scene.lightingMode)).toBe("studio");
+
+  // Midsummer noon in Zurich, then the evening: the sun comes down.
+  await header.getByLabel("Date", { exact: true }).fill("2026-06-21");
+  await header.getByLabel("Time of day (standard time)").fill("12.5");
+  await expect(header.locator("[data-tekto-sun-readout]")).toContainText("Alt 66°");
+  const noon = await altitude();
+  expect(noon).toBeGreaterThan(60);
+  await header.getByLabel("Time of day (standard time)").fill("19");
+  expect(await altitude()).toBeLessThan(noon - 40);
+
+  // Another place: its coordinates, and its own time.
+  await header.getByLabel("Place", { exact: true }).selectOption("Tokyo");
+  await expect(header.getByLabel("Latitude, north positive")).toHaveValue("35.68");
+  await expect(header.locator("[data-tekto-sun-readout]")).toContainText("UTC+9");
+  // The popover is inside the view, however wide it grew.
+  const [h, f] = [(await header.boundingBox())!, (await fields.boundingBox())!];
+  expect(f.x + f.width).toBeLessThanOrEqual(h.x + h.width);
+
+  // A named sun takes over: the fields fold away. Set in code: they come back.
+  await header.getByRole("button", { name: /^Noon/ }).click();
+  expect(await site()).toBeNull();
+  await page.evaluate(() => (window as any).__tekto.owner.renderer.setSunAt({ latitude: 51.51, longitude: -0.13, date: "2026-12-21", hour: 12 }));
+  await header.getByRole("button", { name: /^Sun:/ }).click();
+  await expect(header.getByLabel("Place", { exact: true })).toHaveValue("");   // "Other": no named place
+  await expect(header.getByLabel("Date", { exact: true })).toHaveValue("2026-12-21");
   expect(errors).toEqual([]);
 });

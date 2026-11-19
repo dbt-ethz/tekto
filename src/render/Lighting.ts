@@ -8,6 +8,7 @@ import { Vec3 } from "../core/math/vectors";
 import type { LightingMode } from "../scene/Scene";
 import type { RendererCore } from "./RendererCore";
 import { daylight, flatLights, studioLights, sunDirection, SUN_PRESETS, type SunPreset } from "./viewRules";
+import { sunFor, type SunSite } from "./sunSite";
 
 export class Lighting {
   ambientLight: THREE.AmbientLight;
@@ -126,6 +127,7 @@ export class Lighting {
 
   setSunDirection(direction: Vec3, distance = 50): void {
     this.currentSunPreset = null;
+    this.currentSunSite = null;
     const x = direction.x;
     const y = this.core.isZUp ? direction.y :  direction.z;
     const z = this.core.isZUp ? direction.z : -direction.y;
@@ -183,6 +185,18 @@ export class Lighting {
     const d = sunDirection(p.azimuth, p.altitude);
     this.setSunDirection(new Vec3(d.x, d.y, d.z));
     this.currentSunPreset = name;
+  }
+
+  /** The date and place `sunAt` last set, until the sun is moved another way. */
+  currentSunSite: SunSite | null = null;
+
+  /** The sun for a date, an hour and a place: Studio, the light following the sun (night included). */
+  sunAt(site: SunSite): void {
+    const sun = sunFor(site);
+    this.core.gScene.setLightingMode("studio");
+    this.setDaylight(true);
+    this.setSunDirection(sun.direction);
+    this.currentSunSite = { ...site };
   }
 
   setDaylight(on: boolean): void {

@@ -24,7 +24,10 @@ app.scene.setLightingMode("studio");                  // "flat" | "studio"
 app.renderer.setAmbientOcclusion(true);
 app.renderer.setSunPreset("sunset");                  // "morning" | "noon" | "sunset"
 
-// The sun for a place and time: Zurich, midsummer, 11:30 UTC
+// The sun for a date, an hour and a place, as the sun menu's "Date" sets it (Studio, day or night)
+app.renderer.setSunAt({ latitude: 47.37, longitude: 8.55, date: "2026-06-21", hour: 17 });
+
+// Or only its direction, computed yourself: Zurich, midsummer, 11:30 UTC
 const sun = SunPosition.compute({ date: new Date(Date.UTC(2026, 5, 21, 11, 30)), latitude: 47.37, longitude: 8.55 });
 if (sun.isDaytime) app.renderer.setSunDirection(sun.direction);
 
@@ -39,5 +42,5 @@ app.scene.addLight(new Vec3(0, 0, 3.4), { intensity: 3, range: 4 }, { color: "#f
 - Flat lighting is tuned for a dark page. For a model whose colours are a key, `appShell({ renderer: { flatLighting: "plain" } })` shows each colour as it is.
 
 ::: tip Playground
-[App Shell](https://github.com/dbt-ethz/tekto/blob/main/playground/pages/app-shell.ts) (`?page=app-shell`) has lamps under its floors; the testbench's Sun popover drives every 3D page.
+[App Shell](https://github.com/dbt-ethz/tekto/blob/main/playground/pages/app-shell.ts) (`?page=app-shell`) has lamps under its floors. Every 3D page has the sun in its viewer header: Morning, Noon, Sunset, or Date for a place, a day and an hour.
 :::

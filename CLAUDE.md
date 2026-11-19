@@ -100,14 +100,14 @@ The playground ([playground/pages/](playground/pages/)) is the canonical place t
 
 The testbench ([playground/testbench.html](playground/testbench.html) + [.ts](playground/testbench.ts)) provides a top-bar shell that *every* sketch mounted into it inherits:
 
-- **Brand · Page chooser** (left).
-- **Render Mode** · **Lighting** · **Sun ▾** popover · **Export ▾** · **Import ▾** (right).
+- **Brand · Page chooser · Docs · Source**, then a slot for the running app's menu bar (`data-tekto-menu-slot`: File, Edit, View and the app's own, from its commands).
+- Nothing about the view: render style, lighting, sun (named, or by date and place), section, overlays and snapshot are in each 3D view's own header (the viewer tools), the same in every app.
 
 A sketch participates in the shell by:
 
 - Letting the shell auto-detect a `data-shell="…"` container and suppress the sketch's own 44 px title bar. No code change needed if you mount via `sketch({ container })`.
-- Calling `lab.registerExport({name, fileName, handler})` / `lab.registerImport({name, accept, handler})` to populate the menus. Sketches that don't register anything just hide those buttons.
-- The shell drives the directional light via `SketchInstance.setSunDirection(direction)` based on the popover's date/lat/lon — sketches don't need their own sun controls. They CAN call `lab.setSunDirection(dir)` inside the sketch fn to override per-frame (animated daily cycles).
+- Calling `lab.registerExport({name, fileName, handler})` / `lab.registerImport({name, accept, handler})`: they become File menu items.
+- The sun is the viewer's: sketches don't need their own sun controls. They CAN call `lab.setSunDirection(dir)` inside the sketch fn to override per-frame (animated daily cycles); `renderer.setSunAt({ latitude, longitude, date, hour })` sets it by date and place.
 
 When you build a new custom app outside the testbench: use `appShell()` from [src/sketch/AppShell.ts](src/sketch/AppShell.ts) — it provides the panel (via the shared `ControlPanel`), the Scene + ThreeRenderer harness, and the top bar (`viewerToolbar` in [src/sketch/ViewerToolbar.ts](src/sketch/ViewerToolbar.ts): lighting and AO / render mode / camera / Cut / Sun; a React app mounts the same bar as `tekto/react`'s `ViewerToolbar`). Do NOT copy panel/top-bar code into an app; if the shell lacks something, extend `AppShell.ts` or `ViewerToolbar.ts` in the library.
 

@@ -45,6 +45,8 @@ export type { ThreeRendererConfig, PickInfo } from "./render/ThreeRenderer";
 export type { AmbientOcclusionOptions } from "./render/AmbientOcclusion";
 export type { ShadingBarCorner, ShadingBarPlacement, ViewerTools } from "./render/ShadingBar";
 export type { SunPreset } from "./render/viewRules";
+export { SUN_PLACES, sunFor } from "./render/sunSite";
+export type { SunSite, SunPlace } from "./render/sunSite";
 export { SVGRenderer } from "./render/SVGRenderer";
 export { SheetCanvas, drawSheet, fitSheet } from "./render/SheetCanvas";
 export type { SheetCanvasOptions, SheetTransform, DrawSheetOptions } from "./render/SheetCanvas";

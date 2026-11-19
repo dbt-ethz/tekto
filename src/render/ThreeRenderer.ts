@@ -32,6 +32,7 @@ import { downloadSnapshot } from "./snapshot";
 /** The overlays a renderer has itself (an app can register more, such as notes). */
 type BuiltInOverlay = "grid" | "axes" | "wireframe" | "labels";
 import type { FlatLighting, StudioLighting, SunPreset } from "./viewRules";
+import type { SunSite } from "./sunSite";
 import { AmbientOcclusion, type AmbientOcclusionOptions } from "./AmbientOcclusion";
 import { shown } from "./viewRules";
 
@@ -64,7 +65,7 @@ export interface ThreeRendererConfig {
    *  elevation, drag it to orbit, double-click to square up, toggle persp/ortho under it. */
   navGizmo: boolean | "top-left" | "top-right" | "bottom-left" | "bottom-right";
   /** The shading bar in a corner of the view (`true` = top left): minimal icons for the
-   *  render style, the lighting and the sun (morning, noon, sunset), as Blender has in its
+   *  render style, the lighting and the sun (morning, noon, sunset, or a date and a place), as Blender has in its
    *  viewport header. The renderer draws it, so an app only switches it on. `"header"`: a strip
    *  across the top of the view (Blender's viewport header) with slots for the app's controls
    *  (`viewerHeader`), the axis widget top right under it and zoom in / out / to bounds below that
@@ -786,9 +787,20 @@ export class ThreeRenderer {
   get sunPreset(): SunPreset | null { return this.lighting.currentSunPreset; }
 
   /**
+   * The sun for a date, an hour and a place, as the sun menu's "Date" sets it: Studio, the
+   * light following the sun, so the hour gives the evening and the night too.
+   *
+   *   renderer.setSunAt({ latitude: 47.37, longitude: 8.55, date: "2026-06-21", hour: 17 });
+   */
+  setSunAt(site: SunSite): void { this.lighting.sunAt(site); this.shadingBar?.paint(); }
+
+  /** The date and place last set (`setSunAt`), or null once the sun was moved another way. */
+  get sunSite(): SunSite | null { return this.lighting.currentSunSite; }
+
+  /**
    * Let Studio's light follow the sun: with it on, the sun's colour and strength, the sky,
    * the exposure and the background come from the sun's altitude (`setSunDirection`, which
-   * the shell's Sun popover drives by date and hour), so evening and dusk follow from the
+   * `setSunAt` drives by date and hour), so evening and dusk follow from the
    * hour: noon as Studio is, a warm low sun, a blue dusk, night. Flat lighting is unchanged.
    * Off by default.
    */

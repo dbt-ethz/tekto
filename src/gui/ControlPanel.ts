@@ -249,8 +249,9 @@ export class ControlPanel {
     for (const b of buttons) if (inTab(b.tab, b.menu)) groupOf(b.group).buttons.push(b);
     for (const r of customRows) if (inTab(r.tab)) groupOf(r.group).rows.push(r);
 
-    // Nothing but the default group: no heading over it on a plain panel, nor in a tab (its name is the heading).
-    const bare = (!!t.plain || hasTabs) && groups.size === 1 && groups.has(DEFAULT_GROUP);
+    // Nothing but the default group: no heading over it. "Parameters" over the only list of
+    // parameters says nothing (the panel's own top row, or the tab, names it already).
+    const bare = groups.size === 1 && groups.has(DEFAULT_GROUP);
     for (const [name, content] of groups) {
       body.appendChild(this.buildSection(name, content, bare));
     }

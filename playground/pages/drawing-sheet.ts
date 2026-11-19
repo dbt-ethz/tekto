@@ -124,7 +124,6 @@ export default function (container: HTMLElement) {
   const app = appShell({
     title: "Drawing Sheet",
     container,
-    topBar: false,
     camera: [24, -24, 16],
     target: [6, 3.5, 2],
     params: {
@@ -179,7 +178,11 @@ export default function (container: HTMLElement) {
     view.setSheet(sheet);
     status();
   });
-  app.onDisplay(() => { overlay.style.display = app.params.get("show") === "Drawing" ? "" : "none"; });
+  app.onDisplay(() => {
+    const drawing = app.params.get("show") === "Drawing";
+    overlay.style.display = drawing ? "" : "none";
+    app.renderer.setViewerToolsVisible(!drawing);   // the render style, sun and section are the 3D view's
+  });
 
   function status() {
     const n = selection.size;

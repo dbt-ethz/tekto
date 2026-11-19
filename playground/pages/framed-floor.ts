@@ -55,9 +55,6 @@ export default function (container: HTMLElement) {
   const app = appShell({
     title: "Framed Floor",
     container,
-    topBar: true,
-    navGizmo: true,
-    shadingBar: true,
     units: "m",
     camera: [8, -5.5, 7],
     target: [3, 2.25, 1.8],

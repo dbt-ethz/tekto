@@ -26,7 +26,7 @@ import { CameraRig } from "./CameraRig";
 import { Pointer, type GizmoMode, type PickInfo } from "./Pointer";
 import { Marks } from "./Marks";
 import { FadingGrid } from "./FadingGrid";
-import { ShadingBar, VIEWER_HEADER_H, type ShadingBarPlacement } from "./ShadingBar";
+import { ShadingBar, VIEWER_HEADER_H, type ShadingBarPlacement, type ViewerTools } from "./ShadingBar";
 import { downloadSnapshot } from "./snapshot";
 
 /** The overlays a renderer has itself (an app can register more, such as notes). */
@@ -70,6 +70,8 @@ export interface ThreeRendererConfig {
    *  (`viewerHeader`), the axis widget top right under it and zoom in / out / to bounds below that
    *  (and, in a strict-2D view, the hand). */
   shadingBar: boolean | ShadingBarPlacement;
+  /** Which of the shading bar's tools are shown: each is on unless set to false (`{ sun: false }`). */
+  viewerTools: ViewerTools;
   /**
    * The scene's unit, as a label (`"m"`, `"mm"`, `"ft"`): readouts such as the shading bar's
    * section show coordinates in it, and a cut stays at its coordinate. Unset (null, the
@@ -115,6 +117,7 @@ const DEFAULTS: ThreeRendererConfig = {
   up: "y",
   navGizmo: false,
   shadingBar: false,
+  viewerTools: {},
   units: null,
   headerHost: null,
   flatLighting: "sketch",
@@ -252,7 +255,7 @@ export class ThreeRenderer {
     this.rig = new CameraRig(this.core, this.camera, orthoCam, cfg.navGizmo, cfg.shadingBar === "header" ? VIEWER_HEADER_H : 0);
     this.pointer = new Pointer(this.core, this.builder, this.marks);
     // After the rig: the bar reads whether the view orbits (its 2D palette when it does not).
-    if (cfg.shadingBar) this.shadingBar = new ShadingBar(this.core, this.lighting, this.marks, this.ao, this, cfg.shadingBar === true ? "top-left" : cfg.shadingBar, cfg.headerHost);
+    if (cfg.shadingBar) this.shadingBar = new ShadingBar(this.core, this.lighting, this.marks, this.ao, this, cfg.shadingBar === true ? "top-left" : cfg.shadingBar, cfg.headerHost, cfg.viewerTools);
 
     // A restored context comes back blank; nothing else would ask for a draw.
     this.renderer.domElement.addEventListener("webglcontextrestored", () => this.requestRender());
@@ -858,6 +861,14 @@ export class ThreeRenderer {
     this.rig.setOrbitRotateEnabled(enabled);
     this.pointer.handMode = this.rig.handMode;
     this.shadingBar?.paint();
+  }
+
+  /** Hide or show the viewer's tools (the shading bar's icons, the zoom column, the axis widget)
+   *  while the view shows something they do not apply to, such as a drawing laid over it. The
+   *  header strip stays, with the app's own slots and ✎ Markup. */
+  setViewerToolsVisible(visible: boolean): void {
+    this.shadingBar?.setToolsVisible(visible);
+    this.rig.setGizmoShown(visible);
   }
 
   /** The hand, a strict-2D view's tool (the 2D palette has its button): on, the left button drags

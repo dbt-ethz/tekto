@@ -1,6 +1,6 @@
 /**
  * Camera — Reference cubes showing axis orientation, in the viewer header layout
- * (`shadingBar: "header"`): the page's own view buttons in the header's left slot, the
+ * (the default of every 3D view): the page's own view buttons in the header's left slot, the
  * shading icons and ✎ Markup on its right, the axis widget and the zoom column top right.
  * Port of HDGEO CameraTestPage (Y-up adaptation).
  */
@@ -52,8 +52,6 @@ export default function (container: HTMLElement): SketchInstance {
     container,
     title: "Camera",
     background: 0x0a0b14,
-    shadingBar: "header",
-    navGizmo: true,
     camera: [6, 6, 8],
     target: [0, 1, 0],
   });

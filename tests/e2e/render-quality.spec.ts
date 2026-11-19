@@ -125,8 +125,11 @@ test("Studio: no warnings, a cut shows its poché on double-sided meshes and dro
     c.width = img.width; c.height = img.height;
     const g = c.getContext("2d")!;
     g.drawImage(img, 0, 0);
+    // The median of nine pixels around the point: one of them may lie on an edge line drawn over the fill.
+    const at = (dx: number, dy: number) => [...g.getImageData(Math.round(p.x * k) + dx, Math.round(p.y * k) + dy, 1, 1).data.slice(0, 3)];
+    const patch = [-5, 0, 5].flatMap((dx) => [-5, 0, 5].map((dy) => at(dx, dy)));
     return {
-      pixel: [...g.getImageData(Math.round(p.x * k), Math.round(p.y * k), 1, 1).data.slice(0, 3)],
+      pixel: [0, 1, 2].map((i) => patch.map((c) => c[i]).sort((a, b) => a - b)[4]),
       offset: surface.material.polygonOffset,
       clipShadows: surface.material.clipShadows,
     };
@@ -424,7 +427,7 @@ test("the shading bar's AO toggle drives ambient occlusion, and follows it set i
 });
 
 test("the shading bar's overlays, Frame and Snapshot", async ({ page }) => {
-  await page.goto("/testbench.html?page=site-editor");                // shadingBar, notes
+  await page.goto("/testbench.html?page=site-editor");                // the viewer header, notes
   await page.waitForFunction(() => (window as any).siteEditor?.doc.count("blocks") >= 1, null, { timeout: 15_000 });
   const bar = page.locator("[data-tekto-shading-bar]");
   const r = () => page.evaluate(() => {
@@ -458,7 +461,7 @@ test("the shading bar's overlays, Frame and Snapshot", async ({ page }) => {
 
   // Frame: the selection, or everything.
   await page.evaluate(() => { const { doc, selection } = (window as any).siteEditor; selection.select([`blocks/${doc.ids("blocks")[1]}`]); });
-  await bar.getByRole("button", { name: /^Frame/ }).click();
+  await page.locator("[data-tekto-nav-column]").getByRole("button", { name: /^Zoom to bounds/ }).click();   // the header layout's Frame
   await expect.poll(() => page.evaluate(() => Math.round((window as any).__tekto.owner.renderer.controls.target.x))).toBe(20);
 
   // Snapshot: a PNG download.
@@ -469,10 +472,11 @@ test("the shading bar's overlays, Frame and Snapshot", async ({ page }) => {
 test("in a strict-2D view the shading bar is the 2D palette: the hand, zoom in, zoom out, zoom to bounds", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(String(e)));
-  await page.goto("/testbench.html?page=mesh-factory");               // shadingBar: true
+  await page.goto("/testbench.html?page=mesh-factory");               // the viewer header: zoom in the column under the axis widget
   const bar = page.locator("[data-tekto-shading-bar]");
+  const nav = page.locator("[data-tekto-nav-column]");
   await expect(bar.getByRole("button", { name: "Ghost" })).toBeVisible({ timeout: 15_000 });
-  await expect(bar.getByRole("button", { name: "Zoom in" })).toBeHidden();
+  await expect(nav.getByRole("button", { name: /^Hand/ })).toBeHidden();
   const dist = () => page.evaluate(() => {
     const { position: p, target: t } = (window as any).__tekto.owner.renderer.cameraState();
     return Math.hypot(p[0] - t[0], p[1] - t[1], p[2] - t[2]);
@@ -483,12 +487,12 @@ test("in a strict-2D view the shading bar is the 2D palette: the hand, zoom in, 
   await expect(bar).toHaveAttribute("data-palette", "2d");
   await expect(bar.getByRole("button", { name: "Ghost" })).toBeHidden();
   const d0 = await dist();
-  await bar.getByRole("button", { name: "Zoom in" }).click();
+  await nav.getByRole("button", { name: "Zoom in" }).click();
   await expect.poll(dist).toBeCloseTo(d0 / 1.25, 3);
-  await bar.getByRole("button", { name: "Zoom out" }).click();
+  await nav.getByRole("button", { name: "Zoom out" }).click();
   await expect.poll(dist).toBeCloseTo(d0, 3);
-  await bar.getByRole("button", { name: /^Zoom to bounds/ }).click();
-  const hand = bar.getByRole("button", { name: /^Hand/ });
+  await nav.getByRole("button", { name: /^Zoom to bounds/ }).click();
+  const hand = nav.getByRole("button", { name: /^Hand/ });
   await hand.click();
   await expect(hand).toHaveAttribute("aria-pressed", "true");
 
@@ -514,17 +518,17 @@ test("a sketch that reads lab.lightingMode re-runs when the shading bar changes 
 });
 
 test("Frame with nothing selected frames the frame bounds, when set, instead of everything", async ({ page }) => {
-  await page.goto("/testbench.html?page=mesh-factory");               // shadingBar: true
-  const bar = page.locator("[data-tekto-shading-bar]");
-  await expect(bar.getByRole("button", { name: /^Frame/ })).toBeVisible({ timeout: 15_000 });
+  await page.goto("/testbench.html?page=mesh-factory");               // the viewer header: Frame is the column's "Zoom to bounds"
+  const bar = page.locator("[data-tekto-nav-column]");
+  await expect(bar.getByRole("button", { name: /^Zoom to bounds/ })).toBeVisible({ timeout: 15_000 });
   const target = () => page.evaluate(() => (window as any).__tekto.owner.renderer.cameraState().target as number[]);
 
   await page.evaluate(() => (window as any).__tekto.owner.renderer.setFrameBounds({ min: { x: 4, y: 0, z: 4 }, max: { x: 6, y: 2, z: 6 } }));
-  await bar.getByRole("button", { name: /^Frame/ }).click();
+  await bar.getByRole("button", { name: /^Zoom to bounds/ }).click();
   await expect.poll(async () => (await target()).map((v) => Math.round(v * 100) / 100)).toEqual([5, 1, 5]);
 
   // Cleared: everything shown again, which is not centred there.
   await page.evaluate(() => (window as any).__tekto.owner.renderer.setFrameBounds(null));
-  await bar.getByRole("button", { name: /^Frame/ }).click();
+  await bar.getByRole("button", { name: /^Zoom to bounds/ }).click();
   await expect.poll(async () => (await target()).map((v) => Math.round(v * 100) / 100)).not.toEqual([5, 1, 5]);
 });

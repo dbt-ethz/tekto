@@ -3,9 +3,9 @@
  *
  * The shell provides:
  *   • Page chooser (left of the top bar) — categorised dropdown.
- *   • Render mode + lighting (right of the top bar) — persisted in
- *     localStorage so the same setting is reapplied on next reload and
- *     forwarded to each page on navigation.
+ *   • Sun ▾ (right) — the sun for a date and a place, for 3D sketch pages.
+ *     The render style, lighting, section and overlays are in each view's
+ *     own header (the viewer tools), the same in every tekto app.
  *   • Export / Import menus (right) — populated dynamically from
  *     `lab.registerExport(...)` / `lab.registerImport(...)` calls made
  *     by the currently-mounted sketch. Buttons hide when nothing is
@@ -17,7 +17,6 @@
  * 44 px title bar collapses into the top bar's page chooser.
  */
 
-import type { RenderMode, LightingMode } from "../src";
 import { SunPosition, SketchInstance, Sketch2DInstance, download } from "../src";
 
 // ─── Cities (lat, lon, standard-time UTC offset) ────────────────────
@@ -193,10 +192,6 @@ function as3D(): SketchInstance | null {
   return currentSketch instanceof SketchInstance ? currentSketch : null;
 }
 let currentPage = "";
-let currentRenderMode: RenderMode = "solid";
-const LIGHTING_KEY = "tekto.lightingMode";
-let currentLightingMode: LightingMode =
-  (localStorage.getItem(LIGHTING_KEY) as LightingMode) === "studio" ? "studio" : "flat";
 
 const SUN_KEY = "tekto.sun";
 interface SunState {
@@ -226,11 +221,6 @@ let importsUnsub:  (() => void) | null = null;
 
 const app             = document.getElementById("app") as HTMLDivElement;
 const pageChooser     = document.getElementById("page-chooser") as HTMLSelectElement;
-const renderModeSel   = document.getElementById("render-mode") as HTMLSelectElement;
-const cutGroup        = document.getElementById("cut-group") as HTMLSpanElement;
-const sectionAxisSel  = document.getElementById("section-axis") as HTMLSelectElement;
-const sectionAt       = document.getElementById("section-at") as HTMLInputElement;
-const lightingSel     = document.getElementById("lighting-mode") as HTMLSelectElement;
 const exportBtn       = document.getElementById("export-btn") as HTMLButtonElement;
 const exportList      = document.getElementById("export-list") as HTMLDivElement;
 const importBtn       = document.getElementById("import-btn") as HTMLButtonElement;
@@ -247,21 +237,14 @@ const sunTime         = document.getElementById("sun-time") as HTMLInputElement;
 const sunAltAz        = document.getElementById("sun-altaz") as HTMLSpanElement;
 const sunBtnLabel     = document.getElementById("sun-btn-label") as HTMLSpanElement;
 const sunNowBtn       = document.getElementById("sun-now") as HTMLButtonElement;
-const renderGroup     = document.getElementById("render-group") as HTMLElement;
-const lightGroup      = document.getElementById("light-group") as HTMLElement;
 const sunMenu         = document.getElementById("sun-menu") as HTMLElement;
 const docsLink        = document.getElementById("docs-link") as HTMLAnchorElement;
 const sourceLink      = document.getElementById("source-link") as HTMLAnchorElement;
 
-// Show the 3D-only top-bar controls for 3D pages, hide them for 2D (sketch2d)
-// pages where render mode / lighting / sun have no meaning. (`.group` is
-// inline-flex in CSS, so toggle inline display rather than the [hidden] attr.)
+// The sun for a date and a place applies to 3D sketch pages only. (The render style, the
+// lighting, the section and the rest are in each view's own header, the same in every app.)
 function setShellMode(is2D: boolean) {
-  const d = is2D ? "none" : "";
-  renderGroup.style.display = d;
-  cutGroup.style.display = d;
-  lightGroup.style.display = d;
-  sunMenu.style.display = d;
+  sunMenu.style.display = is2D ? "none" : "";
 }
 
 // Tag the container so sketches can detect they're inside a shell and
@@ -301,32 +284,6 @@ pageChooser.addEventListener("change", () => {
   const slug = pageChooser.value;
   history.pushState(null, "", `?page=${slug}`);
   loadPage(slug);
-});
-
-// ─── Render mode ────────────────────────────────────────────────────
-
-renderModeSel.addEventListener("change", () => {
-  currentRenderMode = renderModeSel.value as RenderMode;
-  as3D()?.setRenderMode(currentRenderMode);
-});
-
-// ─── Section cut ────────────────────────────────────────────────────
-
-function applySection() {
-  const axis = sectionAxisSel.value as "" | "x" | "y" | "z";
-  sectionAt.hidden = !axis;
-  as3D()?.setSection(axis ? { axis, at: Number(sectionAt.value) / 100 } : null);
-}
-sectionAxisSel.addEventListener("change", applySection);
-sectionAt.addEventListener("input", applySection);
-
-// ─── Lighting mode (persisted) ──────────────────────────────────────
-
-lightingSel.value = currentLightingMode;
-lightingSel.addEventListener("change", () => {
-  currentLightingMode = lightingSel.value as LightingMode;
-  localStorage.setItem(LIGHTING_KEY, currentLightingMode);
-  as3D()?.setLightingMode(currentLightingMode);
 });
 
 // ─── Export / Import menus ──────────────────────────────────────────
@@ -514,12 +471,9 @@ async function loadPage(slug: string) {
     if (currentPage !== slug) return; // user already navigated away
     currentSketch = mod.default(app);
     const s3d = as3D();
-    setShellMode(!s3d); // hide render/lighting/sun for 2D pages
-    document.body.classList.toggle("own-bar", !s3d); // a 2D or appShell page: the shell's view controls don't apply
+    setShellMode(!s3d); // the sun is for 3D sketch pages
+    document.body.classList.toggle("own-bar", !s3d); // a 2D or appShell page: nothing of the shell's bar applies
     if (s3d) {
-      if (currentRenderMode !== "solid")  s3d.setRenderMode(currentRenderMode);
-      if (sectionAxisSel.value) requestAnimationFrame(applySection);   // once the page has built its content
-      if (currentLightingMode !== "flat") s3d.setLightingMode(currentLightingMode);
       // Subscribe to the sketch's export/import registrations and re-render
       // the menus whenever the sketch (re)registers an entry.
       exportsUnsub = s3d.onExportsChange(rebuildExportMenu);

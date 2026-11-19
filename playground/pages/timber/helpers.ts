@@ -105,7 +105,7 @@ export function syncInfoPanel(
   if (!infoPanelEl) {
     infoPanelEl = document.createElement("div");
     infoPanelEl.style.cssText = `
-      position:absolute; top:12px; right:12px; z-index:50;
+      position:absolute; top:46px; left:12px; z-index:4;
       min-width:220px; max-width:300px;
       background:#0c0d16; color:#c8cad0;
       border:1px solid #16182a; border-radius:6px;

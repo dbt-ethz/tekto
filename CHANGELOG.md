@@ -6,6 +6,23 @@ before 1.0, breaking changes bump the minor version. See
 
 ## Unreleased
 
+- **The viewer's tools in every 3D view.** The viewer header (a strip across the top of the
+  view with icons for the render style, lighting, ambient occlusion, sun, section, overlays and
+  snapshot, ✎ Markup at its end) and the axis widget with the zoom column under it are now the
+  default of `sketch()` and `appShell()`, also inside a shell such as the playground.
+  `viewerTools: { sun: false, section: false, … }` drops single tools (`ViewerTools`: `modes`,
+  `light`, `sun`, `section`, `overlays`, `snapshot`, `zoom`), and
+  `renderer.setViewerToolsVisible(false)` hides them while the view shows something they do not
+  apply to (a drawing laid over it). **Changed defaults:** `navGizmo` is on (`navGizmo: false`
+  for an app with its own panels in that corner); `appShell`'s `shadingBar` is `"header"` (was
+  off) and its text toolbar `topBar` is off (was on): `topBar: true` shows it as before, and it
+  is the only place with the sun for a date and a site. An `appShell` inside a shell (`<div
+  data-shell>`) drops its title bar (`showHeader: true` keeps it). The playground's own Render,
+  Cut and Light dropdowns are gone: they repeated the header.
+  `PresenceBar` (shared editing) now takes its place in the header's row by itself, between
+  the view's tools and ✎ Markup, when the view has a header; a given `position` floats it as
+  before.
+
 - **One panel frame, a paper style, tabs down the side.** The control panel now behaves the
   same in `sketch`, `sketch2d` and `appShell`: drag its right edge to resize it (double-click to
   reset), fold it with the chevron at its top right corner (it used to sit in the header of a

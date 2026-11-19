@@ -1,9 +1,10 @@
 /**
- * Section cuts and ghost mode on the one renderer: the appShell top bar's Cut popover and
+ * Section cuts and ghost mode on the one renderer: the text toolbar's Cut popover and
  * Ghost button, picking that ignores what the cut removed, poché on opaque surfaces only,
- * a ghosted selection drawn solid, and the testbench's Cut control on a sketch() page.
+ * a ghosted selection drawn solid, and the viewer header's Section on a sketch() page.
  */
 import { expect, test, type Page } from "@playwright/test";
+import { mountTextToolbar } from "./textToolbar";
 
 /** Pick at the screen point of a world position; returns the scene id or null. */
 const pickWorld = (page: Page, p: [number, number, number]) => page.evaluate(([x, y, z]) => {
@@ -23,20 +24,21 @@ test("appShell: Cut cuts the tower, picking skips what is gone; Ghost and Flip",
   const bottom: [number, number, number] = [0, 0, 0];
   expect(await pickWorld(page, top)).not.toBeNull();
 
-  await page.getByRole("button", { name: "Cut ▾" }).click();
-  await page.getByRole("button", { name: "Plan", exact: true }).click();
+  const bar = await mountTextToolbar(page);
+  await bar.getByRole("button", { name: "Cut ▾" }).click();
+  await bar.getByRole("button", { name: "Plan", exact: true }).click();
   expect(await page.evaluate(() => (window as any).__tekto.owner.renderer.section)).toEqual({ axis: "z", at: 0.5, flip: false });
   expect(await pickWorld(page, top)).toBeNull();                  // above the cut: gone
   expect(await pickWorld(page, bottom)).not.toBeNull();
 
-  await page.getByLabel("Keep the other side").check();
+  await bar.getByLabel("Keep the other side").check();
   expect(await pickWorld(page, top)).not.toBeNull();
   expect(await pickWorld(page, bottom)).toBeNull();
 
-  await page.getByRole("button", { name: "Ghost" }).click();
+  await bar.getByRole("button", { name: "Ghost" }).click();
   expect(await page.evaluate(() => (window as any).__tekto.owner.scene.renderMode)).toBe("ghost");
 
-  await page.getByRole("button", { name: "Off", exact: true }).click();
+  await bar.getByRole("button", { name: "Off", exact: true }).click();
   expect(await page.evaluate(() => (window as any).__tekto.owner.renderer.section)).toBeNull();
   expect(await pickWorld(page, bottom)).not.toBeNull();
   expect(errors).toEqual([]);
@@ -67,14 +69,16 @@ test("ghost draws a selection solid; poché only on opaque surfaces, none in gho
   expect((await surface()).poche).toBe(true);                     // rebuilt for the mode, and cut again
 });
 
-test("testbench: Cut and Ghost reach a sketch() page, and the cut survives a re-run", async ({ page }) => {
+test("the viewer header's Section and Ghost reach a sketch() page, and the cut survives a re-run", async ({ page }) => {
   await page.goto("/testbench.html?page=mesh-factory");
   await page.waitForFunction(() => (window as any).__tekto?.harness === "sketch", null, { timeout: 15_000 });
-  await page.selectOption("#section-axis", "z");
-  await page.locator("#section-at").evaluate((el: HTMLInputElement) => { el.value = "30"; el.dispatchEvent(new Event("input")); });
+  const header = page.locator("[data-tekto-viewer-header]");
+  await header.getByRole("button", { name: /^Section/ }).click();
+  await header.getByRole("button", { name: /^Plan/ }).click();
+  await page.evaluate(() => (window as any).__tekto.owner.renderer.setSection({ axis: "y", at: 0.3 }));   // Y-up: the plan cut, 30 % up
   const section = () => page.evaluate(() => (window as any).__tekto.owner.renderer.section);
-  expect(await section()).toEqual({ axis: "z", at: 0.3 });
-  await page.selectOption("#render-mode", "ghost");
+  expect(await section()).toEqual({ axis: "y", at: 0.3 });
+  await header.getByRole("button", { name: "Ghost", exact: true }).click();
   expect(await page.evaluate(() => (window as any).__tekto.owner.scene.renderMode)).toBe("ghost");
 
   // A slider re-runs the sketch: every object is rebuilt, and the cut stays on them.
@@ -82,7 +86,7 @@ test("testbench: Cut and Ghost reach a sketch() page, and the cut survives a re-
   expect(slider).toBeTruthy();
   await page.evaluate(([n, v]) => (window as any).__tekto.setParams({ [n]: v }), [slider.name, slider.max] as const);
   await page.waitForTimeout(100);
-  expect(await section()).toEqual({ axis: "z", at: 0.3 });
+  expect(await section()).toEqual({ axis: "y", at: 0.3 });
   const clipped = await page.evaluate(() => {
     let n = 0;
     (window as any).__tekto.owner.renderer.threeScene.traverse((o: any) => { if (o.material?.clippingPlanes?.length) n++; });

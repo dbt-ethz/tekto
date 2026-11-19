@@ -4,7 +4,7 @@
 
 <Live page="site-editor" label="Site Editor" />
 
-`appShell()` is the harness for a real app: a panel built once from a declared schema of params, a Z-up 3D view, and a top bar for light, render mode, camera, section and sun. Unlike `sketch()`, nothing is rebuilt unless you rebuild it: the app owns its `Scene` and decides what changes. That makes it the place for the retained model, with a [`Doc`](/buildings/doc), selection, undo and saving.
+`appShell()` is the harness for a real app: a panel built once from a declared schema of params, a Z-up 3D view, and the viewer's tools every tekto 3D view has: the header with render style, lighting, sun, section and overlays, and the axis widget. Unlike `sketch()`, nothing is rebuilt unless you rebuild it: the app owns its `Scene` and decides what changes. That makes it the place for the retained model, with a [`Doc`](/buildings/doc), selection, undo and saving.
 
 ```ts
 import { appShell, MeshFactory, MeshTransform, Vec3 } from "tekto";
@@ -12,8 +12,6 @@ import { appShell, MeshFactory, MeshTransform, Vec3 } from "tekto";
 const app = appShell({
   container: document.getElementById("app")!,
   title: "Tower",
-  topBar: true,
-  navGizmo: true,
   camera: [14, -16, 12],
   target: [0, 0, 4],
   params: {
@@ -46,7 +44,7 @@ app.rebuild();
 ## What to know
 
 - **Params are declared once.** A param with `display: true` calls `onDisplay` only, so changing a colour does not rebuild geometry. `groups` sorts params into folders.
-- **Top bar and view**: `topBar: { cut: false }` drops a control the app does not need; `shadingBar: true` puts render style, lighting and sun as icons in the view; `navGizmo: true` adds the axis widget for plans and elevations.
+- **The viewer's tools** are on by default, the same in every 3D view: the header across the view (render style, lighting, sun, section, overlays, snapshot, ✎ Markup) and the axis widget for plans and elevations. `viewerTools: { sun: false, section: false }` drops what the app does not need; `shadingBar: true` is the compact bar in a corner instead, `shadingBar: false` and `navGizmo: false` hide them. `topBar: true` adds the older text toolbar, with the sun for a date and a site.
 - **Commands**: `app.commands.add([{ id: "edit.undo", label: "Undo", keys: "Mod+Z", run }])`. People get the key, agents get the id.
 - **Notes**: `appShell({ notes: doc })` keeps ✎ Markup's marks as notes in the document. See [Markup and notes](/collaboration/notes).
 - `app.overlay()` is a layer over the view, for a [drawing](/drawings/sheet-canvas) of the same model.

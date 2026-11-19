@@ -4,10 +4,10 @@
  *
  * The subject is a framed wall from `WallSystem`, so the modes have something with depth:
  * Solid reads the framing against the boards, Ghost shows the studs through the sheathing,
- * Hidden with Ortho and the axis widget's front view is an elevation drawing, and Cut ▾ →
- * Plan is the wall in plan.
+ * Hidden with Ortho and the axis widget's front view is an elevation drawing, and the
+ * section's Plan is the wall in plan.
  *
- *   top bar      Light · Mode · Cam (Persp | Ortho, Iso) · Cut ▾ · Sun ▾
+ *   header       the viewer's tools: render style · lighting · sun · section · overlays
  *   axis widget  click an axis for a plan or an elevation, toggle persp/ortho under it
  *   click        selects a member (outlined, its colour kept); Frame selection zooms to it
  *   callouts     one per kind of member, in the margins, hidden ones left out
@@ -54,8 +54,6 @@ export default function (container: HTMLElement) {
   const app = appShell({
     title: "Framed Wall",
     container,
-    topBar: true,
-    navGizmo: true,
     camera: [6.5, -7, 3.8],
     target: [2.5, 0, 1.35],
     params: {

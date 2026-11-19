@@ -130,3 +130,27 @@ test("a header popover opens under its button; Markup's Done stays in reach whil
   await expect(header.getByRole("button", { name: "✎ Markup" })).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+test("one row, in order: the view's tools, who is here (shared editing), ✎ Markup", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(String(e)));
+  for (const url of ["shared-editing", "site-editor&shared=1"]) {     // a sketch() and an appShell()
+    await page.goto(`/testbench.html?page=${url}`);
+    const header = page.locator("[data-tekto-viewer-header]");
+    const presence = header.locator("[data-tekto-presence=header]");
+    await expect(presence).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("[data-tekto-presence]")).toHaveCount(1);
+    const box = async (l: ReturnType<typeof page.locator>) => (await l.boundingBox())!;
+    const tools = await box(header.getByRole("button", { name: /^Snapshot/ }));   // the last of the view's tools
+    const who = await box(presence);
+    const markup = await box(header.getByRole("button", { name: /Markup/ }));
+    expect(tools.x + tools.width).toBeLessThanOrEqual(who.x);
+    expect(who.x + who.width).toBeLessThanOrEqual(markup.x);
+    const h = await box(header);
+    for (const b of [tools, who, markup]) {                          // all inside the header's row
+      expect(b.y).toBeGreaterThanOrEqual(h.y);
+      expect(b.y + b.height).toBeLessThanOrEqual(h.y + h.height);
+    }
+  }
+  expect(errors).toEqual([]);
+});

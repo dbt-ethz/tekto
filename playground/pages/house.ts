@@ -95,9 +95,6 @@ export default function (container: HTMLElement) {
   const app = appShell({
     title: "House",
     container,
-    topBar: false,
-    navGizmo: true,
-    shadingBar: true,
     units: "m",
     // Notes with the model: Markup's marks are kept in the doc's `notes`, for people and the agent.
     notes: doc,

@@ -11,8 +11,6 @@ const doc = new Doc<BuildingRecords>({ name: "house", adapter: localAdapter() })
 const app = appShell({
   container: document.getElementById("app")!,
   title: "House",
-  shadingBar: true,
-  navGizmo: true,
   units: "m",
   camera: [22, -18, 16],
   target: [5, 4, 2.5],

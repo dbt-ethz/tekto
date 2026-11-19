@@ -25,9 +25,6 @@ export default function (container: HTMLElement) {
   const app = appShell({
     title: "Roofs",
     container,
-    topBar: true,
-    navGizmo: true,
-    shadingBar: true,
     units: "m",
     camera: [19, -13, 13],
     target: [5, 4, 3],

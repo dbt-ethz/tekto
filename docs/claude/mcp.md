@@ -15,7 +15,6 @@ const app = appShell({
   title: "House",
   params: {},
   notes: doc,
-  shadingBar: true,
 });
 const house = bindBuilding(doc, app.scene);
 

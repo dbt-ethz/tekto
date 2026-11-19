@@ -17,7 +17,7 @@ import type { Scene, VisualStyle, FlatMeshData, LightSpec, RenderMode, LightingM
 import type { LayerNode, LayerMap } from "../gui/LayerPanel";
 import type { SectionRequest, StandardView } from "../scene/Scene";
 import type { Command } from "../gui/Commands";
-import type { ShadingBarPlacement } from "../render/ShadingBar";
+import type { ShadingBarPlacement, ViewerTools } from "../render/ShadingBar";
 export type { LayerNode, LayerState, LayerMap, LayerColumns } from "../gui/LayerPanel";
 import type { LayerState, LayerColumns } from "../gui/LayerPanel";
 
@@ -57,17 +57,18 @@ export interface SketchConfig {
   showHeader?: boolean;
   /** Show the ✎ Markup button (draw instructions on the view; see Markup.ts). Default `true`. */
   markup?: boolean;
-  /** The axis widget in the viewport corner: click an axis for a plan or an elevation,
-   *  toggle persp/ortho under it; hidden in a strict-2D view. Default `false`. */
+  /** The axis widget, top right under the viewer header: click an axis for a plan or an
+   *  elevation, toggle persp/ortho under it; hidden in a strict-2D view. Default `true`. */
   navGizmo?: boolean;
   /** The view's controls. `"header"` (the default): a strip across the top of the view, as
    *  Blender's viewport header — the app's own controls on its left (`lab.viewerHeader`), the
    *  render style, lighting, sun, section, overlays, snapshot and ✎ Markup on its right; the axis
    *  widget (`navGizmo`) top right under it and zoom in / out / to bounds below. In a strict-2D view
    *  (`lab.setOrbitRotateEnabled(false)`) the header keeps the snapshot and ✎ Markup, the column the
-   *  zoom. A corner (`true` = top left) is the compact bar instead; `false` hides it. Off by default
-   *  inside a shell with its own bar (the testbench). */
+   *  zoom. A corner (`true` = top left) is the compact bar instead; `false` hides it. */
   shadingBar?: boolean | ShadingBarPlacement;
+  /** Which of the viewer's tools to show (`{ sun: false, section: false }`): each is on unless false. */
+  viewerTools?: ViewerTools;
   /** The scene's unit (`"m"`, `"mm"`…): readouts show coordinates in it. Unset (default):
    *  relative to the content's extent. */
   units?: string;

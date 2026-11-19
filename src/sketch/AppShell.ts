@@ -48,7 +48,7 @@ import { StepsPanel, type StepMark } from "./StepsPanel";
 import { Commands, viewCommands } from "../gui/Commands";
 import { viewerToolbar, type TopBarOptions } from "./ViewerToolbar";
 import { panelFrame, type PanelFrame } from "./panelFrame";
-import { VIEWER_HEADER_H } from "../render/ShadingBar";
+import { VIEWER_HEADER_H, type ViewerTools } from "../render/ShadingBar";
 import { NotesLayer, type Note } from "./Notes";
 import type { Doc } from "../collab/Doc";
 import { MarkupOverlay, type MarkupCaptureOptions } from "./Markup";
@@ -74,10 +74,14 @@ export interface AppShellConfig<S extends ParamSchema = ParamSchema> {
   tabs?: "top" | "side";
   /** Renderer config overrides */
   renderer?: Partial<ThreeRendererConfig>;
-  /** Top bar with Lighting / Render-mode / Camera / Cut / Sun controls. Default: true.
-   *  An object turns single controls off where they don't make sense for the app
-   *  (`{ cut: false, sun: false }`). */
+  /** The older text toolbar in the title bar (Light / Mode / Cam / Cut / Sun, the sun for a
+   *  place and a date). Default: false: the view's own header has these as icons (`shadingBar`,
+   *  `viewerTools`). `true` or an object of its controls shows it as well. */
   topBar?: boolean | TopBarOptions;
+  /** Show the title bar. Default: yes, except inside a shell that has its own bar (`<div data-shell>`). */
+  showHeader?: boolean;
+  /** Which of the viewer's tools to show (`{ sun: false, section: false }`): each is on unless false. */
+  viewerTools?: ViewerTools;
   /** Show the ✎ Markup button (draw instructions on the view; marks name document records). Default `true`. */
   markup?: boolean;
   /**
@@ -90,12 +94,14 @@ export interface AppShellConfig<S extends ParamSchema = ParamSchema> {
    *  marks as notes too), the notes are drawn over the view with a pin each (`app.notes`), and
    *  an agent lists, answers and resolves them (`__tekto.notes`). */
   notes?: Doc<any> | { doc: Doc<any>; collection?: string; author?: string };
-  /** The axis widget in a viewport corner (`true` = bottom right): click an axis for a plan
-   *  or an elevation, toggle persp/ortho under it. Default `false` — an app may have its own
-   *  panels in that corner. */
+  /** The axis widget (default on, top right under the viewer header): click an axis for a plan
+   *  or an elevation, toggle persp/ortho under it. A corner places it; `false` hides it, for an
+   *  app with its own panels there. */
   navGizmo?: boolean | "top-left" | "top-right" | "bottom-left" | "bottom-right";
-  /** The shading bar in a viewport corner (`true` = top left): icons for the render style, the
-   *  lighting and the sun (morning, noon, sunset). Default `false`. */
+  /** The view's tools, the same in every tekto 3D view. `"header"` (the default): a strip across
+   *  the top of the view with icons for the render style, lighting, sun, section, overlays and
+   *  snapshot, and ✎ Markup at its end. A corner (`true` = top left) is the compact bar instead;
+   *  `false` hides it. `viewerTools` drops single tools. */
   shadingBar?: boolean | "top-left" | "top-right" | "bottom-left" | "bottom-right" | "header";
   /** The scene's unit (`"m"`, `"mm"`…): readouts show coordinates in it. Unset: relative to
    *  the content's extent. */
@@ -179,10 +185,15 @@ export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppS
 
   // ── Layout ──
 
+  // A shell (the testbench: `<div data-shell>`) shows the title in its own bar.
+  const showHeader = config.showHeader ?? (config.container.dataset.shell == null || !!config.topBar);
+  const headerH = showHeader ? 36 : 0;
+  const bodyRow = showHeader ? 2 : 1;
+
   const root = document.createElement("div");
   root.style.cssText = `
     display:grid; grid-template-columns:260px 1fr;
-    grid-template-rows:36px 1fr; position:relative;
+    grid-template-rows:${showHeader ? "36px " : ""}1fr; position:relative;
     width:100%; height:100%; font-family:${t.font};
     font-size:12px; color:${t.text}; background:${t.panelBg};
   `;
@@ -200,19 +211,19 @@ export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppS
     <span style="font-size:9px;padding:2px 6px;border-radius:3px;
       background:${t.hoverBg};color:${t.accent}">LIVE</span>
   `;
-  root.appendChild(header);
+  if (showHeader) root.appendChild(header);
 
   // Panel
   const panelEl = document.createElement("div");
   panelEl.style.cssText = `
-    overflow-y:auto; overflow-x:hidden; padding:0; grid-column:1; grid-row:2;
+    overflow-y:auto; overflow-x:hidden; padding:0; grid-column:1; grid-row:${bodyRow};
     background:${t.panelBg}; border-right:1px solid ${t.border};
   `;
   root.appendChild(panelEl);
 
   // Viewport wrapper (pinned to its cell: a folded panel leaves the grid flow)
   const vpWrap = document.createElement("div");
-  vpWrap.style.cssText = "position:relative;overflow:hidden;grid-column:2;grid-row:2;";
+  vpWrap.style.cssText = `position:relative;overflow:hidden;grid-column:2;grid-row:${bodyRow};`;
 
   const viewportEl = document.createElement("div");
   // Its own stacking context: what the 3D view puts in its corners (the axis widget) stays
@@ -287,7 +298,7 @@ export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppS
   panelEl.appendChild(panel.el);
   // The same frame as a sketch's panel: drag its edge, fold it, or let it size itself.
   frame = panelFrame({
-    root, panelEl, theme: t, top: 36,
+    root, panelEl, theme: t, top: headerH,
     width: config.panelWidth ?? 260,
     storageKey: config.title ?? "app",
     preferred: () => panel.preferredWidth(),
@@ -304,8 +315,9 @@ export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppS
     // the architectural / BIM / voxel geometry these apps usually build. Pass
     // `up: "y"` if you're showing the Y-up built-in primitives (box/cylinder/sphere).
     up: config.up ?? "z",
-    navGizmo: config.navGizmo ?? false,
-    shadingBar: config.shadingBar ?? false,
+    navGizmo: config.navGizmo ?? true,
+    shadingBar: config.shadingBar ?? "header",
+    viewerTools: config.viewerTools ?? {},
     headerHost: vpWrap,   // the viewer header (shadingBar: "header") above overlays and ✎ Markup
     units: config.units ?? null,
     ...config.renderer,
@@ -317,8 +329,8 @@ export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppS
   const unbindKeys = commands.bindKeys();
 
   // ── Top bar: lighting · render mode · camera · cut · sun (the viewer toolbar) ──
-  const toolbar = config.topBar === false ? null
-    : viewerToolbar(scene, renderer, { ...(config.topBar === true || config.topBar === undefined ? {} : config.topBar), theme: t });
+  const toolbar = !config.topBar ? null
+    : viewerToolbar(scene, renderer, { ...(config.topBar === true ? {} : config.topBar), theme: t });
   if (toolbar) header.appendChild(toolbar.el);
 
   // ── Notes that live with the model (a Doc collection), drawn over the view ──

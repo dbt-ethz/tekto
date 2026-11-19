@@ -13,7 +13,6 @@ const app = appShell({
   container: document.getElementById("app")!,
   title: "Daylight",
   params: {},
-  shadingBar: true,
   camera: [10, -10, 7],
   target: [0, 0, 1],
 });

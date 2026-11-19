@@ -85,6 +85,27 @@ export type ShadingBarCorner = "top-left" | "top-right" | "bottom-left" | "botto
  *  under the axis widget (the hand above them in a strict-2D view). */
 export type ShadingBarPlacement = ShadingBarCorner | "header";
 
+/**
+ * Which of the viewer's tools an app shows; each is on unless set to false. An app without
+ * daylight drops `sun`, a drawing viewer drops `light`, and so on: fewer tools, same places.
+ */
+export interface ViewerTools {
+  /** The render style: solid, wireframe, hidden line, ghost. */
+  modes?: boolean;
+  /** Flat / Studio lighting, and ambient occlusion beside it. */
+  light?: boolean;
+  /** The sun: morning, noon, sunset. */
+  sun?: boolean;
+  /** The section through the model. */
+  section?: boolean;
+  /** The overlays' switches: grid, axes, wireframe, labels, notes. */
+  overlays?: boolean;
+  /** Save the view as a PNG. */
+  snapshot?: boolean;
+  /** Zoom in / out / to bounds (the column under the axis widget in the header layout). */
+  zoom?: boolean;
+}
+
 /** The header strip's height in pixels (`shadingBar: "header"`). */
 export const VIEWER_HEADER_H = 34;
 
@@ -112,7 +133,8 @@ export class ShadingBar {
   private off: () => void;
 
   constructor(private core: RendererCore, private lighting: Lighting, private marks: Marks, private ao: AmbientOcclusion,
-    private view: ShadingBarHost, placement: ShadingBarPlacement = "top-left", headerHost: HTMLElement | null = null) {
+    private view: ShadingBarHost, placement: ShadingBarPlacement = "top-left", headerHost: HTMLElement | null = null,
+    tools: ViewerTools = {}) {
     const host = core.container;
     if (getComputedStyle(host).position === "static") host.style.position = "relative";
     // The header may sit outside the view's own stacking context (above overlays laid over the view);
@@ -135,6 +157,7 @@ export class ShadingBar {
       const left = slot(), right = slot(), end = slot(), spacer = document.createElement("div");
       spacer.style.cssText = "flex:1;min-width:8px;";
       right.style.marginLeft = end.style.marginLeft = "8px";
+      left.dataset.tektoHeaderSlot = "left"; right.dataset.tektoHeaderSlot = "right"; end.dataset.tektoHeaderSlot = "end";
       this.header = { left, right, end };
       this.root.append(left, spacer, this.full, this.flat, right, end);
       this.nav = document.createElement("div");
@@ -150,75 +173,95 @@ export class ShadingBar {
     }
 
     const scene = core.gScene;
-    for (const [mode, label] of MODES) this.button(viewModeIconSvg(mode, 16), label, () => scene.renderMode === mode, () => scene.setRenderMode(mode));
-    this.separator();
-    for (const [mode, label] of LIGHTS) this.button(SHADING_ICONS[mode], label, () => scene.lightingMode === mode, () => scene.setLightingMode(mode));
-    this.button(SHADING_ICONS.ao, "Ambient occlusion: darker where surfaces meet (Solid, perspective)", () => this.ao.enabled, () => this.ao.set(!this.ao.enabled));
-    this.separator();
-    const sunPop = this.popover(v, h);
-    const sun = this.button(SHADING_ICONS.noon, "Sun: morning, noon, sunset", () => this.openPop === sunPop, () => this.toggle(sunPop));
-    this.openers.set(sunPop, sun);
-    this.paints.push(() => { sun.innerHTML = SHADING_ICONS[this.lighting.currentSunPreset ?? "noon"]; });
-    for (const [preset, label] of SUNS) {
-      const b = this.button(`${SHADING_ICONS[preset]}<span style="font:500 9.5px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${label}</span>`,
-        `${label}: Studio, the light following the sun`, () => this.lighting.currentSunPreset === preset,
-        () => { this.lighting.sunPreset(preset); this.toggle(null); }, sunPop);
-      b.style.width = "54px";
-      b.style.height = "42px";
-      b.style.flexDirection = "column";
-      b.style.gap = "4px";
-    }
+    // Groups of tools with a separator between those that are shown.
+    let any = false;
+    const group = (shown: boolean | undefined, build: () => void) => {
+      if (shown === false) return;
+      if (any) this.separator();
+      any = true;
+      build();
+    };
+    group(tools.modes, () => {
+      for (const [mode, label] of MODES) this.button(viewModeIconSvg(mode, 16), label, () => scene.renderMode === mode, () => scene.setRenderMode(mode));
+    });
+    group(tools.light, () => {
+      for (const [mode, label] of LIGHTS) this.button(SHADING_ICONS[mode], label, () => scene.lightingMode === mode, () => scene.setLightingMode(mode));
+      this.button(SHADING_ICONS.ao, "Ambient occlusion: darker where surfaces meet (Solid, perspective)", () => this.ao.enabled, () => this.ao.set(!this.ao.enabled));
+    });
+    const sunAndSection = tools.sun !== false || tools.section !== false;
+    group(sunAndSection, () => {
+      if (tools.sun !== false) {
+        const sunPop = this.popover(v, h);
+        const sun = this.button(SHADING_ICONS.noon, "Sun: morning, noon, sunset", () => this.openPop === sunPop, () => this.toggle(sunPop));
+        this.openers.set(sunPop, sun);
+        this.paints.push(() => { sun.innerHTML = SHADING_ICONS[this.lighting.currentSunPreset ?? "noon"]; });
+        for (const [preset, label] of SUNS) {
+          const b = this.button(`${SHADING_ICONS[preset]}<span style="font:500 9.5px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${label}</span>`,
+            `${label}: Studio, the light following the sun`, () => this.lighting.currentSunPreset === preset,
+            () => { this.lighting.sunPreset(preset); this.toggle(null); }, sunPop);
+          b.style.width = "54px";
+          b.style.height = "42px";
+          b.style.flexDirection = "column";
+          b.style.gap = "4px";
+        }
+      }
 
-    // The section: which way it cuts, where (a slider in metres), which side stays.
-    const cutPop = this.popover(v, h);
-    cutPop.style.flexDirection = "column";
-    cutPop.style.gap = "6px";
-    this.openers.set(cutPop, this.button(SHADING_ICONS.section, "Section: cut the model", () => this.openPop === cutPop || !!this.marks.section, () => this.toggle(cutPop)));
-    this.sectionControls(cutPop);
-    this.separator();
-
-    // Overlays: a switch each for what is drawn over the model (and any the app registered).
-    const overlayPop = this.popover(v, h);
-    overlayPop.style.flexDirection = "column";
-    overlayPop.style.minWidth = "120px";
-    this.openers.set(overlayPop, this.button(SHADING_ICONS.overlays, "Overlays: grid, axes, wireframe, labels, notes", () => this.openPop === overlayPop, () => this.toggle(overlayPop)));
-    let listed = "";
-    this.paints.push(() => {
-      const names = Object.keys(this.view.overlays);
-      if (names.join() === listed) return;                          // rebuilt only when the list changes
-      listed = names.join();
-      overlayPop.replaceChildren();
-      this.overlayPaints = [];
-      for (const name of names) {
-        const label = OVERLAY_LABELS[name] ?? name[0].toUpperCase() + name.slice(1);
-        const b = this.button(`<span style="width:14px;font:600 11px/1 system-ui,sans-serif">${"✓"}</span>`
-          + `<span style="font:500 11px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${escapeHtml(label)}</span>`,
-          `${label}: show or hide`, () => false,                     // a checklist: a tick, not a filled button
-          () => this.view.setOverlays({ [name]: !(this.view.overlays[name] ?? false) }), overlayPop, this.overlayPaints);
-        b.style.width = "auto";
-        b.style.justifyContent = "flex-start";
-        b.style.gap = "6px";
-        b.style.padding = "0 10px 0 6px";
-        const tick = b.firstElementChild as HTMLElement;
-        this.overlayPaints.push(() => {
-          const on = !!this.view.overlays[name];
-          tick.style.visibility = on ? "visible" : "hidden";
-          b.style.color = on ? "#e8ebf0" : "rgba(232,235,240,.5)";
-          b.setAttribute("aria-pressed", String(on));
-        });
+      // The section: which way it cuts, where (a slider in metres), which side stays.
+      if (tools.section !== false) {
+        const cutPop = this.popover(v, h);
+        cutPop.style.flexDirection = "column";
+        cutPop.style.gap = "6px";
+        this.openers.set(cutPop, this.button(SHADING_ICONS.section, "Section: cut the model", () => this.openPop === cutPop || !!this.marks.section, () => this.toggle(cutPop)));
+        this.sectionControls(cutPop);
       }
     });
-    this.paints.push(() => { for (const p of this.overlayPaints) p(); });
 
-    // Frame the selection or everything (the header layout has it in the nav column); save the view.
-    if (!isHeader) this.button(SHADING_ICONS.frame, "Frame: the selection, or everything", () => false, () => this.view.frame());
-    this.button(SHADING_ICONS.snapshot, "Snapshot: save the view as a PNG", () => false, () => this.view.saveSnapshot());
+    // Overlays: a switch each for what is drawn over the model (and any the app registered).
+    group(tools.overlays !== false || tools.snapshot !== false || (!isHeader && tools.zoom !== false), () => {
+      if (tools.overlays !== false) {
+        const overlayPop = this.popover(v, h);
+        overlayPop.style.flexDirection = "column";
+        overlayPop.style.minWidth = "120px";
+        this.openers.set(overlayPop, this.button(SHADING_ICONS.overlays, "Overlays: grid, axes, wireframe, labels, notes", () => this.openPop === overlayPop, () => this.toggle(overlayPop)));
+        let listed = "";
+        this.paints.push(() => {
+          const names = Object.keys(this.view.overlays);
+          if (names.join() === listed) return;                          // rebuilt only when the list changes
+          listed = names.join();
+          overlayPop.replaceChildren();
+          this.overlayPaints = [];
+          for (const name of names) {
+            const label = OVERLAY_LABELS[name] ?? name[0].toUpperCase() + name.slice(1);
+            const b = this.button(`<span style="width:14px;font:600 11px/1 system-ui,sans-serif">${"✓"}</span>`
+              + `<span style="font:500 11px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${escapeHtml(label)}</span>`,
+              `${label}: show or hide`, () => false,                     // a checklist: a tick, not a filled button
+              () => this.view.setOverlays({ [name]: !(this.view.overlays[name] ?? false) }), overlayPop, this.overlayPaints);
+            b.style.width = "auto";
+            b.style.justifyContent = "flex-start";
+            b.style.gap = "6px";
+            b.style.padding = "0 10px 0 6px";
+            const tick = b.firstElementChild as HTMLElement;
+            this.overlayPaints.push(() => {
+              const on = !!this.view.overlays[name];
+              tick.style.visibility = on ? "visible" : "hidden";
+              b.style.color = on ? "#e8ebf0" : "rgba(232,235,240,.5)";
+              b.setAttribute("aria-pressed", String(on));
+            });
+          }
+        });
+        this.paints.push(() => { for (const p of this.overlayPaints) p(); });
+      }
+
+      // Frame the selection or everything (the header layout has it in the nav column); save the view.
+      if (!isHeader && tools.zoom !== false) this.button(SHADING_ICONS.frame, "Frame: the selection, or everything", () => false, () => this.view.frame());
+      if (tools.snapshot !== false) this.button(SHADING_ICONS.snapshot, "Snapshot: save the view as a PNG", () => false, () => this.view.saveSnapshot());
+    });
 
     // The 2D palette, for a strict-2D view (orbit rotation off): a flat sheet has no style,
     // lighting, sun or section to choose — only how much of it to see. In the header layout the
     // zoom is in the nav column (in 2D and 3D), and the 2D header keeps just the snapshot.
     this.group = this.flat;
-    if (isHeader) this.button(SHADING_ICONS.snapshot, "Snapshot: save the view as a PNG", () => false, () => this.view.saveSnapshot());
+    if (isHeader && tools.snapshot !== false) this.button(SHADING_ICONS.snapshot, "Snapshot: save the view as a PNG", () => false, () => this.view.saveSnapshot());
     this.group = this.nav ?? this.flat;
     const hand = this.button(SHADING_ICONS.hand, "Hand: drag the view along (click again to stop)",
       () => this.view.handMode, () => this.view.setHandMode(!this.view.handMode));
@@ -228,8 +271,9 @@ export class ShadingBar {
     this.paints.push(() => {
       const flat = !this.view.orbitRotateEnabled;
       this.root.dataset.palette = flat ? "2d" : "3d";
-      this.full.style.display = flat ? "none" : "contents";
-      this.flat.style.display = flat ? "contents" : "none";
+      this.full.style.display = flat || this.toolsHidden ? "none" : "contents";
+      this.flat.style.display = flat && !this.toolsHidden ? "contents" : "none";
+      if (this.nav) this.nav.style.display = this.toolsHidden || tools.zoom === false ? "none" : "flex";
       hand.style.display = flat ? "flex" : "none";            // a flat sheet's tool (the nav column shows in 3D too)
       if (flat && this.openPop) { this.openPop.style.display = "none"; this.openPop = null; }
       if (this.nav) this.placeNav();
@@ -239,6 +283,14 @@ export class ShadingBar {
 
     // Follow the state wherever it is changed.
     this.off = scene.on((e) => { if (e.type === "scene:renderMode" || e.type === "scene:lightingMode") this.paint(); });
+    this.paint();
+  }
+
+  private toolsHidden = false;
+  /** Hide or show the tools (the header strip itself stays, with the app's slots and ✎ Markup). */
+  setToolsVisible(visible: boolean): void {
+    this.toolsHidden = !visible;
+    if (!visible && this.openPop) { this.openPop.style.display = "none"; this.openPop = null; }
     this.paint();
   }
 

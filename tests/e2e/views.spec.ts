@@ -5,6 +5,7 @@
  * sketch() has no widget unless it asks.
  */
 import { expect, test, type Page } from "@playwright/test";
+import { mountTextToolbar } from "./textToolbar";
 
 /** The camera's direction from its target, rounded. */
 const viewDir = (page: Page) => page.evaluate(() => {
@@ -42,14 +43,15 @@ test("the axis widget turns the view; its projection toggle and the Cam control 
 
   await page.getByRole("button", { name: "persp", exact: true }).click();          // the widget's toggle
   expect(await page.evaluate(() => (window as any).__tekto.owner.renderer.projection)).toBe("orthographic");
-  const lit = (name: string) => page.getByRole("button", { name, exact: true }).evaluate((b: HTMLElement) => b.style.background !== "transparent");
+  const bar = await mountTextToolbar(page);
+  const lit = (name: string) => bar.getByRole("button", { name, exact: true }).evaluate((b: HTMLElement) => b.style.background !== "transparent");
   expect(await lit("Ortho")).toBe(true);
   expect(await lit("Persp")).toBe(false);
 
-  await page.getByRole("button", { name: "Persp", exact: true }).click();          // the top bar
+  await bar.getByRole("button", { name: "Persp", exact: true }).click();           // the text toolbar
   expect(await page.getByRole("button", { name: "persp", exact: true }).textContent()).toBe("persp");
 
-  await page.getByRole("button", { name: "Iso", exact: true }).click();
+  await bar.getByRole("button", { name: "Iso", exact: true }).click();
   expect(await page.evaluate(() => (window as any).__tekto.owner.renderer.projection)).toBe("orthographic");
   await expect.poll(() => viewDir(page)).toEqual([0.58, -0.58, 0.58]);
   expect(errors).toEqual([]);
@@ -65,10 +67,11 @@ test("the axis widget hides in a strict-2D view and comes back with rotation", a
   await expect(widget).toBeVisible();
 });
 
-test("a sketch() has no axis widget unless it asks for one", async ({ page }) => {
+test("a sketch() has the axis widget and the viewer header, as every 3D view", async ({ page }) => {
   await page.goto("/testbench.html?page=mesh-factory");
   await page.waitForFunction(() => (window as any).__tekto?.harness === "sketch", null, { timeout: 15_000 });
-  await expect(page.getByRole("button", { name: "persp", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "persp", exact: true })).toHaveCount(1);
+  await expect(page.locator("[data-tekto-viewer-header]")).toHaveCount(1);
   await page.evaluate(() => (window as any).__tekto.owner.renderer.setView("top", { animate: false }));
   expect(await viewDir(page)).toEqual([0, 1, 0]);        // Y-up: the plan looks down -Y
 });

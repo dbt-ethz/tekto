@@ -5,7 +5,7 @@
 <Live page="framed-wall" label="Framed Wall" />
 <Live page="shape-modes" label="Shape Modes" />
 
-One renderer, `ThreeRenderer`, sits under every `sketch()` and `appShell()`. It draws a scene in four modes: **solid**, **wireframe**, **hidden line** (sharp edges only, like a technical drawing) and **ghost** (every surface faint in its own colour, with its creases, so what is inside reads through what is in front). The top bar and the shading bar switch them; code does the same.
+One renderer, `ThreeRenderer`, sits under every `sketch()` and `appShell()`. It draws a scene in four modes: **solid**, **wireframe**, **hidden line** (sharp edges only, like a technical drawing) and **ghost** (every surface faint in its own colour, with its creases, so what is inside reads through what is in front). The viewer header switches them; code does the same.
 
 ```ts
 import { appShell, MeshFactory } from "tekto";
@@ -14,8 +14,6 @@ const app = appShell({
   container: document.getElementById("app")!,
   title: "Modes",
   params: {},
-  shadingBar: true,
-  navGizmo: true,
   camera: [6, -6, 4],
   target: [0, 0, 1],
 });

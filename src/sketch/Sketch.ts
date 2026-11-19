@@ -398,9 +398,10 @@ export class SketchInstance {
       cameraPosition: this.config.camera ?? (zUp ? [8, -10, 6] : [5, 6, 8]),
       cameraTarget: this.config.target ?? [0, 0, 0],
       up: this.config.up ?? "y",
-      navGizmo: this.config.navGizmo ?? false,
-      // On by default; a shell with its own bar (the testbench's data-shell) turns it off.
-      shadingBar: this.config.shadingBar ?? (this.container.dataset.shell == null ? "header" : false),
+      // The view's tools are the same in every 3D view: the header strip and the axis widget.
+      navGizmo: this.config.navGizmo ?? true,
+      shadingBar: this.config.shadingBar ?? "header",
+      viewerTools: this.config.viewerTools ?? {},
       headerHost: this.viewportWrap,   // above overlay() layers and ✎ Markup's drawing layer
       units: this.config.units ?? null,
     });

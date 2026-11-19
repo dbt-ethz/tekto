@@ -12,7 +12,7 @@ import {
   edgeStyle, surfaceAppearance, lightBalance, standardOrbit, fitRadius, orthoFrustum,
   modeBackground, groundAppearance, sectionAppearance, DEFAULT_BACKGROUND,
   orbitFor, shortestTurn, nearestAxis, easeInOut, sectionPlane, viewDirection, calloutSamples, occludes, rayTargets, cameraKey,
-  groundGrid, gridLineColour, daylight, sunDirection, SUN_PRESETS, flatLights, studioLights,
+  groundGrid, gridLineColour, daylight, sunDirection, SUN_PRESETS, flatLights, studioLights, hiddenLinePage, inkOn,
 } from "../src/render/viewRules";
 
 /** Rough perceptual brightness of a packed hex colour, 0 to 255. */
@@ -412,5 +412,25 @@ describe("studio lights", () => {
 
   it("filmic keeps the balance Studio was tuned with", () => {
     expect(studioLights("filmic")).toMatchObject({ ambient: 0.35, sky: 0.3, sun: 2.8, toneMapped: true });
+  });
+});
+
+describe("a hidden-line drawing's page and ink", () => {
+  it("is light paper whatever the background, or a dark page when inverse", () => {
+    expect(hiddenLinePage(0x0b0b0b)).toBe(0xffffff);                 // a dark app: white paper
+    expect(hiddenLinePage(0xf5f7fa)).toBe(0xf5f7fa);                 // a light app keeps its own
+    expect(hiddenLinePage("#0a0b14")).toBe(0xffffff);
+    expect(hiddenLinePage(0x0b0b0b, true)).toBe(0x0b0b0b);           // inverse: the dark app's own
+    expect(hiddenLinePage(0xffffff, true)).toBe(0x0b0b0b);           // inverse on a light app: near black
+  });
+
+  it("keeps a colour that reads on the page and inks one that would vanish into it", () => {
+    expect(inkOn(0xffffff, 0x2f2f2f)).toBe(0x2f2f2f);                // dark creases on paper
+    expect(inkOn(0x0b0b0b, 0x2f2f2f)).toBe("#d8d8d8");               // the same creases on a dark page: light
+    expect(inkOn(0xffffff, "#ffffff")).toBe("#2f2f2f");              // a dark app's white line, on paper
+    expect(inkOn(0xffffff, "#e8ebf0")).toBe("#2f2f2f");
+    expect(inkOn(0xffffff, "#c0392b")).toBe("#c0392b");              // a red stays red
+    expect(inkOn(0x0b0b0b, "#c0392b")).toBe("#c0392b");
+    expect(inkOn(0x0b0b0b, "#101010")).toBe("#d8d8d8");
   });
 });

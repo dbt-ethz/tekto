@@ -217,15 +217,27 @@ export class Lighting {
     this.hemiLight.intensity = d.skyIntensity;
     this.ambientLight.intensity = d.ambient;
     this.core.renderer.toneMappingExposure = d.exposure;
-    if (!(this.envBackground && this.envSourceTex)) {
-      this.core.threeScene.background = new THREE.Color(this.core.config.backgroundColor).lerp(new THREE.Color(d.background), d.backgroundAmount);
+    this.applyPage();
+  }
+
+  /**
+   * The colour behind the model: the page, tinted by the sky while Studio's light follows
+   * the sun. A hidden-line drawing keeps its page plain. An image as background stays.
+   */
+  applyPage(): void {
+    if (this.envBackground && this.envSourceTex) return;
+    const page = new THREE.Color(this.core.pageColor());
+    if (this.daylightOn && this.currentLighting === "studio" && this.core.gScene.renderMode !== "hiddenline") {
+      const d = daylight(this.sunAltitude());
+      page.lerp(new THREE.Color(d.background), d.backgroundAmount);
     }
+    this.core.threeScene.background = page;
   }
 
   /** Back to the plain balance of the current mode. */
   private _resetDaylight(): void {
     this.dirLight.color.setHex(0xffffff);              // the sky's colours come back with applyMode
-    if (!(this.envBackground && this.envSourceTex)) this.core.threeScene.background = new THREE.Color(this.core.config.backgroundColor);
+    this.applyPage();
     this.applyMode(this.currentLighting);
   }
 
@@ -274,7 +286,7 @@ export class Lighting {
       // Daylight is Studio's: flat draws in the plain colours.
       if (this.daylightOn) {
         this.dirLight.color.setHex(0xffffff);
-        if (!(this.envBackground && this.envSourceTex)) this.core.threeScene.background = new THREE.Color(this.core.config.backgroundColor);
+        this.applyPage();
       }
     }
 
@@ -366,7 +378,8 @@ export class Lighting {
       this.core.threeScene.background = this.envSourceTex;
     } else if ((this.core.threeScene.background as THREE.Texture | null)?.isTexture) {
       // The image off: the plain background comes back (it stayed up before).
-      this.core.threeScene.background = new THREE.Color(this.core.config.backgroundColor);
+      this.core.threeScene.background = null;
+      this.applyPage();
     }
   }
 

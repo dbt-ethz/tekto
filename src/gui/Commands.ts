@@ -99,6 +99,9 @@ export interface ViewControl {
   setView(view: StandardView): void;
   setProjection(projection: "perspective" | "orthographic"): void;
   readonly projection: "perspective" | "orthographic";
+  /** Hidden line drawn inverse (light lines on a dark page), where the view has it. */
+  readonly hiddenLineInverse?: boolean;
+  setHiddenLineInverse?(on: boolean): void;
 }
 
 /**
@@ -115,6 +118,10 @@ export function viewCommands(view: ViewControl): Command[] {
       id: "view.toggleProjection", label: "Perspective / orthographic", group: "View",
       run: () => view.setProjection(view.projection === "perspective" ? "orthographic" : "perspective"),
     },
+    ...(view.setHiddenLineInverse ? [{
+      id: "view.hiddenLineInverse", label: "Hidden line: paper / inverse", group: "View",
+      run: () => view.setHiddenLineInverse!(!view.hiddenLineInverse),
+    }] : []),
   ];
 }
 

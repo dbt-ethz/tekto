@@ -6,6 +6,17 @@ before 1.0, breaking changes bump the minor version. See
 
 ## Unreleased
 
+- **Hidden line is a drawing on white paper, in a dark app too.** It used to fill the faces
+  with the view's background and draw the creases in a fixed dark grey: on a dark view, faint
+  grey lines on black. Now the view turns white while the mode is on, with dark lines and a
+  pale grid (an app whose background is light keeps it); a sunset no longer tints the page.
+  Clicking the Hidden line button again, or View ▸ Hidden line: paper / inverse
+  (`view.hiddenLineInverse`), draws it inverse: light lines on the dark view
+  (`renderer.setHiddenLineInverse(on)`, `hiddenLineInverse` in the config). Lines, points,
+  labels and edge colours that would vanish into the page (a white line on white paper) are
+  drawn in the drawing's ink; others keep their colour. `hiddenLinePage` and `inkOn` are the
+  rules, exported. An app that relied on hidden line staying dark sets `hiddenLineInverse: true`.
+
 - **The sun by date and place is in the viewer's sun menu.** The sun button of the viewer
   header (and of the corner shading bar) has a fourth choice beside Morning, Noon and Sunset:
   Date, which opens a place (24 cities, or a latitude and longitude), the model's north, a

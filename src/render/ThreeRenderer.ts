@@ -34,7 +34,7 @@ type BuiltInOverlay = "grid" | "axes" | "wireframe" | "labels";
 import type { FlatLighting, StudioLighting, SunPreset } from "./viewRules";
 import type { SunSite } from "./sunSite";
 import { AmbientOcclusion, type AmbientOcclusionOptions } from "./AmbientOcclusion";
-import { shown } from "./viewRules";
+import { shown, hiddenLinePage, luminance } from "./viewRules";
 
 export type { GizmoMode, PickInfo } from "./Pointer";
 
@@ -95,6 +95,12 @@ export interface ThreeRendererConfig {
    * mapping, so a colour stays readable against a key on the side turned from the sun too.
    */
   studioLighting: StudioLighting;
+  /**
+   * How a hidden-line drawing is drawn. False (the default): dark lines on light paper,
+   * whatever the background — the view turns white while the mode is on (the background
+   * itself, if it is light). True: inverse, light lines on a dark page.
+   */
+  hiddenLineInverse: boolean;
 }
 
 // Style keys that never change the three.js object: layer is metadata, WebGL
@@ -123,6 +129,7 @@ const DEFAULTS: ThreeRendererConfig = {
   headerHost: null,
   flatLighting: "sketch",
   studioLighting: "filmic",
+  hiddenLineInverse: false,
 };
 
 /** How long a frame may spend building crease lines before it draws. */
@@ -213,6 +220,7 @@ export class ThreeRenderer {
       gScene, threeScene: this.threeScene, renderer: this.renderer, container, isZUp: this.isZUp,
       objectMap: this.objectMap, externalObjects: this.externalObjects, config: this.config, camera: this.camera,
       overlay: (name: string) => this.overlayState[name as BuiltInOverlay] ?? true,
+      pageColor: () => this.pageColor(),
       get controls() { return self.controls; },
       get activeCamera() { return self.rig.activeCamera; },
       requestRender: () => this.requestRender(),
@@ -229,19 +237,17 @@ export class ThreeRenderer {
 
     // Helpers
     if (cfg.showGrid && cfg.gridStyle === "fading") {
-      this.fadingGrid = new FadingGrid(cfg.backgroundColor, this.isZUp);
+      this.fadingGrid = new FadingGrid(this.pageColor(), this.isZUp);
       this.gridHelper = this.fadingGrid.mesh;
       this.threeScene.add(this.fadingGrid.mesh);
     } else if (cfg.showGrid) {
-      const grid = new THREE.GridHelper(cfg.gridSize, cfg.gridDivisions, 0x3a3a3a, 0x262626);
-      if (this.isZUp) grid.rotation.x = Math.PI / 2;
-      this.gridHelper = grid;
-      this.threeScene.add(grid);
+      this.buildLineGrid(this.pageColor());
     }
     if (cfg.showAxes) {
       this.axesHelper = new THREE.AxesHelper(cfg.axesSize);
       this.threeScene.add(this.axesHelper);
     }
+    this.syncPage();                       // the scene may be in hidden line already
 
     // Orbit controls
     if (cfg.enableOrbitControls) {
@@ -316,7 +322,9 @@ export class ThreeRenderer {
         this.clearThree();
         break;
       case "scene:renderMode":
-        this.rebuildAllMeshes();
+        // Into or out of a hidden-line drawing the page changes, and lines are inked for it.
+        if (this.syncPage()) this.rebuildAll();
+        else this.rebuildAllMeshes();
         break;
       case "scene:lightingMode":
         this.lighting.applyMode(event.mode);
@@ -437,6 +445,65 @@ export class ThreeRenderer {
       this.addToThree(obj);
     }
   }
+
+  /** Rebuild every object (the page changed: lines and marks are drawn for the page they are on). */
+  private rebuildAll() {
+    for (const obj of this.gScene.all()) {
+      this.removeFromThree(obj.id);
+      this.addToThree(obj);
+    }
+  }
+
+  // ── The page ──
+
+  /** The colour behind the model now: the background, or in hidden line the drawing's page. */
+  private pageColor(): number {
+    const background = new THREE.Color(this.config.backgroundColor as THREE.ColorRepresentation).getHex();
+    return this.gScene.renderMode === "hiddenline" ? hiddenLinePage(background, this.config.hiddenLineInverse) : background;
+  }
+
+  private page: number | null = null;
+  /** Put the page behind the model and rule the grid for it. True if the page changed. */
+  private syncPage(): boolean {
+    const page = this.pageColor();
+    this.lighting.applyPage();             // also when only the mode changed (no sky tint in a drawing)
+    if (page === this.page) return false;
+    const first = this.page === null;
+    this.page = page;
+    this.fadingGrid?.setBackground(page);
+    if (!this.fadingGrid && this.gridHelper && !first) {
+      const visible = this.gridHelper.visible;
+      this.threeScene.remove(this.gridHelper);
+      (this.gridHelper as THREE.GridHelper).dispose?.();
+      this.buildLineGrid(page);
+      this.gridHelper!.visible = visible;
+    }
+    this.requestRender();
+    return !first;
+  }
+
+  /** The grid of lines, ruled for the page it lies on: dark greys on a dark page, pale ones on paper. */
+  private buildLineGrid(page: number) {
+    const [major, minor] = luminance(page) > 0.5 && page !== new THREE.Color(this.config.backgroundColor as THREE.ColorRepresentation).getHex()
+      ? [0xb4b4b4, 0xdadada] : [0x3a3a3a, 0x262626];      // an app's own light background keeps the grid it had
+    const grid = new THREE.GridHelper(this.config.gridSize, this.config.gridDivisions, major, minor);
+    if (this.isZUp) grid.rotation.x = Math.PI / 2;
+    this.gridHelper = grid;
+    this.threeScene.add(grid);
+  }
+
+  /**
+   * Draw hidden line inverse — light lines on a dark page — or, with false, as a drawing
+   * on light paper (the default; `hiddenLineInverse` in the config).
+   */
+  setHiddenLineInverse(on: boolean): void {
+    this.config.hiddenLineInverse = on;
+    if (this.syncPage()) this.rebuildAll();
+    this.shadingBar?.paint();
+  }
+
+  /** Whether hidden line is drawn inverse (`setHiddenLineInverse`). */
+  get hiddenLineInverse(): boolean { return this.config.hiddenLineInverse; }
 
   // Line/point "helper" object types (vs solid meshes/polygons/planes).
   private _isHelper(type: unknown): boolean {
@@ -691,10 +758,10 @@ export class ThreeRenderer {
 
   /** Set the viewport background color. */
   setBackground(color: number | string) {
-    this.threeScene.background = new THREE.Color(color as any);
-    // Hidden-line occlusion faces are tinted from config.backgroundColor at
-    // mesh build time — keep it in sync so they always match the live bg.
     this.config.backgroundColor = color as unknown as number;
+    // A hidden-line drawing keeps its page (light paper, or the inverse); its faces and
+    // lines are tinted from the page when built, so they are rebuilt if it changed.
+    if (this.syncPage()) this.rebuildAll();
     this.requestRender();
   }
 

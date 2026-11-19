@@ -53,7 +53,7 @@ export type { SheetCanvasOptions, SheetTransform, DrawSheetOptions } from "./ren
 export type { SVGRendererConfig } from "./render/SVGRenderer";
 // The rules the renderer draws by, as plain functions: mode looks, named views, fitting, sections.
 export {
-  edgeStyle, surfaceAppearance, lightBalance, modeBackground,
+  edgeStyle, surfaceAppearance, lightBalance, modeBackground, hiddenLinePage, inkOn,
   groundAppearance, sectionAppearance, DEFAULT_BACKGROUND,
   standardOrbit, orbitFor, shortestTurn, nearestAxis, easeInOut,
   fitRadius, orthoFrustum, sectionPlane, flatLights, studioLights,

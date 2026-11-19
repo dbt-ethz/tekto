@@ -367,6 +367,12 @@ scene.addMesh(building, { edgeAngle: 20 });                      // a touch more
 scene.addMesh(flat, { color: "#e0a14f", edgeColor: "#e0a14f" }); // colored edges
 ```
 
+A hidden-line view is a drawing on paper: dark lines on white, also in an app with a
+dark view (an app's own light background is kept). Clicking the Hidden line button again,
+or View ▸ Hidden line: paper / inverse, draws it inverse, light lines on the dark view
+(`renderer.setHiddenLineInverse(true)`). A line or an `edgeColor` that would vanish into
+the page is drawn in the drawing's ink instead.
+
 Note this draws creases, not view-dependent silhouettes — a smooth sphere has no
 sharp edges, so in hidden-line it reads as the occluding solid with no lines.
 

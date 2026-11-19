@@ -532,3 +532,38 @@ test("Frame with nothing selected frames the frame bounds, when set, instead of 
   await bar.getByRole("button", { name: /^Zoom to bounds/ }).click();
   await expect.poll(async () => (await target()).map((v) => Math.round(v * 100) / 100)).not.toEqual([5, 1, 5]);
 });
+
+test("hidden line is a drawing on white paper in a dark app; inverse turns it dark with light lines", async ({ page }) => {
+  await openShell(page);
+  const look = () => page.evaluate(() => {
+    const o = (window as any).__tekto.owner;
+    let face = -1, edge = -1;
+    o.renderer.threeScene.traverse((c: any) => {
+      if (!(c.isMesh && c.material?.polygonOffset && c.material.type === "MeshBasicMaterial") || face >= 0) return;
+      face = c.material.color.getHex();                               // a slab's occluding face, and the creases beside it
+      edge = c.parent.children.find((k: any) => k.isLineSegments).material.color.getHex();
+    });
+    return { page: o.renderer.threeScene.background.getHex(), face, edge, inverse: o.renderer.hiddenLineInverse };
+  });
+  expect((await look()).page).toBe(0x0b0b0b);                        // solid: the app's dark view
+
+  await page.evaluate(() => (window as any).__tekto.owner.scene.setRenderMode("hiddenline"));
+  expect(await look()).toEqual({ page: 0xffffff, face: 0xffffff, edge: 0x2f2f2f, inverse: false });
+
+  // Clicked again, the Hidden line button turns the drawing inverse; the View menu's command turns it back.
+  const button = page.locator("[data-tekto-viewer-header]").getByRole("button", { name: "Hidden line" });
+  await button.click();
+  expect(await look()).toEqual({ page: 0x0b0b0b, face: 0x0b0b0b, edge: 0xd8d8d8, inverse: true });
+  await page.evaluate(() => (window as any).__tekto.run("view.hiddenLineInverse"));
+  expect(await look()).toMatchObject({ page: 0xffffff, edge: 0x2f2f2f, inverse: false });
+
+  // A sunset tints the view in Solid, never the drawing's paper; leaving the mode gives the view back.
+  await page.evaluate(() => (window as any).__tekto.owner.renderer.setSunPreset("sunset"));
+  expect((await look()).page).toBe(0xffffff);
+  await page.evaluate(() => {
+    const o = (window as any).__tekto.owner;
+    o.renderer.setDaylight(false);
+    o.scene.setRenderMode("solid");
+  });
+  expect((await look()).page).toBe(0x0b0b0b);
+});

@@ -74,6 +74,9 @@ export interface ShadingBarHost {
   /** The hand (a strict-2D view's tool): the left button drags the view along. */
   readonly handMode: boolean;
   setHandMode(on: boolean): void;
+  /** Hidden line inverse: light lines on a dark page, not dark lines on paper. */
+  readonly hiddenLineInverse: boolean;
+  setHiddenLineInverse(on: boolean): void;
   saveSnapshot(fileName?: string): void;
   /** The axis widget's element, if there is one: in the header layout the nav column sits under it. */
   readonly navGizmoEl: HTMLElement | null;
@@ -187,7 +190,12 @@ export class ShadingBar {
       build();
     };
     group(tools.modes, () => {
-      for (const [mode, label] of MODES) this.button(viewModeIconSvg(mode, 16), label, () => scene.renderMode === mode, () => scene.setRenderMode(mode));
+      for (const [mode, label] of MODES) {
+        // Hidden line, clicked again: the drawing turns inverse (light lines on dark) and back.
+        const again = mode === "hiddenline";
+        this.button(viewModeIconSvg(mode, 16), again ? `${label}: dark lines on paper (click again for the inverse)` : label, () => scene.renderMode === mode,
+          () => { if (again && scene.renderMode === mode) this.view.setHiddenLineInverse(!this.view.hiddenLineInverse); else scene.setRenderMode(mode); });
+      }
     });
     group(tools.light, () => {
       for (const [mode, label] of LIGHTS) this.button(SHADING_ICONS[mode], label, () => scene.lightingMode === mode, () => scene.setLightingMode(mode));

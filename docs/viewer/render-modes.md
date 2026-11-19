@@ -30,6 +30,7 @@ app.renderer.setView("front");              // an elevation: "top" is a plan, "i
 ## What to know
 
 - **Hidden line** draws creases, not silhouettes: an edge appears where its faces meet at more than `style.edgeAngle` (default 30°), so the tessellation of a flat wall drops out. A smooth sphere has no creases. `edgeColor` keeps an object's colour in the drawing.
+- **Hidden line is a drawing on paper**: dark lines on white, in a dark app too — the view turns white while the mode is on (an app's own light background stays). Clicking the Hidden line button again, or View ▸ Hidden line: paper / inverse, turns it inverse: light lines on the dark view (`renderer.setHiddenLineInverse(true)`, or `hiddenLineInverse` in the renderer's config). A line or an edge colour that would vanish into the page (a white line on white paper) is drawn in the drawing's ink.
 - **Ghost** draws a selected object solid, so it stands out against the rest.
 - Creases are built a frame at a time: switching a model of thousands of meshes does not stall the tab. A snapshot waits for all of them.
 - **Hard edges**: `flatShading: true` in an object's style gives crisp faces without changing the geometry.

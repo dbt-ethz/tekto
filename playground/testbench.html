@@ -5,7 +5,7 @@
   <title>Tekto TestBench</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { height: 100%; overflow: hidden; background: #0b0b0b; color: #cccccc; font-family: 'IBM Plex Mono', 'Menlo', monospace; }
+    html, body { height: 100%; overflow: hidden; background: #0b0b0b; color: #cccccc; font-family: 'IBM Plex Mono', ui-monospace, monospace; }
 
     /* ── Top bar ──────────────────────────────────────────────────── */
     #topbar {
@@ -37,8 +37,10 @@
     #topbar .group {
       display: inline-flex; align-items: center; gap: 6px;
     }
-    #topbar a.link { color: #a8a8a8; text-decoration: none; font-size: 11px; }
-    #topbar a.link:hover { color: #ffffff; }
+    /* Docs and Source are set as the app's menus beside them: the same type, box and spacing. */
+    #topbar #link-group { gap: 2px; }
+    #topbar a.link { color: #a8a8a8; text-decoration: none; font-size: 12px; padding: 4px 9px; border-radius: 4px; }
+    #topbar a.link:hover { color: #ffffff; background: rgba(255,255,255,.08); }
     #topbar a.link[hidden] { display: none; }
 
     #app { position: absolute; left: 0; top: 36px; right: 0; bottom: 0; }
@@ -46,7 +48,7 @@
     /* ?embed: shown inside a docs page, which picked the page and links its docs and source:
        only the view controls stay, and no bar at all for a page that brings its own. */
     body.embed #topbar .brand, body.embed #topbar .brand + .sep, body.embed #page-group,
-    body.embed #topbar a.link { display: none; }
+    body.embed #topbar a.link, body.embed #link-group { display: none; }
     body.embed.own-bar #topbar { display: none; }
     body.embed.own-bar #app { top: 0; }
   </style>
@@ -59,8 +61,10 @@
       <span class="label">Page</span>
       <select id="page-chooser" title="Switch demo"></select>
     </span>
-    <a id="docs-link" class="link" target="_blank" rel="noopener" title="What this page shows, in the docs" hidden>Docs</a>
-    <a id="source-link" class="link" target="_blank" rel="noopener" title="This page's code: one function">Source</a>
+    <span class="group" id="link-group">
+      <a id="docs-link" class="link" target="_blank" rel="noopener" title="What this page shows, in the docs" hidden>Docs</a>
+      <a id="source-link" class="link" target="_blank" rel="noopener" title="This page's code: one function">Source</a>
+    </span>
 
     <!-- The running app's menu bar (File, Edit, View, its own): each app mounts it here. -->
     <span class="sep" id="menu-sep"></span>

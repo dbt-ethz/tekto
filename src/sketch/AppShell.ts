@@ -47,6 +47,7 @@ import { StepTrace } from "../core/steps/StepTrace";
 import { StepsPanel, type StepMark } from "./StepsPanel";
 import { Commands, viewCommands } from "../gui/Commands";
 import { viewerToolbar, type TopBarOptions } from "./ViewerToolbar";
+import { panelFrame, type PanelFrame } from "./panelFrame";
 import { VIEWER_HEADER_H } from "../render/ShadingBar";
 import { NotesLayer, type Note } from "./Notes";
 import type { Doc } from "../collab/Doc";
@@ -67,8 +68,10 @@ export interface AppShellConfig<S extends ParamSchema = ParamSchema> {
   /** Camera up-axis. Default "z" (tekto Z-up convention). Use "y" for the Y-up built-in primitives. */
   up?: "y" | "z";
   theme?: "dark" | "light";
-  /** Panel width in pixels (default: 260) */
-  panelWidth?: number;
+  /** Panel width in pixels (default 260), or "auto": as wide as its controls need. A width dragged by hand wins. */
+  panelWidth?: number | "auto";
+  /** Tabs as a bar on top of the panel (default) or as a list down its left side. */
+  tabs?: "top" | "side";
   /** Renderer config overrides */
   renderer?: Partial<ThreeRendererConfig>;
   /** Top bar with Lighting / Render-mode / Camera / Cut / Sun controls. Default: true.
@@ -173,14 +176,13 @@ export interface AppShellInstance<S extends ParamSchema = ParamSchema> {
  */
 export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppShellInstance<S> {
   const t = getTheme(config.theme);
-  const panelWidth = config.panelWidth ?? 260;
 
   // ── Layout ──
 
   const root = document.createElement("div");
   root.style.cssText = `
-    display:grid; grid-template-columns:${panelWidth}px 1fr;
-    grid-template-rows:36px 1fr;
+    display:grid; grid-template-columns:260px 1fr;
+    grid-template-rows:36px 1fr; position:relative;
     width:100%; height:100%; font-family:${t.font};
     font-size:12px; color:${t.text}; background:${t.panelBg};
   `;
@@ -203,14 +205,14 @@ export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppS
   // Panel
   const panelEl = document.createElement("div");
   panelEl.style.cssText = `
-    overflow-y:auto; overflow-x:hidden; padding:0;
+    overflow-y:auto; overflow-x:hidden; padding:0; grid-column:1; grid-row:2;
     background:${t.panelBg}; border-right:1px solid ${t.border};
   `;
   root.appendChild(panelEl);
 
-  // Viewport wrapper
+  // Viewport wrapper (pinned to its cell: a folded panel leaves the grid flow)
   const vpWrap = document.createElement("div");
-  vpWrap.style.cssText = "position:relative;overflow:hidden;";
+  vpWrap.style.cssText = "position:relative;overflow:hidden;grid-column:2;grid-row:2;";
 
   const viewportEl = document.createElement("div");
   // Its own stacking context: what the 3D view puts in its corners (the axis widget) stays
@@ -273,7 +275,8 @@ export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppS
   // ── ParamStore + shared ControlPanel sidebar ──
 
   const params = new ParamStore(config.params);
-  const panel = new ControlPanel({ store: params, theme: t });
+  let frame: PanelFrame | null = null;
+  const panel = new ControlPanel({ store: params, theme: t, tabs: config.tabs, onRender: () => frame?.fit() });
 
   const groups = config.groups ?? { Parameters: Object.keys(config.params) };
   const items: ControlItem[] = [];
@@ -282,6 +285,13 @@ export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppS
   }
   panel.render(items);
   panelEl.appendChild(panel.el);
+  // The same frame as a sketch's panel: drag its edge, fold it, or let it size itself.
+  frame = panelFrame({
+    root, panelEl, theme: t, top: 36,
+    width: config.panelWidth ?? 260,
+    storageKey: config.title ?? "app",
+    preferred: () => panel.preferredWidth(),
+  });
 
   // ── Scene + Renderer ──
 

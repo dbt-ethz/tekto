@@ -6,6 +6,22 @@ before 1.0, breaking changes bump the minor version. See
 
 ## Unreleased
 
+- **One panel frame, a paper style, tabs down the side.** The control panel now behaves the
+  same in `sketch`, `sketch2d` and `appShell`: drag its right edge to resize it (double-click to
+  reset), fold it with the chevron at its top right corner (it used to sit in the header of a
+  2D sketch, and an `appShell` had none), both remembered per app title. `panelWidth: "auto"`
+  sizes the panel to its longest label and widest control, and the label column now fits its
+  labels (56 to 170 px) instead of a fixed 80. `tabs: "side"` lists a panel's tabs down its left
+  edge, each with its number of controls, for more and longer names than the bar on top holds;
+  `lab.slider/toggle/select/colorPicker/button` of a 2D sketch take `tab`. `sketch2d(fn,
+  { style: "paper" })` draws the app as a figure in a book: white, one ink, no title bar, section
+  names without arrows, the panel as wide as it needs (`UiStyle`, `getTheme("paper")`). The
+  playground's lecture apps use it. Changed for every app: labels are shown as written
+  ("Width m" was shown as "Width M"; a control declared without a label gets one from its key,
+  "floorHeight" reads "Floor height"); the status line of a 2D sketch (`lab.log`) is a row under
+  the canvas and no longer a box over the drawing; a 2D sketch inside a shell (`<div
+  data-shell>`) drops its own title bar, as a 3D sketch does (`showHeader: true` keeps it).
+
 - **Stairs built as timber, steel or concrete.** `new Stair({ structure })`, and `structure` on
   a building's stair record, choose how the flights are built: `"concrete"` puts the steps on a
   160 mm waist slab, `"timber"` sets 50 mm treads between two 60 × 300 mm stringers with open

@@ -41,8 +41,10 @@ export interface SketchConfig {
   target?: [number, number, number];
   /** Show the 2D projection panel */
   show2D?: boolean;
-  /** Panel width in pixels */
-  panelWidth?: number;
+  /** Panel width in pixels (default 320), or "auto": as wide as its controls need. A width dragged by hand wins. */
+  panelWidth?: number | "auto";
+  /** Tabs as a bar on top of the panel (default) or as a list down its left side. */
+  tabs?: "top" | "side";
   /** Dark or light theme */
   theme?: "dark" | "light";
   /** Up-axis: "y" (Three.js default) or "z" (CAD convention, XY = ground plane) */

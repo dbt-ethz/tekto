@@ -13,7 +13,7 @@ const PAGES = [
   "sdf", "graph", "planar-graph", "voronoi", "voxel-2d",
   "particles", "circle-packing", "camera", "gizmo",
   "app-shell", "site-editor", "drawing-sheet", "sketch-drawing",
-  "pointer-2d",
+  "pointer-2d", "panel-tabs",
   "timber", "framed-wall", "framed-floor", "roofs", "custom-viewer", "dxf-test", "dxf-3d",
   // the lecture apps (pages/lecture/)
   ...["house", "subdivision", "grammar", "lsystem", "landscape", "pareto", "biomorph",

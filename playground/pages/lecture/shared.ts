@@ -60,8 +60,12 @@ function makePalette(): Palette {
 /** The current palette. Re-read whenever the reader switches theme. */
 export let P: Palette = makePalette();
 
-/** Height reserved at the bottom of each canvas for the status bar (tekto's log). */
-export const BAR = 34;
+/**
+ * Height the apps keep free at the bottom of the canvas for the status bar. In
+ * the lecture book (tekto 0.5) the bar lies over the canvas and this is 34;
+ * here the status line is a row of its own under the canvas.
+ */
+export const BAR = 0;
 
 export const FONT = `11px "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace`;
 export const FONT_SMALL = `10px "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace`;
@@ -145,61 +149,16 @@ export function mount(el: HTMLElement, factory: AppFactory): void {
 }
 
 /**
- * The panel overrides of the lecture book, scoped to `.lecture-app`: labels
- * keep their case, sliders may shrink, the status bar runs along the bottom
- * edge, and all text is in the ink of the drawing.
+ * A playground page for one lecture app, in tekto's paper style: the drawing
+ * first, black on white, the panel as wide as its controls need. It is always
+ * running (there is no scrolling page to pause it).
  */
-const PAGE_STYLE = `
-.lecture-app .tekto-slider { min-width: 0; width: 0; }
-.lecture-app span[style*="capitalize"] { text-transform: none !important; }
-.lecture-app > div > div,
-.lecture-app > div > div > div:nth-child(1),
-.lecture-app > div > div > div:nth-child(2) { background: #fff !important; }
-.lecture-app > div > div > div:nth-child(1) { border-bottom-color: rgba(128,128,128,.25) !important; }
-.lecture-app > div > div > div:nth-child(2) { border-right-color: rgba(128,128,128,.25) !important; }
-.lecture-app div[style*="backdrop-filter"] { left: 0 !important; right: 0 !important; bottom: 0 !important; max-width: none !important; border-radius: 0 !important; border-width: 1px 0 0 0 !important; padding: 5px 12px !important; line-height: 1.55 !important; backdrop-filter: none !important; background: rgba(255,255,255,.88) !important; border-color: rgba(0,0,0,.15) !important; }
-.lecture-app div[style*="backdrop-filter"]:not([style*="display: none"]) { display: flex !important; flex-wrap: wrap; column-gap: 20px; }
-.lecture-app div[style*="backdrop-filter"] > div { white-space: nowrap; }
-.lecture-app > div > div,
-.lecture-app > div > div * { color: var(--app-ink) !important; }
-.lecture-app .tekto-slider { --tekto-thumb: var(--app-ink) !important; --tekto-track: rgba(128,128,128,.35) !important; }
-`;
-
-/**
- * A playground page for one lecture app: the app fills `container`, black on
- * white, always running (there is no scrolling page to pause it).
- */
-export function page(factory: AppFactory): (container: HTMLElement) => { dispose(): void } {
+export function page(factory: AppFactory): (container: HTMLElement) => Sketch2DInstance {
   return (container) => {
     standalone = true;
     P = makePalette();
-    if (!document.getElementById("lecture-app-style")) {
-      const style = document.createElement("style");
-      style.id = "lecture-app-style";
-      style.textContent = PAGE_STYLE;
-      document.head.appendChild(style);
-    }
     const def = factory({ visible: true });
-    const host = document.createElement("div");
-    host.style.cssText = "position:absolute;inset:0;";
-    container.classList.add("lecture-app");
-    container.style.setProperty("--app-ink", P.ink);
-    container.appendChild(host);
-    const inst = sketch2d(def.fn, {
-      container: host,
-      title: def.title,
-      theme: "light",
-      panelWidth: def.panelWidth ?? 230,
-      background: P.paper,
-    });
-    return {
-      dispose() {
-        inst.dispose();
-        host.remove();
-        container.classList.remove("lecture-app");
-        container.style.removeProperty("--app-ink");
-      },
-    };
+    return sketch2d(def.fn, { container, title: def.title, style: "paper", background: P.paper });
   };
 }
 

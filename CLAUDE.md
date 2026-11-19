@@ -154,6 +154,13 @@ and ALL controls are rendered by [src/gui/ControlPanel.ts](src/gui/ControlPanel.
 Add or restyle a control type THERE, never inline in Sketch.ts / Sketch2D.ts /
 AppShell.ts — those files only declare params and mount the panel.
 
+Labels are shown as written (no `text-transform`): write "Width m", not "width_m". The
+panel's frame (resize by its edge, the fold chevron at its top right corner, `panelWidth:
+"auto"`) is [src/sketch/panelFrame.ts](src/sketch/panelFrame.ts), shared by all three
+harnesses: never give one harness its own collapse button or width logic. A second look,
+`style: "paper"` (white, one ink, no title bar; `getTheme("paper")`, `theme.plain`), is for 2D
+figures such as the lecture apps; it is a preset of the same components, not a second set.
+
 Sliders are the rectangular "scientific" style: flat 4 px track, square white
 7×14 px thumb, no rounded pill — via the injected `.tekto-slider` stylesheet in
 ControlPanel.ts (`--tekto-track` / `--tekto-thumb` CSS vars per control). Any

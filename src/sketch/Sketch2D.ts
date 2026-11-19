@@ -38,7 +38,8 @@ import { noise } from "../core/math/noise";
 import { createRandom, SeededRandom } from "../core/math/random";
 import { ParamStore, ParamDef } from "../gui/Params";
 import { ControlPanel, ControlItem, PanelButton } from "../gui/ControlPanel";
-import { getTheme } from "../gui/theme";
+import { getTheme, type UiStyle } from "../gui/theme";
+import { panelFrame, type PanelFrame } from "./panelFrame";
 import type { Reactive, SliderOpts, SelectOpts } from "./SketchTypes";
 import { installAgentBridge, plainBundle, type AgentBridge } from "./AgentBridge";
 import type { MarkupCaptureOptions } from "./Markup";
@@ -48,7 +49,7 @@ export type { Reactive, SliderOpts, SelectOpts } from "./SketchTypes";
 // Public Types
 // ═══════════════════════════════════════════════
 
-/** Options for `sketch2d()`: where to mount it, title, canvas background, panel width and theme. */
+/** Options for `sketch2d()`: where to mount it, title, style, canvas background, panel width and tabs. */
 export interface Sketch2DConfig {
   /** DOM element or CSS selector to mount into */
   container?: HTMLElement | string;
@@ -56,10 +57,19 @@ export interface Sketch2DConfig {
   title?: string;
   /** Canvas background color (CSS) */
   background?: string;
-  /** Panel width in pixels (default 280) */
-  panelWidth?: number;
-  /** Dark or light theme */
+  /** Panel width in pixels (default 280), or "auto" (the default on paper): as wide as its controls need. A width dragged by hand wins. */
+  panelWidth?: number | "auto";
+  /** Dark or light theme (the studio style) */
   theme?: "dark" | "light";
+  /**
+   * The look of the whole app. "studio" (default): tekto's tool chrome. "paper": a figure
+   * in a book, white and minimal: no title bar, one ink, the drawing first.
+   */
+  style?: UiStyle;
+  /** Tabs as a bar on top of the panel (default) or as a list down its left side. */
+  tabs?: "top" | "side";
+  /** Show the 44 px title bar. Default: yes, except on paper and inside a shell that has its own bar (`<div data-shell>`). */
+  showHeader?: boolean;
 }
 
 /** The `lab.draw` callback: paint the canvas, given its 2D context and size in CSS pixels; runs on every re-run and animation frame. */
@@ -83,10 +93,10 @@ export type PointerFn = (p: Pointer2D) => void;
 export interface Lab2D {
   // ── GUI Controls ──
   slider(label: string, min: number, max: number, defaultValue: number, opts?: SliderOpts): Reactive<number>;
-  toggle(label: string, defaultValue?: boolean, opts?: { group?: string }): Reactive<boolean>;
+  toggle(label: string, defaultValue?: boolean, opts?: { group?: string; tab?: string }): Reactive<boolean>;
   select<T extends string>(label: string, options: readonly T[], defaultValue?: T, opts?: SelectOpts): Reactive<T>;
-  colorPicker(label: string, defaultValue?: string, opts?: { group?: string }): Reactive<string>;
-  button(label: string, action: () => void, opts?: { group?: string }): void;
+  colorPicker(label: string, defaultValue?: string, opts?: { group?: string; tab?: string }): Reactive<string>;
+  button(label: string, action: () => void, opts?: { group?: string; tab?: string }): void;
 
   /** Register the draw callback. Called on every re-run and animation frame. */
   draw(fn: DrawFn): void;
@@ -192,6 +202,8 @@ export class Sketch2DInstance {
   private ctx: CanvasRenderingContext2D;
   private panelEl!: HTMLElement;
   private logEl!: HTMLElement;
+  private logColors: [string, string] = ["", ""];
+  private _logHtml = "";
 
   // Param model: values in the ParamStore, placement in `items` — rendered
   // by the shared ControlPanel.
@@ -266,77 +278,70 @@ export class Sketch2DInstance {
   // ── DOM ──
 
   private buildDOM() {
-    const pw = this.config.panelWidth ?? 280;
-    const t = getTheme(this.config.theme);
+    const paper = this.config.style === "paper";
+    const t = getTheme(paper ? "paper" : this.config.theme);
+    // A shell (the testbench: `<div data-shell>`) shows the title in its own bar, and the
+    // paper style has no bar at all: the title is then the first line of the panel.
+    const inShell = this.container.dataset.shell != null;
+    const showHeader = this.config.showHeader ?? (!paper && !inShell);
+    const headerH = showHeader ? 44 : 0;
 
     const root = document.createElement("div");
     root.style.cssText = `
-      display:grid; grid-template-columns:${pw}px 1fr; grid-template-rows:44px 1fr;
+      display:grid; grid-template-columns:280px 1fr; grid-template-rows:${showHeader ? "44px " : ""}1fr;
       height:100%; width:100%; overflow:hidden; position:relative;
       background:${t.bg}; color:${t.text};
       font-family:${t.font};
     `;
 
-    // Header
-    const header = document.createElement("div");
-    header.style.cssText = `
-      grid-column:1/-1; display:flex; align-items:center; padding:0 16px; gap:12px;
-      background:${t.panelBg}; border-bottom:1px solid ${t.border};
-    `;
-    header.innerHTML = `
-      <span style="font-weight:600;font-size:14px;color:${t.accent}">
-        &#x2B21; ${this.config.title ?? "Tekto Sketch2D"}
-      </span>
-      <span style="font-size:9px;padding:2px 6px;border-radius:3px;
-        background:${t.hoverBg};color:${t.accent}">2D</span>
-    `;
-    root.appendChild(header);
+    if (showHeader) {
+      const header = document.createElement("div");
+      header.style.cssText = `
+        grid-column:1/-1; display:flex; align-items:center; padding:0 16px; gap:12px;
+        background:${t.panelBg}; border-bottom:1px solid ${t.border};
+      `;
+      header.innerHTML = `
+        <span style="font-weight:600;font-size:14px;color:${t.accent}">
+          &#x2B21; ${this.config.title ?? "Tekto Sketch2D"}
+        </span>
+        <span style="font-size:9px;padding:2px 6px;border-radius:3px;
+          background:${t.hoverBg};color:${t.accent}">2D</span>
+      `;
+      root.appendChild(header);
+    }
 
     // Panel
     this.panelEl = document.createElement("div");
     this.panelEl.style.cssText = `
-      grid-column:1; grid-row:2; overflow-y:auto; overflow-x:hidden; padding:0;
+      grid-column:1; grid-row:${showHeader ? 2 : 1}; overflow-y:auto; overflow-x:hidden; padding:0;
       background:${t.panelBg}; border-right:1px solid ${t.border};
     `;
     root.appendChild(this.panelEl);
+    if (paper && !inShell && this.config.title) {
+      const title = document.createElement("div");
+      title.style.cssText = `padding:12px 34px 10px 14px;font-size:13px;font-weight:600;line-height:1.35;border-bottom:1px solid ${t.border};`;
+      title.textContent = this.config.title;
+      this.panelEl.appendChild(title);
+    }
 
+    let frame: PanelFrame | null = null;
     this.panel = new ControlPanel({
       store: this.store,
       theme: t,
       getButtons: () => this.buttons,
       onAction: () => this.scheduleRerun(),
+      tabs: this.config.tabs,
+      onRender: () => frame?.fit(),
     });
     this.panelEl.appendChild(this.panel.el);
     this.store.onChange(() => this.scheduleRerun());
 
-    // Collapsible sidebar — a toggle in the header hides the panel and hands the width
-    // to the canvas; the choice is persisted across reloads.
-    const collapseKey = "tekto.sketch2d.collapsed";
-    let collapsed = false;
-    try { collapsed = localStorage.getItem(collapseKey) === "1"; } catch { /* noop */ }
-    const toggleBtn = document.createElement("button");
-    toggleBtn.style.cssText = `
-      margin-left:auto; cursor:pointer; width:28px; height:26px; border-radius:6px;
-      border:1px solid ${t.border}; background:transparent; color:${t.text};
-      font-size:15px; line-height:1; padding:0; flex:none;
-    `;
-    const applyCollapse = () => {
-      root.style.gridTemplateColumns = collapsed ? "0 1fr" : `${pw}px 1fr`;
-      this.panelEl.style.display = collapsed ? "none" : "";
-      toggleBtn.textContent = collapsed ? "›" : "‹";   // › when hidden, ‹ when shown
-      toggleBtn.title = collapsed ? "Show controls" : "Hide controls";
-    };
-    toggleBtn.addEventListener("click", () => {
-      collapsed = !collapsed;
-      try { localStorage.setItem(collapseKey, collapsed ? "1" : "0"); } catch { /* noop */ }
-      applyCollapse();
-      this.resizeCanvas();
-    });
-    header.appendChild(toggleBtn);
-
-    // Canvas container + log overlay
+    // The view: the canvas, and under it the status line (lab.log) as a row of its own,
+    // so it never covers the drawing. Pinned to its cell: a folded panel leaves the grid flow.
+    const view = document.createElement("div");
+    view.style.cssText = `grid-column:2;grid-row:${showHeader ? 2 : 1};display:flex;flex-direction:column;min-width:0;min-height:0;`;
     const vpWrap = document.createElement("div");
-    vpWrap.style.cssText = "grid-column:2;grid-row:2;position:relative;overflow:hidden;";   // pinned so a display:none panel can't steal its column
+    vpWrap.style.cssText = "flex:1;min-height:0;position:relative;overflow:hidden;";
 
     this.canvas.style.cssText = `
       width:100%; height:100%; display:block;
@@ -345,17 +350,15 @@ export class Sketch2DInstance {
     vpWrap.appendChild(this.canvas);
 
     this.logEl = document.createElement("div");
+    this.logEl.dataset.tektoStatus = "";
     this.logEl.style.cssText = `
-      position:absolute; bottom:12px; left:12px;
-      padding:8px 12px; border-radius:6px;
-      background:rgba(7,8,14,.85); backdrop-filter:blur(8px);
-      font-size:11px; line-height:1.7; color:${t.textDim};
-      pointer-events:none; max-width:300px;
-      border:1px solid rgba(22,24,42,.8); display:none;
+      flex:none; display:none; flex-wrap:wrap; column-gap:20px; padding:5px 12px;
+      background:${t.panelBg}; border-top:1px solid ${t.border};
+      font-size:11px; line-height:1.55; color:${t.text};
     `;
-    vpWrap.appendChild(this.logEl);
-
-    root.appendChild(vpWrap);
+    this.logColors = [t.textFaint, t.text];
+    view.append(vpWrap, this.logEl);
+    root.appendChild(view);
 
     if (this.container === document.body) {
       this.container.style.margin = "0";
@@ -363,7 +366,15 @@ export class Sketch2DInstance {
       this.container.style.overflow = "hidden";
     }
     this.container.appendChild(root);
-    applyCollapse();   // honor the persisted collapsed state on first paint
+
+    // The panel's frame, as in a 3D sketch: drag its edge, fold it at its corner, or let it
+    // size itself to its controls (the default on paper).
+    frame = panelFrame({
+      root, panelEl: this.panelEl, theme: t, top: headerH,
+      width: this.config.panelWidth ?? (paper ? "auto" : 280),
+      storageKey: this.config.title ?? "sketch2d",
+      preferred: () => this.panel.preferredWidth(),
+    });
 
     // Resize canvas to match viewport
     const ro = new ResizeObserver(() => this.resizeCanvas());
@@ -496,27 +507,27 @@ export class Sketch2DInstance {
         const key = `slider:${opts?.group ?? ""}:${label}`;
         return makeParam(key,
           { type: "float", min, max, default: def, step: opts?.step ?? (max - min) / 100, label },
-          { key, group });
+          { key, group, tab: opts?.tab });
       },
       toggle(label, def = false, opts) {
         const group = opts?.group ?? "Parameters";
         const key = `toggle:${opts?.group ?? ""}:${label}`;
-        return makeParam(key, { type: "bool", default: def, label }, { key, group });
+        return makeParam(key, { type: "bool", default: def, label }, { key, group, tab: opts?.tab });
       },
       select(label, options, def, opts) {
         const group = opts?.group ?? "Parameters";
         const key = `select:${opts?.group ?? ""}:${label}`;
         return makeParam(key,
           { type: "select", options, default: def ?? options[0], label },
-          { key, group });
+          { key, group, tab: opts?.tab });
       },
       colorPicker(label, def = "#38d9a9", opts) {
         const group = opts?.group ?? "Display";
         const key = `color:${opts?.group ?? ""}:${label}`;
-        return makeParam(key, { type: "color", default: def, label }, { key, group });
+        return makeParam(key, { type: "color", default: def, label }, { key, group, tab: opts?.tab });
       },
       button(label, action, opts) {
-        self.buttons.push({ label, action, group: opts?.group ?? "Actions" });
+        self.buttons.push({ label, action, group: opts?.group ?? "Actions", tab: opts?.tab });
       },
 
       draw(fn) { self.drawFn = fn; },
@@ -576,16 +587,16 @@ export class Sketch2DInstance {
   }
 
   private updateLog() {
-    if (this.logs.length === 0) {
-      this.logEl.style.display = "none";
-      return;
-    }
-    this.logEl.style.display = "block";
-    this.logEl.innerHTML = this.logs.map(l =>
-      `<div style="display:flex;gap:8px;">` +
-      `<span style="color:#4a5070">${l.label}</span>` +
-      `<span style="color:#b8bdd4">${l.value}</span></div>`
+    const [dim, ink] = this.logColors;
+    const html = this.logs.map(l =>
+      `<div style="display:flex;gap:8px;white-space:nowrap;">` +
+      `<span style="color:${dim}">${l.label}</span>` +
+      `<span style="color:${ink}">${l.value}</span></div>`
     ).join('');
+    if (html === this._logHtml) return;   // an animated sketch logs the same lines most frames
+    this._logHtml = html;
+    this.logEl.style.display = this.logs.length ? "flex" : "none";
+    this.logEl.innerHTML = html;
   }
 
   // ── Animation Loop ──

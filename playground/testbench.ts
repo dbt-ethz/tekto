@@ -126,6 +126,7 @@ const GROUPS: PageGroup[] = [
   ]},
   { name: "Sketch2D", pages: [
     { slug: "pointer-2d", label: "Pointer Input", docs: "apps/sketch2d", load: () => import("./pages/pointer-2d") },
+    { slug: "panel-tabs", label: "Panel options (side tabs, auto width)", docs: "apps/sketch2d", load: () => import("./pages/panel-tabs") },
   ]},
   { name: "BIM", pages: [
     { slug: "timber",   label: "Timber + IFC", docs: "buildings/framing", load: () => import("./pages/timber") },

@@ -47,6 +47,7 @@ import { ControlPanel, ControlItem, PanelButton, CustomRow, ExtraTab } from "../
 import { getTheme, Theme } from "../gui/theme";
 import { ThreeRenderer } from "../render/ThreeRenderer";
 import { buildSketchLayout, renderFileMenus } from "./sketchLayout";
+import { panelFrame, type PanelFrame } from "./panelFrame";
 import { Commands, viewCommands, type Command } from "../gui/Commands";
 import { meshHandle, flatMeshHandle, pointHandle, lineHandle, polylineHandle, shapeHandle } from "./handles";
 import type { SectionRequest } from "../scene/Scene";
@@ -172,6 +173,7 @@ export class SketchInstance {
   // `items`, and the DOM is rendered by the shared ControlPanel (src/gui/).
   private store: ParamStore = new ParamStore({});
   private panel!: ControlPanel;
+  private panelFrame: PanelFrame | null = null;
   private items = new Map<string, ControlItem>();
   private layerTrees = new Map<string, LayerTreeState>();
   private theme!: Theme;
@@ -364,8 +366,16 @@ export class SketchInstance {
       },
       onAction: () => this.runSketch(),
       onTabChange: (tab) => { this._onTabChange?.(tab); },
+      tabs: this.config.tabs,
+      onRender: () => this.panelFrame?.fit(),
     });
     this.panelEl.appendChild(this.panel.el);
+    this.panelFrame = panelFrame({
+      root: layout.root, panelEl: this.panelEl, theme: t, top: layout.headerHeight,
+      width: this.config.panelWidth ?? 320,
+      storageKey: this.config.title ?? "default",
+      preferred: () => this.panel.preferredWidth(),
+    });
     this.store.onChange((key) => {
       if (this._running || this._squelch) return;
       if (this.isDisplayChange(key)) this.runDisplayPass();

@@ -332,7 +332,7 @@ Types: `AddWallSystemOptions`, `Adjacency`, `AdjacencyOptions`, `Axis`, `Balloon
 - `computeEffectiveLock` (function): The lock counterpart of `computeEffectiveVisibility`: a node is effectively locked when it OR any of its ancestors is locked.
 - `computeEffectiveVisibility` (function): Traverse a layer tree and return a map of id → effective visibility, where a node is effectively visible only when it AND all its ancestors are individually visible.
 - `ControlPanel` (class): The panel every tekto GUI uses (`sketch`, `sketch2d`, `appShell`): sliders, toggles, selects, colours, text, buttons, menus, tabs and accordion groups for the values in a `ParamStore`.
-  members: el, footer, dispose(), render(), applyValue(), getActiveTab()
+  members: el, footer, dispose(), render(), preferredWidth(), applyValue(), getActiveTab()
 - `DEFAULT_BACKGROUND` (const): The page shaded and hidden-line are drawn on, when the host names none.
 - `download` (function): Download `data` as `fileName`.
 - `drawSheet` (function): Draw the sheet's primitives with `t`; the canvas transform (e.g.
@@ -345,7 +345,7 @@ Types: `AddWallSystemOptions`, `Adjacency`, `AdjacencyOptions`, `Axis`, `Balloon
 - `fitSheet` (function): The transform that fits `bounds` into a `width` × `height` canvas with a pixel margin.
 - `flatLights` (function): Flat lighting's lights, as intensities and colours.
 - `formatKeys` (function): A binding the way the platform writes it: "⇧⌘Z" on a Mac, "Ctrl+Shift+Z" elsewhere.
-- `getTheme` (function): The panel chrome colours for dark (default, white-on-dark) or light mode.
+- `getTheme` (function): The panel chrome colours for dark (default, white-on-dark), light or paper mode.
 - `groundAppearance` (function): The visible plane the content stands on.
 - `hiddenLineIdBuffer` (function): Compute hidden-line segments using GPU ID buffer rendering.
 - `keyMatches` (function): Does this key event press this binding?
@@ -396,7 +396,7 @@ Types: `AddWallSystemOptions`, `Adjacency`, `AdjacencyOptions`, `Axis`, `Balloon
 - `viewModeIconShapes` (function): What to draw for a render mode, back to front.
 - `viewModeIconSvg` (function): A render mode's icon as SVG markup, for a DOM app: `button.innerHTML = viewModeIconSvg("ghost")`.
 
-Types: `AgentDocApi`, `AgentDocOptions`, `AgentIssue`, `AgentNotes`, `AmbientOcclusionOptions`, `AnimateFn`, `Appearance`, `AppShellConfig`, `AppShellInstance`, `CalloutItem`, `CalloutOptions`, `Command`, `CommandInfo`, `ControlItem`, `ControlPanelConfig`, `CustomRow`, `DrawFn`, `DrawSheetOptions`, `DxfEdgeOptions`, `DxfMeshOptions`, `DxfSegment`, `DxfView`, `DxfWorkerRequest`, `DxfWriteOptions`, `ExportRegistration`, `ExtraTab`, `FlatLighting`, `IconShape`, `IdBufferOptions`, `ImportRegistration`, `Lab`, `Lab2D`, `LayerColumns`, `LayerMap`, `LayerNode`, `LayerState`, `LayerTree`, `LayoutOptions`, `LineHandle`, `MarkKind`, `MarkupBundle`, `MarkupCaptureOptions`, `MarkupObjectRef`, `MarkupRenderer`, `MeshHandle`, `NavGizmoOptions`, `Note`, `NoteInfo`, `NoteReply`, `NotesRenderer`, `PanelButton`, `PickInfo`, `Placement`, `Pointer2D`, `PointerFn`, `PointHandle`, `PresenceBarOptions`, `ProjectedSegment`, `Reactive`, `SelectOpts`, `ShadingBarCorner`, `ShadingBarPlacement`, `ShapeHandle`, `ShapeMode`, `SheetCanvasOptions`, `SheetTransform`, `Sketch2DConfig`, `Sketch2DFn`, `SketchConfig`, `SliderOpts`, `StepMark`, `StepsPanelOptions`, `StudioLighting`, `SunPreset`, `SVGOptions`, `SVGRendererConfig`, `Theme`, `ThreeRendererConfig`, `TopBarOptions`, `ViewControl`, `ViewMode`, `VisibilityOptions`, `VisibilityResult`, `VisibilityView`
+Types: `AgentDocApi`, `AgentDocOptions`, `AgentIssue`, `AgentNotes`, `AmbientOcclusionOptions`, `AnimateFn`, `Appearance`, `AppShellConfig`, `AppShellInstance`, `CalloutItem`, `CalloutOptions`, `Command`, `CommandInfo`, `ControlItem`, `ControlPanelConfig`, `CustomRow`, `DrawFn`, `DrawSheetOptions`, `DxfEdgeOptions`, `DxfMeshOptions`, `DxfSegment`, `DxfView`, `DxfWorkerRequest`, `DxfWriteOptions`, `ExportRegistration`, `ExtraTab`, `FlatLighting`, `IconShape`, `IdBufferOptions`, `ImportRegistration`, `Lab`, `Lab2D`, `LayerColumns`, `LayerMap`, `LayerNode`, `LayerState`, `LayerTree`, `LayoutOptions`, `LineHandle`, `MarkKind`, `MarkupBundle`, `MarkupCaptureOptions`, `MarkupObjectRef`, `MarkupRenderer`, `MeshHandle`, `NavGizmoOptions`, `Note`, `NoteInfo`, `NoteReply`, `NotesRenderer`, `PanelButton`, `PickInfo`, `Placement`, `Pointer2D`, `PointerFn`, `PointHandle`, `PresenceBarOptions`, `ProjectedSegment`, `Reactive`, `SelectOpts`, `ShadingBarCorner`, `ShadingBarPlacement`, `ShapeHandle`, `ShapeMode`, `SheetCanvasOptions`, `SheetTransform`, `Sketch2DConfig`, `Sketch2DFn`, `SketchConfig`, `SliderOpts`, `StepMark`, `StepsPanelOptions`, `StudioLighting`, `SunPreset`, `SVGOptions`, `SVGRendererConfig`, `Theme`, `ThreeRendererConfig`, `TopBarOptions`, `UiStyle`, `ViewControl`, `ViewMode`, `VisibilityOptions`, `VisibilityResult`, `VisibilityView`
 
 ## tekto/2d — sketch2d and the 2D geometry a first sketch needs — no three.js
 

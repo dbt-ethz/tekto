@@ -2,9 +2,9 @@
  * The frame of a 3D sketch, and its Export / Import menus.
  *
  * A grid: an optional title bar (the sketch's name, LIVE, and the menus on the right —
- * suppressed inside a shell that has its own bar), the control panel on the left — resizable
- * by dragging its edge, collapsible to a slim rail, both remembered per sketch title — and
- * the viewport with its log overlay. The sketch mounts its ControlPanel and renderer into it.
+ * suppressed inside a shell that has its own bar), the control panel on the left (the sketch
+ * gives it its `panelFrame`: resize, fold, automatic width) and the viewport with its log
+ * overlay. The sketch mounts its ControlPanel and renderer into it.
  */
 import type { Theme } from "../gui/theme";
 import { download } from "../io/download";
@@ -19,14 +19,12 @@ export interface SketchLayout {
   /** The viewport's container: the 3D view, overlays laid over it, the log overlay. */
   viewportWrap: HTMLElement;
   logEl: HTMLElement;
+  /** The title bar's height in px (0 without one): where the panel starts. */
+  headerHeight: number;
 }
 
 /** Build the frame into `container`. */
 export function buildSketchLayout(container: HTMLElement, config: SketchConfig, t: Theme): SketchLayout {
-  const defaultWidth = config.panelWidth ?? 320;
-  const storageKey = `tekto.panelWidth.${config.title ?? "default"}`;
-  const stored = parseInt(localStorage.getItem(storageKey) ?? "", 10);
-  const panelWidth = Number.isFinite(stored) && stored >= 200 && stored <= 800 ? stored : defaultWidth;
   // Default the internal header off when the container is tagged by a
   // shell (`<div data-shell="testbench">…</div>`) — the shell's top bar
   // already shows the page title, so the sketch's own 44 px title bar
@@ -41,7 +39,7 @@ export function buildSketchLayout(container: HTMLElement, config: SketchConfig, 
   // Root
   const root = document.createElement("div");
   root.style.cssText = `
-    display:grid; grid-template-columns:${panelWidth}px 1fr; grid-template-rows:${headerRow}1fr;
+    display:grid; grid-template-columns:320px 1fr; grid-template-rows:${headerRow}1fr;
     height:100%; width:100%; overflow:hidden; position:relative;
     background:${t.bg};
     color:${t.text};
@@ -80,89 +78,6 @@ export function buildSketchLayout(container: HTMLElement, config: SketchConfig, 
   `;
   root.appendChild(panelEl);
 
-  // Resize handle (vertical bar on the panel's right edge).
-  const resizeHandle = document.createElement("div");
-  resizeHandle.title = "Drag to resize panel · double-click to reset";
-  const handleIdle   = t.isDark ? "rgba(255,255,255,.14)" : "rgba(0,0,0,.14)";
-  const handleHover  = t.isDark ? "rgba(255,255,255,.35)" : "rgba(0,0,0,.30)";
-  resizeHandle.style.cssText = `
-    position:absolute; top:${showHeader ? 44 : 0}px; bottom:0;
-    left:${panelWidth - 3}px; width:6px;
-    cursor:col-resize; z-index:10;
-    background:${handleIdle};
-    transition:background .15s;
-  `;
-  resizeHandle.addEventListener("mouseenter", () => { resizeHandle.style.background = handleHover; });
-  resizeHandle.addEventListener("mouseleave", () => { resizeHandle.style.background = handleIdle; });
-  resizeHandle.addEventListener("dblclick", () => applyWidth(defaultWidth));
-  resizeHandle.addEventListener("mousedown", (e) => {
-    e.preventDefault();
-    const startX = e.clientX;
-    const startWidth = parseInt(root.style.gridTemplateColumns, 10) || panelWidth;
-    const onMove = (ev: MouseEvent) => {
-      const next = Math.max(200, Math.min(800, startWidth + (ev.clientX - startX)));
-      applyWidth(next);
-    };
-    const onUp = () => {
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
-      document.body.style.cursor = "";
-    };
-    document.body.style.cursor = "col-resize";
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
-  });
-  root.appendChild(resizeHandle);
-
-  let curWidth = panelWidth;
-  const applyWidth = (w: number) => {
-    curWidth = w;
-    root.style.gridTemplateColumns = `${w}px 1fr`;
-    resizeHandle.style.left = `${w - 3}px`;
-    collapseBtn.style.left = `${w - 26}px`;
-    localStorage.setItem(storageKey, String(w));
-    requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
-  };
-
-  // Collapse / expand the panel to reclaim the full canvas width.
-  const collapseKey = `tekto.panelCollapsed.${config.title ?? "default"}`;
-  const btnCss = (left: number) => `
-    position:absolute; top:${(showHeader ? 44 : 0) + 6}px; left:${left}px;
-    width:20px; height:24px; z-index:11; cursor:pointer; user-select:none;
-    display:flex; align-items:center; justify-content:center;
-    font:13px/1 ui-monospace,monospace;
-    border:1px solid ${t.controlBorder}; border-radius:4px;
-    background:${t.panelBg}; color:${t.accent};
-  `;
-  const collapseBtn = document.createElement("div");
-  collapseBtn.title = "Collapse panel";
-  collapseBtn.textContent = "‹";   // ‹
-  collapseBtn.style.cssText = btnCss(panelWidth - 26);
-  root.appendChild(collapseBtn);
-  const expandBtn = document.createElement("div");
-  expandBtn.title = "Show panel";
-  expandBtn.textContent = "›";      // ›
-  expandBtn.style.cssText = btnCss(4);   // sits on the collapsed 28px rail
-  expandBtn.style.display = "none";
-  root.appendChild(expandBtn);
-
-  const applyCollapsed = (c: boolean) => {
-    // Collapsed = a slim RAIL (not 0px): the expand chevron stays visible in a stable spot and the
-    // canvas reclaims the rest. An explicit resize nudge follows the reflow — the renderer's
-    // ResizeObserver usually catches it, but a forced event makes the canvas resize deterministic.
-    root.style.gridTemplateColumns = c ? "28px 1fr" : `${curWidth}px 1fr`;
-    panelEl.style.display = c ? "none" : "";
-    resizeHandle.style.display = c ? "none" : "";
-    collapseBtn.style.display = c ? "none" : "flex";
-    collapseBtn.style.left = `${curWidth - 26}px`;
-    expandBtn.style.display = c ? "flex" : "none";
-    localStorage.setItem(collapseKey, c ? "1" : "0");
-    requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
-  };
-  collapseBtn.addEventListener("click", () => applyCollapsed(true));
-  expandBtn.addEventListener("click", () => applyCollapsed(false));
-  if (localStorage.getItem(collapseKey) === "1") applyCollapsed(true);
-
   // Viewport container (holds 3D canvas + log overlay). Grid column pinned explicitly: when the
   // panel collapses via display:none it leaves the grid flow, and without the pin the viewport
   // auto-places into column 1 (the slim rail) leaving column 2 black.
@@ -197,7 +112,7 @@ export function buildSketchLayout(container: HTMLElement, config: SketchConfig, 
     container.style.overflow = "hidden";
   }
   container.appendChild(root);
-  return { root, fileMenusEl, panelEl, viewportEl, viewportWrap: vpWrap, logEl };
+  return { root, fileMenusEl, panelEl, viewportEl, viewportWrap: vpWrap, logEl, headerHeight: showHeader ? 44 : 0 };
 }
 
 /**

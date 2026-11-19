@@ -37,6 +37,8 @@ export interface Theme {
   fieldBg: string;
   /** Panel font stack */
   font: string;
+  /** Minimal chrome (the paper style): no title bar or badge, section names without arrows, no heading over a lone default group. */
+  plain?: boolean;
 }
 
 const DARK: Theme = {
@@ -71,7 +73,32 @@ const LIGHT: Theme = {
   font: "'IBM Plex Mono',ui-monospace,monospace",
 };
 
-/** The panel chrome colours for dark (default, white-on-dark) or light mode. */
-export function getTheme(mode: "dark" | "light" = "dark"): Theme {
-  return mode === "light" ? LIGHT : DARK;
+// Paper: a figure in a book. White, one ink for every text, hairlines, no chrome.
+const PAPER: Theme = {
+  isDark: false,
+  bg: "#ffffff",
+  panelBg: "#ffffff",
+  popupBg: "#ffffff",
+  border: "#d9d9d9",
+  controlBorder: "#c4c4c4",
+  text: "#111111",
+  textDim: "#111111",
+  textFaint: "#111111",
+  accent: "#111111",
+  hoverBg: "rgba(0,0,0,.05)",
+  fieldBg: "#ffffff",
+  font: "'IBM Plex Mono',ui-monospace,monospace",
+  plain: true,
+};
+
+/**
+ * A look for a whole app. "studio" (default): the dark, tool-like chrome of a 3D app
+ * (or its light variant, by `theme`). "paper": white and minimal, for a 2D figure:
+ * the drawing first, one ink, no title bar.
+ */
+export type UiStyle = "studio" | "paper";
+
+/** The panel chrome colours for dark (default, white-on-dark), light or paper mode. */
+export function getTheme(mode: "dark" | "light" | "paper" = "dark"): Theme {
+  return mode === "paper" ? PAPER : mode === "light" ? LIGHT : DARK;
 }

@@ -37,6 +37,31 @@ sketch2d((lab) => {
 - `lab.noise`, `lab.random`, `lab.lerp`, `lab.vec2` and friends are there, scoped to `lab`.
 - Geometry in `tekto/2d`: `Vec2`, `Polygon2D`, `PolygonBool`, `Sheet`, `noise`, `createRandom`.
 
+## The panel and the look
+
+The options after the function shape the frame around the drawing:
+
+```ts
+sketch2d(fn, {
+  title: "Façade",
+  style: "paper",        // a figure in a book: white, one ink, no title bar
+  tabs: "side",          // tabs listed down the panel's left edge
+  panelWidth: "auto",    // as wide as the longest label and widest control need
+});
+```
+
+- **`style`** is the look of the whole app. `"studio"` (the default) is tekto's dark tool chrome, light with `theme: "light"`. `"paper"` is for a figure that explains something: the drawing first, black on white, no title bar, and the panel sizes itself.
+- **`tabs`**: give controls a `tab` (`lab.slider("Pitch °", 10, 55, 30, { tab: "Roof" })`) and the panel shows one tab at a time. `"top"` (the default) is a bar across the panel; `"side"` is a list down its left edge with each tab's number of controls, which holds more tabs and longer names. A control without a tab stays above them, always on show.
+- **`panelWidth`** is a number of pixels or `"auto"`. Either way a person can drag the panel's right edge (double-click it to go back) and fold the panel with the chevron at its top right corner; both are remembered per title.
+- Labels are shown as you write them, so a unit keeps its case: `"Width m"`.
+- `lab.log(label, value)` writes the status line, a row under the canvas.
+
+`sketch()` and `appShell()` take `tabs` and `panelWidth` the same way.
+
+::: tip Playground
+[Panel options](https://github.com/dbt-ethz/tekto/blob/main/playground/pages/panel-tabs.ts): `?page=panel-tabs`, a façade with side tabs and an automatic width. The [lecture apps](/interface/playground#the-lecture-apps) are in the paper style.
+:::
+
 ::: tip Playground
 [Pointer Input](https://github.com/dbt-ethz/tekto/blob/main/playground/pages/pointer-2d.ts): `?page=pointer-2d`. [Circle Packing](https://github.com/dbt-ethz/tekto/blob/main/playground/pages/circle-packing.ts) is a larger 2D sketch.
 :::

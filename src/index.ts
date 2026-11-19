@@ -23,7 +23,7 @@ export type { IdBufferOptions } from "./io/IdBufferHiddenLine";
 // GUI: shared theme + control renderer (used by sketch / sketch2d / appShell;
 // also usable standalone for custom panels).
 export { getTheme } from "./gui/theme";
-export type { Theme } from "./gui/theme";
+export type { Theme, UiStyle } from "./gui/theme";
 // Commands: what an app can do, with its keys — run by key, listed for a palette, run by agents.
 export { Commands, keyMatches, formatKeys, viewCommands } from "./gui/Commands";
 export type { Command, CommandInfo, ViewControl } from "./gui/Commands";

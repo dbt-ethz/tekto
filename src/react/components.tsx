@@ -320,7 +320,7 @@ export function InspectorPanel({
               borderLeft: `3px solid ${obj.style.color}`,
             }}
           >
-            <span style={{ color: "#5a6080", fontSize: 11, fontFamily: "monospace" }}>{obj.type}</span>
+            <span style={{ color: "#808080", fontSize: 11, fontFamily: "monospace" }}>{obj.type}</span>
             <span style={{ color: "#9aa0b8", fontSize: 11, fontFamily: "monospace" }}>{obj.id}</span>
             {obj.style.label && (
               <span style={{ color: "#6a7090", fontSize: 10, fontStyle: "italic" }}>"{obj.style.label}"</span>
@@ -413,7 +413,7 @@ const panelStyle: CSSProperties = {
   padding: 12,
   background: "rgba(14, 15, 26, 0.95)",
   borderRadius: 8,
-  border: "1px solid #1a1c2e",
+  border: "1px solid #2d2d2e",
   color: "#c8cad8",
   fontFamily: "'DM Sans', sans-serif",
   fontSize: 13,
@@ -426,7 +426,7 @@ const panelTitleStyle: CSSProperties = {
   fontWeight: 600,
   textTransform: "uppercase",
   letterSpacing: "1.2px",
-  color: "#5a6080",
+  color: "#808080",
   marginBottom: 12,
   fontFamily: "monospace",
 };
@@ -470,7 +470,7 @@ const checkStyle: CSSProperties = {
 const selectStyle: CSSProperties = {
   flex: 1,
   padding: "4px 8px",
-  background: "#0a0b14",
+  background: "#0b0b0b",
   border: "1px solid #1e2035",
   borderRadius: 4,
   color: "#c8cad8",
@@ -481,7 +481,7 @@ const selectStyle: CSSProperties = {
 const textStyle: CSSProperties = {
   flex: 1,
   padding: "4px 8px",
-  background: "#0a0b14",
+  background: "#0b0b0b",
   border: "1px solid #1e2035",
   borderRadius: 4,
   color: "#c8cad8",

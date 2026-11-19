@@ -96,10 +96,10 @@ export function buildSketchLayout(container: HTMLElement, config: SketchConfig, 
   logEl.style.cssText = `
     position:absolute; bottom:12px; left:12px;
     padding:8px 12px; border-radius:6px;
-    background:rgba(7,8,14,.85); backdrop-filter:blur(8px);
-    font-size:11px; line-height:1.7; color:#7a80a0;
+    background:rgba(37,37,38,.92); backdrop-filter:blur(8px);
+    font-size:11px; line-height:1.7; color:#a8a8a8;
     pointer-events:none; max-width:300px;
-    border:1px solid rgba(22,24,42,.8);
+    border:1px solid rgba(255,255,255,.1);
     display:none;
   `;
   vpWrap.appendChild(logEl);

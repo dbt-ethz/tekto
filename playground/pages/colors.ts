@@ -42,7 +42,6 @@ export default function (container: HTMLElement): SketchInstance {
   }, {
     container,
     title: "Colors & Style",
-    background: 0x0a0b14,
     camera: [8, 6, 10],
     target: [0, 0, 0],
   });

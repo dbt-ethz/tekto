@@ -58,7 +58,6 @@ export default function (container: HTMLElement): SketchInstance {
   }, {
     container,
     title: "Shape Modes",
-    background: 0x0a0b14,
     camera: [6, 10, 8],
     target: [0, 0, 0],
   });

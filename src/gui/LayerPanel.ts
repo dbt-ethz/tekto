@@ -321,11 +321,11 @@ export class LayerPanel {
 
     // Dim text when this node or any ancestor is off
     const labelColor = d
-      ? (effectiveVisible ? "#b8bdd4" : "#3a3f5a")
+      ? (effectiveVisible ? "#cccccc" : "#3a3f5a")
       : (effectiveVisible ? "#2a2d3a" : "#b0b4c0");
     const arrowColor = d ? "#3a3f5a" : "#b0b4c0";
     const hoverBg    = d ? "rgba(255,255,255,.04)" : "rgba(0,0,0,.04)";
-    const iconOn     = d ? "#b8bdd4" : "#2a2d3a";
+    const iconOn     = d ? "#cccccc" : "#2a2d3a";
     const iconOff    = d ? "#3a3f5a" : "#b0b4c0";
     const bulbOn     = d ? "#fbbf24" : "#d97706";
     const checkColor = d ? "#ffffff" : "#16182c";

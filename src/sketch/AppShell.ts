@@ -41,7 +41,7 @@ import { Scene } from "../scene/Scene";
 import { ThreeRenderer, ThreeRendererConfig } from "../render/ThreeRenderer";
 import { ParamStore, ParamSchema } from "../gui/Params";
 import { ControlPanel, ControlItem } from "../gui/ControlPanel";
-import { getTheme, Theme } from "../gui/theme";
+import { getTheme, Theme, VIEW_BG_DARK } from "../gui/theme";
 import { installAgentBridge, plainBundle, sceneSummary, describeSceneObject, addOverlay, snapshotWithOverlays, callSite } from "./AgentBridge";
 import { StepTrace } from "../core/steps/StepTrace";
 import { StepsPanel, type StepMark } from "./StepsPanel";
@@ -240,10 +240,10 @@ export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppS
   statusEl.style.cssText = `
     position:absolute; bottom:12px; left:12px;
     border-radius:6px;
-    background:rgba(7,8,14,.85); backdrop-filter:blur(8px);
+    background:rgba(37,37,38,.92); backdrop-filter:blur(8px);
     font-size:11px; line-height:1.7; color:${t.textDim};
     pointer-events:none; max-width:340px;
-    border:1px solid rgba(22,24,42,.8);
+    border:1px solid rgba(255,255,255,.1);
     font-family:${t.font};
     display:none; align-items:flex-start;
   `;
@@ -312,7 +312,7 @@ export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppS
 
   const scene = new Scene();
   const renderer = new ThreeRenderer(scene, viewportEl, {
-    backgroundColor: config.background ?? 0x0a0b14,
+    backgroundColor: config.background ?? VIEW_BG_DARK,
     cameraPosition: config.camera ?? [6, 8, 10],
     cameraTarget: config.target ?? [0, 0, 0],
     // Z-up by default — matches the tekto convention (XY = ground plane) and

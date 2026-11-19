@@ -51,7 +51,6 @@ export default function (container: HTMLElement): SketchInstance {
   }, {
     container,
     title: "Camera",
-    background: 0x0a0b14,
     camera: [6, 6, 8],
     target: [0, 1, 0],
   });

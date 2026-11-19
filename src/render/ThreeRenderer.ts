@@ -102,7 +102,7 @@ const INERT_STYLE_KEYS = new Set(["layer", "lineWidth", "noExport"]);
 
 const DEFAULTS: ThreeRendererConfig = {
   antialias: true,
-  backgroundColor: 0x0a0b14,
+  backgroundColor: 0x0b0b0b,
   showGrid: true,
   gridStyle: "lines",
   gridSize: 20,
@@ -232,7 +232,7 @@ export class ThreeRenderer {
       this.gridHelper = this.fadingGrid.mesh;
       this.threeScene.add(this.fadingGrid.mesh);
     } else if (cfg.showGrid) {
-      const grid = new THREE.GridHelper(cfg.gridSize, cfg.gridDivisions, 0x3a3c5a, 0x2a2c4a);
+      const grid = new THREE.GridHelper(cfg.gridSize, cfg.gridDivisions, 0x3a3a3a, 0x262626);
       if (this.isZUp) grid.rotation.x = Math.PI / 2;
       this.gridHelper = grid;
       this.threeScene.add(grid);

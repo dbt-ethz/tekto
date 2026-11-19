@@ -6,6 +6,13 @@ before 1.0, breaking changes bump the minor version. See
 
 ## Unreleased
 
+- **The dark theme is grey, not blue.** Panels, bars, menus and the viewer header are a neutral
+  dark grey (`#252526`, as an editor's dark theme), with grey borders and text; the view behind
+  them (a 3D view, a 2D canvas) is darker still, almost black (`#0b0b0b`, was the navy
+  `#0a0b14`), and its grid lines are grey. `getTheme()` returns the new colours, so an app
+  that reads the theme follows; an app that set `background: 0x0a0b14` itself keeps it. No
+  chrome is green: the playground's name and hovers are white.
+
 - **A menu bar, and Undo in every app.** `sketch`, `sketch2d` and `appShell` now show a menu
   bar drawn from the app's commands: File, Edit and View first, then the app's own menus, each
   command in the menu its `group` names (`app.commands.add({ id: "file.save", label: "Save

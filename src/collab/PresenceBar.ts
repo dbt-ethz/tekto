@@ -106,7 +106,7 @@ export class PresenceBar {
       const b = document.createElement("span");
       b.dataset.agent = agent.name;
       b.style.cssText = "height:22px;padding:0 6px;border-radius:5px;display:inline-flex;align-items:center;"
-        + "font:600 10px system-ui,sans-serif;color:#14161e;background:#ffb020;white-space:nowrap;";
+        + "font:600 10px system-ui,sans-serif;color:#1e1e1e;background:#ffb020;white-space:nowrap;";
       b.textContent = agent.name;
       const me = p.session === this.store.session;
       b.title = `${agent.name}, through ${me ? "your" : `${p.user.name}'s`} window${agent.doing ? `: ${agent.doing}` : ""}`;

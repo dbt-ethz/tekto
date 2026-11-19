@@ -96,7 +96,6 @@ export default function (container: HTMLElement): SketchInstance {
   }, {
     container,
     title: "Graph",
-    background: 0x0a0b14,
     camera: [0, 14, 0],
     target: [0, 0, 0],
   });

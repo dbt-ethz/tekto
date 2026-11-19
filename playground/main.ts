@@ -94,7 +94,6 @@ sketch((lab) => {
   });
 }, {
   title: "Tekto Playground",
-  background: 0x0a0b14,
   camera: [6, 8, 10],
   target: [0, 1, 0],
 });

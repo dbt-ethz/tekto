@@ -364,7 +364,7 @@ export class Sketch2DInstance {
 
     this.canvas.style.cssText = `
       width:100%; height:100%; display:block;
-      background:${this.config.background ?? (t.isDark ? "#0a0a10" : "#ffffff")};
+      background:${this.config.background ?? (t.isDark ? "#0b0b0b" : "#ffffff")};
     `;
     vpWrap.appendChild(this.canvas);
 

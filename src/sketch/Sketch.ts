@@ -44,7 +44,7 @@ import { VIEWER_HEADER_H } from "../render/ShadingBar";
 import { LayerPanel, LayerMap, LayerNode, LayerState, layerDefaults, computeEffectiveLock, activateLayer, keepActiveOn } from "../gui/LayerPanel";
 import { ParamStore } from "../gui/Params";
 import { ControlPanel, ControlItem, PanelButton, CustomRow, ExtraTab } from "../gui/ControlPanel";
-import { getTheme, Theme } from "../gui/theme";
+import { getTheme, Theme, VIEW_BG_DARK } from "../gui/theme";
 import { ThreeRenderer } from "../render/ThreeRenderer";
 import { buildSketchLayout, fileCommands } from "./sketchLayout";
 import { menuBar, menuSlot } from "../gui/MenuBar";
@@ -401,7 +401,7 @@ export class SketchInstance {
   private initRenderer() {
     const zUp = this.config.up === "z";
     this.renderer = new ThreeRenderer(this.scene, this.viewportEl, {
-      backgroundColor: this.config.background ?? 0x07080e,
+      backgroundColor: this.config.background ?? VIEW_BG_DARK,
       showGrid: this.config.grid !== false,
       showAxes: this.config.axes !== false,
       cameraPosition: this.config.camera ?? (zUp ? [8, -10, 6] : [5, 6, 8]),

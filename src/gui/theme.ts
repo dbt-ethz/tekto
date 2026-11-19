@@ -4,9 +4,9 @@
  * Every tekto panel (sketch, sketch2d, appShell, LayerPanel, ControlPanel)
  * derives its colors from here instead of re-declaring hex literals inline.
  *
- * Chrome is WHITE on the dark background by design: white slider accents and
- * value labels, white toggle tracks, plain white titles — no colored accents
- * in panel chrome. (Content colors — e.g. a colorPicker's default value — are
+ * Chrome is WHITE on dark GREY by design: neutral greys with no blue in them,
+ * white slider accents and value labels, white toggle tracks, plain white
+ * titles — no colored accents in panel chrome, and never green. (Content colors — e.g. a colorPicker's default value — are
  * the sketch's business, not the theme's.)
  */
 
@@ -41,21 +41,26 @@ export interface Theme {
   plain?: boolean;
 }
 
+// Dark: neutral greys, as an editor's dark theme. The chrome (panels, bars, menus) is a dark
+// grey; the view behind it is darker still, almost black, so the model is what stands out.
 const DARK: Theme = {
   isDark: true,
-  bg: "#07080e",
-  panelBg: "#0c0d16",
-  popupBg: "#0d0f1e",
-  border: "#16182a",
-  controlBorder: "#1e2140",
-  text: "#b8bdd4",
-  textDim: "#7a80a0",
-  textFaint: "#5a6080",
+  bg: "#0b0b0b",
+  panelBg: "#252526",
+  popupBg: "#2d2d2e",
+  border: "#383838",
+  controlBorder: "#4a4a4a",
+  text: "#cccccc",
+  textDim: "#a8a8a8",
+  textFaint: "#808080",
   accent: "#ffffff",
-  hoverBg: "rgba(255,255,255,.06)",
-  fieldBg: "#07080e",
+  hoverBg: "rgba(255,255,255,.08)",
+  fieldBg: "#1e1e1e",
   font: "'IBM Plex Mono',ui-monospace,monospace",
 };
+
+/** The dark theme's view background (a 3D view, a 2D canvas): almost black, darker than the chrome. */
+export const VIEW_BG_DARK = 0x0b0b0b;
 
 const LIGHT: Theme = {
   isDark: false,

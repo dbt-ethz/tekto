@@ -99,7 +99,6 @@ export default function (container: HTMLElement): SketchInstance {
   }, {
     container,
     title: "Curves",
-    background: 0x0a0b14,
     camera: [0, 0, 14],
     target: [0, -1, 0],
   });

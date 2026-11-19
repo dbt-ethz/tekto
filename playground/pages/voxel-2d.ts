@@ -341,7 +341,6 @@ export default function (container: HTMLElement): SketchInstance {
   }, {
     container,
     title: "Voxel Grid 2D",
-    background: 0x0a0b14,
     camera: [0, 12, 0],
     target: [0, 0, 0],
   });

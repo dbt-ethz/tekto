@@ -200,7 +200,7 @@ test("daylight: Studio's light follows the sun's altitude, and goes back when it
     (window as any).__tekto.owner.renderer.setSunDirection({ x: Math.cos(a), y: 0, z: Math.sin(a) });
   }, deg);
   await page.evaluate(() => { const o = (window as any).__tekto.owner; o.scene.setLightingMode("studio"); o.renderer.setDaylight(true); });
-  const plain = 0x0a0b14;
+  const plain = 0x0b0b0b;                              // the dark theme's view, almost black
   await sunAt(60);
   expect(await light()).toMatchObject({ altitude: 60, warm: false, exposure: 1, background: plain });
   await sunAt(8);
@@ -291,7 +291,7 @@ test("setSky lights and backs the scene with an image, stood upright in Z-up; nu
   await page.evaluate(() => (window as any).__tekto.owner.renderer.setSky(null));
   const plain = await corners();
   expect(plain.env).toBe(false);
-  expect(plain.top).toEqual([0x0a, 0x0b, 0x14]);
+  expect(plain.top).toEqual([0x0b, 0x0b, 0x0b]);
 });
 
 test("the shading bar: render style, lighting and the sun's presets as icons in the view, following code", async ({ page }) => {

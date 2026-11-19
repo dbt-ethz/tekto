@@ -650,7 +650,6 @@ export default function (container: HTMLElement): SketchInstance {
   }, {
     container,
     title: "Walls — first-class joints (mitered ↔ butt)",
-    background: 0x0a0b14,
     up: "z",
     panelWidth: 380,
     camera: [10, -10, 9],

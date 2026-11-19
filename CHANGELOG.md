@@ -6,6 +6,14 @@ before 1.0, breaking changes bump the minor version. See
 
 ## Unreleased
 
+- **The panel has a top row of its own, and an empty panel is not there.** The first row of
+  the panel in `sketch`, `sketch2d` and `appShell` belongs to its frame: the panel's name on
+  the left ("Parameters"; `panelTitle` changes it, `""` leaves it free; a paper figure shows
+  its title there) and the fold chevron on the right. The controls start below it, so nothing
+  sits beside the chevron any more, and the row is as high as the viewer header, one band
+  across the app. An app that declares no control has no panel at all — no column, no rail,
+  no chevron — and the view takes the whole width; the panel appears with its first content.
+
 - **Hidden line is a drawing on white paper, in a dark app too.** It used to fill the faces
   with the view's background and draw the creases in a fixed dark grey: on a dark view, faint
   grey lines on black. Now the view turns white while the mode is on, with dark lines and a

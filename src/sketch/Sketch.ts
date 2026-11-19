@@ -382,6 +382,7 @@ export class SketchInstance {
     this.panelFrame = panelFrame({
       root: layout.root, panelEl: this.panelEl, theme: t, top: layout.headerHeight,
       width: this.config.panelWidth ?? 320,
+      title: this.config.panelTitle ?? "Parameters",
       storageKey: this.config.title ?? "default",
       preferred: () => this.panel.preferredWidth(),
     });

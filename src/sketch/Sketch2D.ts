@@ -62,6 +62,8 @@ export interface Sketch2DConfig {
   background?: string;
   /** Panel width in pixels (default 280), or "auto" (the default on paper): as wide as its controls need. A width dragged by hand wins. */
   panelWidth?: number | "auto";
+  /** The name in the panel's top row, beside the chevron that folds it. Default "Parameters"; on paper the app's title, or nothing inside a shell. "" leaves the row free. */
+  panelTitle?: string;
   /** Dark or light theme (the studio style) */
   theme?: "dark" | "light";
   /**
@@ -335,12 +337,6 @@ export class Sketch2DInstance {
       background:${t.panelBg}; border-right:1px solid ${t.border};
     `;
     root.appendChild(this.panelEl);
-    if (paper && !inShell && this.config.title) {
-      const title = document.createElement("div");
-      title.style.cssText = `padding:12px 34px 10px 14px;font-size:13px;font-weight:600;line-height:1.35;border-bottom:1px solid ${t.border};`;
-      title.textContent = this.config.title;
-      this.panelEl.appendChild(title);
-    }
 
     let frame: PanelFrame | null = null;
     this.panel = new ControlPanel({
@@ -391,6 +387,8 @@ export class Sketch2DInstance {
     frame = panelFrame({
       root, panelEl: this.panelEl, theme: t, top: headerH,
       width: this.config.panelWidth ?? (paper ? "auto" : 280),
+      // A paper figure has no bar: its title is the panel's name (a shell names it already).
+      title: this.config.panelTitle ?? (paper ? (inShell ? "" : this.config.title ?? "") : "Parameters"),
       storageKey: this.config.title ?? "sketch2d",
       preferred: () => this.panel.preferredWidth(),
     });

@@ -159,9 +159,11 @@ Add or restyle a control type THERE, never inline in Sketch.ts / Sketch2D.ts /
 AppShell.ts — those files only declare params and mount the panel.
 
 Labels are shown as written (no `text-transform`): write "Width m", not "width_m". The
-panel's frame (resize by its edge, the fold chevron at its top right corner, `panelWidth:
-"auto"`) is [src/sketch/panelFrame.ts](src/sketch/panelFrame.ts), shared by all three
-harnesses: never give one harness its own collapse button or width logic. A second look,
+panel's frame (its top row with the panel's name and the fold chevron, level with the viewer
+header; resize by its edge; `panelWidth: "auto"`; no panel at all while it is empty) is
+[src/sketch/panelFrame.ts](src/sketch/panelFrame.ts), shared by all three harnesses: never
+give one harness its own collapse button or width logic, and never put an app's control in
+the top row. A second look,
 `style: "paper"` (white, one ink, no title bar; `getTheme("paper")`, `theme.plain`), is for 2D
 figures such as the lecture apps; it is a preset of the same components, not a second set.
 

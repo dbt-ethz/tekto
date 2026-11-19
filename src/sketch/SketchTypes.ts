@@ -43,6 +43,8 @@ export interface SketchConfig {
   show2D?: boolean;
   /** Panel width in pixels (default 320), or "auto": as wide as its controls need. A width dragged by hand wins. */
   panelWidth?: number | "auto";
+  /** The name in the panel's top row, beside the chevron that folds it. Default "Parameters"; "" leaves the row free. */
+  panelTitle?: string;
   /** Tabs as a bar on top of the panel (default) or as a list down its left side. */
   tabs?: "top" | "side";
   /** Dark or light theme */

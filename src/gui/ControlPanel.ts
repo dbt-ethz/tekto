@@ -94,8 +94,6 @@ const LABEL_MIN = 56, LABEL_MAX = 170;
 const CONTROL_MIN = 150, CONTROL_MAX = 220;
 /** A section's horizontal padding. */
 const SECTION_PAD = 14;
-/** Kept free at the panel's top right corner, where its frame puts the chevron that folds it. */
-const CORNER = 32;
 
 // Rectangular ("scientific") range sliders — flat track, square thumb — the
 // tekto default look. Pseudo-element thumbs can't be styled inline, so a
@@ -211,7 +209,7 @@ export class ControlPanel {
     const pinnedButtons = hasTabs ? buttons.filter(b => !b.tab && !b.menu) : [];
     if (pinnedItems.length || pinnedButtons.length) {
       const strip = document.createElement("div");
-      strip.style.cssText = `padding:4px ${CORNER}px 2px 8px;border-bottom:1px solid ${t.border};`;
+      strip.style.cssText = `padding:4px 8px 2px 8px;border-bottom:1px solid ${t.border};`;
       for (const it of pinnedItems) { const row = this.buildControl(it); if (row) strip.appendChild(row); }
       for (const b of pinnedButtons) strip.appendChild(this.buildButtonRow(b));
       this.el.appendChild(strip);
@@ -219,8 +217,6 @@ export class ControlPanel {
     // Tabs on top: a bar, then the sections. Tabs on the side: a list beside the sections.
     const side = hasTabs && this.cfg.tabs === "side";
     let body = this.el;
-    // Something already across the panel's top (menus, pinned controls, a tab bar) keeps its corner free.
-    let cornerFree = this.el.childElementCount > 0 || (hasTabs && !side);
     // (single properties: the owner may have styled the element itself)
     this.el.style.display = side ? "flex" : "";
     this.el.style.flexDirection = side ? "column" : "";
@@ -256,8 +252,7 @@ export class ControlPanel {
     // Nothing but the default group: no heading over it on a plain panel, nor in a tab (its name is the heading).
     const bare = (!!t.plain || hasTabs) && groups.size === 1 && groups.has(DEFAULT_GROUP);
     for (const [name, content] of groups) {
-      body.appendChild(this.buildSection(name, content, bare, cornerFree));
-      cornerFree = true;
+      body.appendChild(this.buildSection(name, content, bare));
     }
     if (activeExtra) {
       const host = document.createElement("div");
@@ -472,7 +467,7 @@ export class ControlPanel {
   private buildTabBar(tabOrder: string[]): HTMLElement {
     const t = this.theme;
     const bar = document.createElement("div");
-    bar.style.cssText = `display:flex;border-bottom:1px solid ${t.border};flex-shrink:0;padding-right:${CORNER}px;`;
+    bar.style.cssText = `display:flex;border-bottom:1px solid ${t.border};flex-shrink:0;`;
     for (const tab of tabOrder) {
       const btn = document.createElement("button");
       btn.textContent = tab;
@@ -545,7 +540,6 @@ export class ControlPanel {
     name: string,
     content: { items: ControlItem[]; buttons: PanelButton[]; rows: CustomRow[] },
     bare = false,
-    cornerFree = true,
   ): HTMLElement {
     const t = this.theme;
     const section = document.createElement("div");
@@ -577,7 +571,7 @@ export class ControlPanel {
     if (!bare) section.appendChild(header);
 
     const body = document.createElement("div");
-    body.style.cssText = `padding:${bare ? (cornerFree ? 10 : CORNER) : 0}px ${SECTION_PAD}px 10px;${collapsed ? "display:none;" : ""}`;
+    body.style.cssText = `padding:${bare ? 10 : 0}px ${SECTION_PAD}px 10px;${collapsed ? "display:none;" : ""}`;
 
     for (const it of content.items) {
       const row = this.buildControl(it);

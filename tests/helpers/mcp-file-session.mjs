@@ -48,13 +48,13 @@ export async function collabServer(dir) {
 
 /**
  * Send `messages` to a fresh MCP server working on a building file (`{ file }`) or joined to
- * a shared document (`{ doc, url }`), and resolve with the replies to the ones that have an
+ * a shared document (`{ doc, url }`), with `propose: true` allowed only to propose, and resolve with the replies to the ones that have an
  * id, in id order. A message `{ wait: ms }` pauses before the next one.
  */
 export async function mcpFileSession(messages, target) {
   const lib = await library();
   const where = typeof target === "string" ? { file: target } : target;
-  const args = where.file ? ["--file", where.file] : ["--doc", where.doc];
+  const args = [...(where.file ? ["--file", where.file] : ["--doc", where.doc]), ...(where.propose ? ["--propose"] : [])];
   const child = spawn(process.execPath, ["tools/mcp.mjs", ...args], { env: { ...process.env, TEKTO_LIB: lib, TEKTO_AGENT: "Claude", ...(where.url ? { TEKTO_URL: where.url } : {}) } });
   const want = messages.filter((m) => m.id !== undefined).length;
   const replies = [];

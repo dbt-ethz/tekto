@@ -6,6 +6,21 @@ before 1.0, breaking changes bump the minor version. See
 
 ## Unreleased
 
+- **Proposals: an agent's change waits for a person.** `tekto_propose` (in every mode of the
+  MCP server) stores a patch in the document as an open proposal instead of applying it, with a
+  label and a note saying why, and answers with what the check would say if it were applied:
+  the issues it would cause and the ones it would settle. `ProposalBar` shows each open proposal
+  over the view (who, why, the records added, changed field by field, removed) with Accept and
+  Reject: accepting is one undo step, and undoing it reopens the proposal; a rejection keeps the
+  reason for the agent, which reads it with `tekto_proposals`. `tools/mcp.mjs --propose` offers
+  no `tekto_apply` and no `tekto_undo`: the way to run an agent in the background on a shared
+  model. Proposals are records in the document's `proposals` collection, so they are shared
+  live, saved with a file and kept as history. In code: `propose`, `listProposals`,
+  `acceptProposal`, `rejectProposal`, `patchedCollections`; `BuildingSession.propose`,
+  `.proposals`, `.accept`, `.reject`, `.preview`, and `snapshot({ proposal })`, which draws the
+  plans as the proposal would leave them, its changes in red (`buildingPlan({ highlight })`);
+  `applyPatch(…, { dryRun: true })`; `agentDoc({ preview })`. The House page has the bar.
+
 - **An agent on the live model, with nobody's app open.** `tools/mcp.mjs --doc house` makes the
   MCP server join a shared document as one more participant instead of reaching into an open
   tab: people who have the app open see the agent's edits arrive, it sees theirs, and there is

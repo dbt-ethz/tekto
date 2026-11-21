@@ -20,6 +20,7 @@
  */
 import { applyPatch, type Doc, type DocPatch, type PatchResult } from "../collab/Doc";
 import type { RecordSchema } from "../collab/recordSchema";
+import { listProposals, patchedCollections, propose, type ProposalInfo } from "../collab/proposals";
 import type { NoteInfo } from "./Notes";
 import type { ParamStore, ParamDef } from "../gui/Params";
 import type { Scene } from "../scene/Scene";
@@ -162,6 +163,12 @@ export interface AgentDocOptions {
   check?: () => readonly AgentIssue[];
   /** The app's notes layer, when it is not an `appShell`'s (which shares its own). */
   notes?: AgentNotes;
+  /**
+   * What the check would say of the records as a proposal would leave them (collection → id →
+   * record), e.g. `(c) => realizeBuilding(c).check()`. Without it a proposal is stored
+   * unchecked beyond the schema.
+   */
+  preview?: (collections: Record<string, Record<string, unknown>>) => readonly AgentIssue[];
 }
 
 /** `__tekto.doc`: the document an app shares, as an agent reads and edits it. */
@@ -177,6 +184,10 @@ export interface AgentDocApi {
   apply(patch: DocPatch, label?: string): Promise<PatchResult & { issues: AgentIssue[] }>;
   /** The app's check, once the document's changes have been drawn. */
   check(): Promise<AgentIssue[]>;
+  /** Store a patch as an open proposal for a person to accept or reject; `issues` is the check with it applied (when the app gave `preview`). */
+  propose(patch: DocPatch, label: string, by: string, note?: string): { ok: boolean; id?: string; rejected: PatchResult["rejected"]; issues?: AgentIssue[] };
+  /** The open proposals, or all with what became of them. */
+  proposals(status?: "open" | "all"): Omit<ProposalInfo, "patch" | "base">[];
   undo(): boolean;
   redo(): boolean;
 }
@@ -214,6 +225,12 @@ export function agentDoc(doc: Doc<any>, opts: AgentDocOptions = {}): () => void 
       return { ...result, issues: [...(opts.check?.() ?? [])] };
     },
     check: async () => { await settled(); return [...(opts.check?.() ?? [])]; },
+    propose: (patch, label, by, note) => {
+      const r = propose(doc, patch, { label, by, note, schema: opts.schema });
+      if (!r.ok || !opts.preview) return r;
+      return { ...r, issues: [...opts.preview(patchedCollections(collections() as Record<string, Record<string, unknown>>, patch))] };
+    },
+    proposals: (status) => listProposals(doc, status ?? "open").map(({ patch: _patch, base: _base, ...p }) => p),
     undo: () => doc.undo(),
     redo: () => doc.redo(),
   };
@@ -264,6 +281,8 @@ function showAgent(name: string, doing: string): void {
 function doingOf(op: string, args: Record<string, unknown>): string {
   switch (op) {
     case "apply": return typeof args.label === "string" && args.label ? args.label : "editing";
+    case "propose": return `proposing: ${typeof args.label === "string" && args.label ? args.label : "a change"}`;
+    case "proposals": return "reading the proposals";
     case "undo": return "undo";
     case "redo": return "redo";
     case "noteReply": return "answering a note";
@@ -332,6 +351,12 @@ async function runRelayed(op: string, args: Record<string, unknown>, agent: stri
     case "records": return needDoc().records(args.collection as string | undefined);
     case "apply": return needDoc().apply(args.patch as DocPatch, args.label as string | undefined);
     case "check": return needDoc().check();
+    case "propose": {
+      const label = String(args.label ?? "").trim();
+      if (!label) throw new Error("label is required: a few words saying what the proposal does");
+      return needDoc().propose(args.patch as DocPatch, label, agent, String(args.note ?? "").trim() || undefined);
+    }
+    case "proposals": return needDoc().proposals(args.status === "all" ? "all" : "open");
     case "undo": return { undone: needDoc().undo() };
     case "redo": return { redone: needDoc().redo() };
     case "setParams": return t.setParams(args.params ?? {});
@@ -350,7 +375,7 @@ async function runRelayed(op: string, args: Record<string, unknown>, agent: stri
       const m = b.markup as unknown as Record<string, unknown>;
       return { viewPng: b.viewPng, camera: m.camera ?? null, scene: m.scene ?? null, logs: m.logs ?? [], errors: m.errors ?? [] };
     }
-    default: throw new Error(`unknown call "${op}" (info, records, apply, check, notes, noteReply, noteResolve, undo, redo, setParams, run, camera, section, steps, snapshot)`);
+    default: throw new Error(`unknown call "${op}" (info, records, apply, check, propose, proposals, notes, noteReply, noteResolve, undo, redo, setParams, run, camera, section, steps, snapshot)`);
   }
 }
 

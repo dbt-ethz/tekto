@@ -413,6 +413,7 @@ export interface PatchResult {
  * (`"collection/id"`), that an updated or removed record exists, and — when `schema` has the
  * collection — the record (for an update, the record as it would be) against its
  * `RecordSchema`. A collection the schema does not list is rejected when a schema is given.
+ * `dryRun` checks only: the answer says what would change, and nothing does.
  *
  *   applyPatch(doc, { set: { "walls/w9": { storey: "eg", path: [[0, 0], [4, 0]] } }, remove: ["openings/o2"] },
  *              { schema: BUILDING_SCHEMA, label: "Agent: add a wall" });
@@ -420,7 +421,7 @@ export interface PatchResult {
 export function applyPatch<S extends DocSchema>(
   doc: Doc<S>,
   patch: DocPatch,
-  opts: { schema?: Partial<Record<string, RecordSchema>>; label?: string } = {},
+  opts: { schema?: Partial<Record<string, RecordSchema>>; label?: string; dryRun?: boolean } = {},
 ): PatchResult {
   const rejected: { key: string; message: string }[] = [];
   const changed = { set: [] as string[], updated: [] as string[], removed: [] as string[] };
@@ -467,6 +468,9 @@ export function applyPatch<S extends DocSchema>(
     plan.push(() => { doc.remove(k[0] as keyof S & string, k[1]); changed.removed.push(key); });
   }
   if (rejected.length) return { ok: false, rejected, changed };
+  if (opts.dryRun) {
+    return { ok: true, rejected, changed: { set: Object.keys(patch.set ?? {}), updated: Object.keys(patch.update ?? {}), removed: [...(patch.remove ?? [])] } };
+  }
   if (!plan.length) return { ok: true, rejected, changed };
   const n = plan.length;
   doc.transact(opts.label ?? `Apply ${n} change${n === 1 ? "" : "s"}`, () => { for (const step of plan) step(); });

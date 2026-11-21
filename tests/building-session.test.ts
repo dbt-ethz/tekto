@@ -119,7 +119,7 @@ describe("tools/mcp.mjs --file", () => {
     ], file);
     const [init, list, info, apply, snap, stray, undo, ifc, svg, notes, bad] = replies;
     expect(init.result.instructions).toContain("building file, without a browser");
-    expect(list.result.tools.map((t: { name: string }) => t.name)).toEqual(["tekto_info", "tekto_records", "tekto_apply", "tekto_check", "tekto_snapshot", "tekto_undo", "tekto_export"]);
+    expect(list.result.tools.map((t: { name: string }) => t.name)).toEqual(["tekto_info", "tekto_records", "tekto_apply", "tekto_check", "tekto_snapshot", "tekto_propose", "tekto_proposals", "tekto_undo", "tekto_export"]);
     expect(answer(info)).toMatchObject({ title: "house", file, saved: false, doc: { collections: { walls: 0 } }, building: { storeys: [] } });
     expect(answer(apply)).toMatchObject({ ok: true, undo: "A room", issues: [{ code: "space-no-window", keys: ["spaces/r"] }] });
     expect(snap.result.content.map((c: { type: string }) => c.type)).toEqual(["text", "image", "text"]);

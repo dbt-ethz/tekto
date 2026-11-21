@@ -229,6 +229,9 @@ export type { DocSchema, DocChange, DocChangeSource, DocEditOptions, DocOptions,
 export { StepTrace, describeValue } from "./core/steps/StepTrace";
 export type { StepRecord, StepInput, StepEdge, StepAnalysis, StepTraceJSON } from "./core/steps/StepTrace";
 // Records checked against a JSON Schema: one schema validates, defines an agent's tool input, documents.
+// Proposals: a change that waits in the document for a person to accept or reject it.
+export { PROPOSALS, propose, listProposals, acceptProposal, rejectProposal, patchedCollections, patchChanges } from "./collab/proposals";
+export type { Proposal, ProposalInfo, ProposalChange } from "./collab/proposals";
 export { checkRecord } from "./collab/recordSchema";
 export type { RecordSchema, SchemaIssue } from "./collab/recordSchema";
 export type {

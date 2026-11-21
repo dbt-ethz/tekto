@@ -51,6 +51,7 @@ claude mcp add tekto -- node node_modules/tekto/tools/mcp.mjs
 | `tekto_snapshot` | an image of the view and a summary of what is drawn |
 | `tekto_section`, `tekto_camera` | cut a plan or move the camera before a snapshot |
 | `tekto_set_params`, `tekto_run_command`, `tekto_undo` | controls, commands and undo, as a person would |
+| `tekto_propose`, `tekto_proposals` | a change that waits for a person to accept or reject it, and what became of earlier ones: see [Proposals](#proposals) |
 | `tekto_steps` | the program as its [steps](/claude/steps) |
 
 ## Without the app open
@@ -68,9 +69,30 @@ Prefer `--doc`. The agent joins the shared document as one more participant, nam
 
 `--file` is for when there is no server. The file is the document the House app saves and opens (Save JSON, Open JSON); it is created with the first edit, and read again when someone else changed it.
 
-In both modes the tools are the document's: `tekto_info`, `tekto_records`, `tekto_apply`, `tekto_check`, `tekto_undo` (the agent's own steps), `tekto_snapshot` and `tekto_export`. A snapshot is a floor plan per storey as an image, each part labelled with its record id and the model's coordinates along the edges, with the building in numbers. `tekto_export` writes IFC, or the plans as SVG or DXF. The tools that need a view or a panel (camera, section, controls, commands, notes) are not offered.
+In both modes the tools are the document's: `tekto_info`, `tekto_records`, `tekto_apply`, `tekto_check`, `tekto_undo` (the agent's own steps), `tekto_propose`, `tekto_proposals`, `tekto_snapshot` and `tekto_export`. A snapshot is a floor plan per storey as an image, each part labelled with its record id and the model's coordinates along the edges, with the building in numbers. `tekto_export` writes IFC, or the plans as SVG or DXF. The tools that need a view or a panel (camera, section, controls, commands, notes) are not offered.
 
 In code, the same thing is a [`BuildingSession`](/buildings/records#without-a-browser).
+
+## Proposals
+
+On a model people share, an agent should not rewrite what they are working on. It proposes: `tekto_propose` takes the same patch as `tekto_apply`, with a `label` (what it does) and a `note` (why), and stores it in the document as an open proposal. Nothing in the model changes. The answer says what the check would say with it applied: the issues it would cause and the ones it would settle. `tekto_snapshot` with the proposal's id shows the plans as they would be, the changes in red.
+
+A person reviews in the app. `ProposalBar` shows each open proposal over the view: who proposes it, the note, the records it adds, changes (field by field, before → after) and removes. **Accept** applies it as one undo step, so trying it and undoing is the preview: after an undo the proposal is open again. **Reject** keeps it with the reason typed beside it, and `tekto_proposals` with `status: "all"` gives the agent that reason back.
+
+```ts
+import { ProposalBar, buildingSchema } from "tekto";
+
+new ProposalBar(doc, viewElement, { schema: buildingSchema(), onFocus: (keys) => selection.select(keys) });
+agentDoc(doc, { schema: buildingSchema(), check: () => house.issues, preview: (c) => realizeBuilding(c).check() });
+```
+
+Start the server with `--propose` (in any mode) and the agent can only propose: `tekto_apply` and `tekto_undo` are not offered. That is the way to run an agent in the background on a shared document:
+
+```bash
+claude mcp add tekto -- node node_modules/tekto/tools/mcp.mjs --doc house --propose
+```
+
+Proposals are records in the document's `proposals` collection, so they travel with a shared document, are saved with a file, and stay as the history of what was proposed, by whom, and who decided. In code: `propose`, `listProposals`, `acceptProposal`, `rejectProposal`.
 
 ## Build a house from a brief
 

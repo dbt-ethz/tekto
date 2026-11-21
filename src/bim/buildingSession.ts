@@ -28,6 +28,7 @@ import {
   type Building, type BuildingCollection, type BuildingData, type BuildingIssue, type BuildingRecords, type BuildingTypes,
 } from "./building";
 import { buildingPlan, type BuildingPlanOptions } from "./buildingPlan";
+import { acceptProposal, listProposals, patchedCollections, propose, rejectProposal, PROPOSALS, type Proposal, type ProposalInfo } from "../collab/proposals";
 
 /** Options for `new BuildingSession(…)`: the document's name and the types its records name. */
 export interface BuildingSessionOptions {
@@ -139,6 +140,47 @@ export class BuildingSession {
   undo(): boolean { return this.doc.undo(); }
   redo(): boolean { return this.doc.redo(); }
 
+  // ── Proposals: changes that wait for a person ──
+
+  /** The building as a patch would leave it. Nothing is changed. */
+  preview(patch: DocPatch): Building {
+    const all = patchedCollections(this.doc.toJSON().collections, patch);
+    const data: Record<string, unknown> = {};
+    for (const c of BUILDING_COLLECTIONS) if (all[c]) data[c] = all[c];
+    return realizeBuilding(data as BuildingData, this.types);
+  }
+
+  /**
+   * Propose a patch instead of applying it: stored in the document as an open proposal for a
+   * person to accept or reject (`proposals.ts`). The answer says what the check would say
+   * with it applied: `issues`, and of those the ones it would newly cause (`added`) and the
+   * current ones it would settle (`resolved`).
+   */
+  propose(patch: DocPatch, label: string, opts: { by?: string; note?: string } = {}): { ok: boolean; id?: string; rejected: PatchResult["rejected"]; issues: BuildingIssue[]; added: BuildingIssue[]; resolved: BuildingIssue[] } {
+    const r = propose(this.doc, patch, { label, by: opts.by ?? "Agent", note: opts.note, schema: this.schema() });
+    if (!r.ok) return { ...r, issues: [], added: [], resolved: [] };
+    const now = this.check(), then = this.preview(patch).check();
+    const sig = (i: BuildingIssue) => `${i.code}|${i.keys.join(",")}|${i.message}`;
+    const before = new Set(now.map(sig)), after = new Set(then.map(sig));
+    return { ...r, issues: then, added: then.filter((i) => !before.has(sig(i))), resolved: now.filter((i) => !after.has(sig(i))) };
+  }
+
+  /** The proposals in the document: the open ones, or all with what became of them. */
+  proposals(status: "open" | "all" = "open"): ProposalInfo[] {
+    return listProposals(this.doc, status);
+  }
+
+  /** Accept an open proposal: its patch as one undo step, then the check's issues. For the person who reviews, not for the agent that proposed. */
+  accept(id: string, by?: string): PatchResult & { issues: BuildingIssue[] } {
+    const r = acceptProposal(this.doc, id, { schema: this.schema(), by });
+    return { ...r, issues: this.check() };
+  }
+
+  /** Reject an open proposal, with the reason for whoever proposed it. */
+  reject(id: string, opts: { by?: string; reason?: string } = {}): boolean {
+    return rejectProposal(this.doc, id, opts);
+  }
+
   /** The building in numbers: per storey its parts, its rooms with their areas, its extent. */
   summary(): BuildingSummary {
     const b = this.building;
@@ -172,10 +214,22 @@ export class BuildingSession {
   /**
    * Look at the building: a floor plan per storey as a PNG image (one storey with `storey`),
    * each part named by its record, with the summary and the check's issues. A check that
-   * passes is not the same as a plan that looks right.
+   * passes is not the same as a plan that looks right. With `proposal` (an id) the plans and
+   * the issues are of the building as that proposal would leave it, its changes in red.
    */
-  async snapshot(opts: { storey?: string } & SheetRasterOptions = {}): Promise<{ plans: { storey: string; name: string; png: Uint8Array }[]; summary: BuildingSummary; issues: BuildingIssue[] }> {
-    const { storey, ...raster } = opts;
+  async snapshot(opts: { storey?: string; proposal?: string } & SheetRasterOptions = {}): Promise<{ plans: { storey: string; name: string; png: Uint8Array }[]; summary: BuildingSummary; issues: BuildingIssue[] }> {
+    const { storey, proposal, ...raster } = opts;
+    if (proposal !== undefined) {
+      // The building as the proposal would leave it, what it touches drawn in the accent colour.
+      const p = this.doc.get(PROPOSALS as never, proposal) as Proposal | undefined;
+      if (!p) throw new Error(`no proposal "${proposal}" (open: ${this.proposals().map((x) => x.id).join(", ") || "none"})`);
+      const b = this.preview(p.patch);
+      const highlight = [...Object.keys(p.patch.set ?? {}), ...Object.keys(p.patch.update ?? {})];
+      const wanted = storey === undefined ? b.storeys : b.storeys.filter((s) => s.id === storey);
+      const plans = [];
+      for (const s of wanted) plans.push({ storey: s.id, name: s.record.name, png: await buildingPlan(b, { storey: s.id, highlight }).toPNG({ width: 1400, ...raster }) });
+      return { plans, summary: this.summary(), issues: b.check() };
+    }
     const b = this.building;
     const wanted = storey === undefined ? b.storeys : b.storeys.filter((s) => s.id === storey);
     if (storey !== undefined && !wanted.length) throw new Error(`no storey "${storey}" (storeys: ${b.storeys.map((s) => s.id).join(", ") || "none"})`);

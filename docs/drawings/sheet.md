@@ -38,7 +38,8 @@ sheet.titleBlock({
 
 const svg = sheet.toSVG({ background: "#ffffff" });
 const dxf = sheet.toDXF();                                 // AutoCAD-safe R12, one layer per sheet layer
-console.log(sheet.explode().length, svg.length, dxf.length);
+const png = await sheet.toPNG({ width: 1600 });            // a PNG file (Uint8Array), also in Node
+console.log(sheet.explode().length, svg.length, dxf.length, png.length);
 ```
 
 ## What to know
@@ -50,6 +51,7 @@ console.log(sheet.explode().length, svg.length, dxf.length);
 - `DRAWING_PALETTE` holds the colours: `ink`, `annotation` and `faint` greys, pale cut fills (`cut`, `steel`, `concrete`, `timber`, `poche`) and one `accent` for what must stand out.
 - Level marks stand on a level line, and a leader always ends on a level shoulder with its text.
 - Save with `download(sheet.toDXF(), "plan.dxf", { stamp: true })`.
+- `sheet.toPNG()` draws the same primitives into pixels with no browser, so an agent in Node can look at a drawing. Its text is a built-in stroke font (Latin letters, digits, umlauts), not the SVG's typeface; `rasterizeSheet(sheet)` gives the RGBA pixels.
 
 ::: tip Playground
 [Drawing Sheet](https://github.com/dbt-ethz/tekto/blob/main/playground/pages/drawing-sheet.ts): `?page=drawing-sheet`, with Export SVG and Export DXF.

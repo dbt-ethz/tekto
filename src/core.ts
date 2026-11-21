@@ -116,6 +116,9 @@ export type { Dxf2DContent, Dxf2DPolyline, Dxf2DLine, Dxf2DCircle, Dxf2DArc, Dxf
 // Drawings: views, entities and dimensions on a sheet — one source for screen, SVG and DXF.
 export { Sheet, SheetView, DASH_PATTERNS, DRAWING_PALETTE, pickPrim } from "./core/drawing/Sheet";
 export type { Pt, Dash, LineStyle, DrawOptions, TextOptions, DimOptions, LevelOptions, ViewOptions, SheetOptions, SheetPrim, ResolvedStyle, TitleBlockOptions } from "./core/drawing/Sheet";
+// A sheet as pixels (PNG), drawn without a browser: what an agent in Node looks at.
+export { rasterizeSheet, sheetToPNG, encodePNG } from "./core/drawing/sheetRaster";
+export type { SheetRasterOptions, SheetRaster } from "./core/drawing/sheetRaster";
 export { stampName } from "./io/download";
 export { IfcFile } from "./io/IfcFile";
 export type { IfcParseOptions } from "./io/IfcFile";
@@ -182,6 +185,12 @@ export type {
   BuildingBinding, BindBuildingOptions, BuildingDetail, RealizedStorey,
   StoreyRecord, WallRecord, OpeningRecord, SlabRecord, SlabOpeningRecord, SpaceRecord, RoofRecord, StairRecord, XY,
 } from "./bim/building";
+// The floor plans of a building as a drawing, and a building document worked on without a
+// browser (the MCP server's file mode): read, patch, check, undo, look.
+export { buildingPlan } from "./bim/buildingPlan";
+export type { BuildingPlanOptions } from "./bim/buildingPlan";
+export { BuildingSession } from "./bim/buildingSession";
+export type { BuildingSessionOptions, BuildingSummary } from "./bim/buildingSession";
 
 // Scene
 export { Scene } from "./scene/Scene";

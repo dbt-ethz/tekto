@@ -329,14 +329,19 @@ const DEV_ID_KEY = "tekto.collab.id";
  * The Vite dev server as backend: records live in `.tekto/collab/<doc>.json` (an agent can read
  * and edit that file — the browsers pick the change up). Guests pick a name (`signIn()`).
  * Needs `tektoCollab()` from "tekto/collab-vite" in vite.config.
+ *
+ * Outside a browser (an agent in Node joining the same document) give the server's full
+ * address and who it is: `devServerAdapter({ endpoint: "http://localhost:5173/__tekto/collab",
+ * user: { id: "agent-claude", name: "Claude" } })`.
  */
-export function devServerAdapter(opts: { endpoint?: string } = {}): CollabAdapter {
+export function devServerAdapter(opts: { endpoint?: string; user?: CollabUser } = {}): CollabAdapter {
   const base = opts.endpoint ?? DEV_ENDPOINT;
   const userL = new Set<(u: CollabUser | null) => void>();
   const store = (k: string, v?: string): string | null => {
     try { if (v !== undefined) localStorage.setItem(k, v); return localStorage.getItem(k); } catch { return null; }
   };
   const currentUser = (): CollabUser | null => {
+    if (opts.user) return opts.user;
     const name = store(DEV_NAME_KEY);
     if (!name) return null;
     const id = store(DEV_ID_KEY) ?? store(DEV_ID_KEY, `dev-${randomId()}`)!;
@@ -359,6 +364,45 @@ export function devServerAdapter(opts: { endpoint?: string } = {}): CollabAdapte
     subscribe(doc, session, on) {
       let es: EventSource | null = null;
       let closed = false;
+      const handle = (event: string, data: string) => {
+        if (event === "record") on.record(JSON.parse(data));
+        else if (event === "presence") on.presence(JSON.parse(data));
+        else if (event === "broadcast") { const m = JSON.parse(data); on.broadcast(m.event, m.payload, m.from); }
+      };
+      if (typeof EventSource === "undefined") {
+        // Outside a browser (an agent in Node): read the same event stream with fetch.
+        const abort = new AbortController();
+        void (async () => {
+          while (!closed) {
+            on.status("connecting");
+            try {
+              const r = await fetch(`${base}/events?doc=${encodeURIComponent(doc)}&session=${session}`, { signal: abort.signal, headers: { accept: "text/event-stream" } });
+              if (!r.ok || !r.body) throw new Error(`${r.status}`);
+              on.status("online");
+              const reader = r.body.getReader();
+              const decoder = new TextDecoder();
+              let buf = "";
+              for (;;) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buf += decoder.decode(value, { stream: true });
+                let i: number;
+                while ((i = buf.indexOf("\n\n")) >= 0) {
+                  let event = "message", data = "";
+                  for (const line of buf.slice(0, i).split("\n")) {
+                    if (line.startsWith("event:")) event = line.slice(6).trim();
+                    else if (line.startsWith("data:")) data += line.slice(5).trim();
+                  }
+                  buf = buf.slice(i + 2);
+                  if (data) handle(event, data);
+                }
+              }
+            } catch { /* the server went away, or we closed: try again below unless closed */ }
+            if (!closed) { on.status("connecting", "reconnecting"); await new Promise((r) => setTimeout(r, 1000)); }
+          }
+        })();
+        return () => { closed = true; abort.abort(); on.status("offline"); };
+      }
       const open = () => {
         on.status("connecting");
         es = new EventSource(`${base}/events?doc=${encodeURIComponent(doc)}&session=${session}`);

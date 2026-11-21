@@ -32,6 +32,40 @@ const ifc = building.toIfc({ projectName: "House" });   // storeys, framed walls
 console.log(ifc.length);
 ```
 
+## Floor plans
+
+`buildingPlan(building)` draws the floor plans as a [`Sheet`](/drawings/sheet): a view per storey, walls solid between their openings, rooms with name and area, stairs, and every part keyed by its record.
+
+```ts
+import { buildingPlan } from "tekto";
+
+const sheet = buildingPlan(building, { storey: "eg" });    // one storey; default: all, side by side
+sheet.toSVG();  sheet.toDXF();
+const png = await sheet.toPNG({ width: 1600 });            // an image, drawn without a browser
+```
+
+`keys` (default on) writes the record ids beside the parts and `coordinates` the model's metres along the edges: what an agent needs to find in the records what it sees in the picture. A door is drawn as an opening without a leaf, because a record does not say which way it swings.
+
+## Without a browser
+
+A `BuildingSession` is a building document with the calls an agent makes on it, in Node: no scene, no page.
+
+```ts
+import { BuildingSession, Doc, devServerAdapter } from "tekto/core";
+
+// On the shared live document: one more participant, its edits reach everyone who has it open.
+const doc = new Doc({ name: "house", adapter: devServerAdapter({ endpoint: "http://localhost:5173/__tekto/collab", user: { id: "agent", name: "Claude" } }) });
+await doc.ready;
+const session = new BuildingSession(doc);
+
+const r = session.apply({ set: { "walls/a": { storey: "eg", path: [[0, 0], [5, 0]] } } }, "South wall");
+r.issues;                                      // what the check says now
+const { plans } = await session.snapshot();    // [{ storey: "eg", name, png }]
+session.undo();
+```
+
+`new BuildingSession(json)` takes a saved document or plain records instead, and `session.toJSON()` is the file the House app opens. The MCP server serves a session as tools: see [Without the app open](/claude/mcp#without-the-app-open).
+
 ## What to know
 
 - **Types**: wall, slab and opening `type`s name entries of `BuildingTypes`. The defaults (`defaultBuildingTypes()`) are Holzrahmenbau exterior walls, framed partitions, joisted floors and a concrete ground slab.

@@ -1,8 +1,8 @@
-import { b as SectionRequest, c as StandardView, S as Scene, V as Vec3 } from './Scene-BsOKEQXC.js';
+import { b as SectionRequest, c as StandardView, S as Scene, V as Vec3 } from './Scene-D4ExzRe1.js';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { S as ShadingBarPlacement } from './ShadingBar-r-eRrCKI.js';
-import { D as Doc } from './Doc-hpBJxom8.js';
+import { S as ShadingBarPlacement, V as ViewerTools, T as Theme } from './ShadingBar-hs0G1nnA.js';
+import { S as SunPositionResult, D as Doc } from './Doc-Da9Dok4-.js';
 
 /**
  * The rules a 3D view draws by — what each render mode paints, where a named view puts the
@@ -28,6 +28,18 @@ interface Appearance {
 }
 /** The page shaded and hidden-line are drawn on, when the host names none. */
 declare const DEFAULT_BACKGROUND = 16119802;
+/**
+ * The page a hidden-line drawing is drawn on. A drawing is dark lines on light paper,
+ * whatever the app's own background: the app's background if it is light, else white.
+ * Inverse: light lines on a dark page — the app's background if it is dark, else near black.
+ */
+declare function hiddenLinePage(background: THREE.ColorRepresentation, inverse?: boolean): number;
+/**
+ * A colour as a hidden-line drawing draws it on `page`: its own while it reads there, and
+ * the drawing's ink (dark on a light page, light on a dark one) where it would vanish into
+ * the page — a white line of a dark app on white paper, a dark crease on a dark page.
+ */
+declare function inkOn<C extends THREE.ColorRepresentation>(page: THREE.ColorRepresentation, colour: C): C | string;
 /** Crease colour and weight for a mode. Hidden line draws them at full strength
  *  because in that mode the lines are the drawing. `background` (default: the dark ground
  *  ghost brings with it) turns ghost's pale creases dark on a light page. */
@@ -206,6 +218,47 @@ declare function orthoFrustum(distance: number, fovDeg: number, aspect: number):
     top: number;
     bottom: number;
 };
+
+/**
+ * The sun for a date, an hour and a place — what the viewer's sun menu sets beside its three
+ * named suns (`renderer.setSunAt`). Pure: no scene, no DOM.
+ */
+
+/** A place, a date and an hour of the day for the sun (`renderer.setSunAt`). */
+interface SunSite {
+    /** The place's name, if it is one of `SUN_PLACES` (shown in the sun menu). */
+    place?: string;
+    /** Latitude in degrees, north positive (Zurich: 47.37). */
+    latitude: number;
+    /** Longitude in degrees, east positive (Zurich: 8.55). */
+    longitude: number;
+    /** Hours ahead of UTC that `hour` is told in. Default: from the longitude (15° an hour). */
+    timeZone?: number;
+    /** The day, as "YYYY-MM-DD". */
+    date: string;
+    /** The hour of the day, 0 to 24, in the place's standard time (13.5 is 13:30). */
+    hour: number;
+    /**
+     * Where north is in the model, as CAD tools' "true north": degrees clockwise from the
+     * model's +Y axis (up on the plan) to north. 0 (the default): +Y is north, +X east.
+     * 90: north points along +X, to the right on the plan.
+     */
+    north?: number;
+}
+/** A place the sun menu offers: where it is, and its standard time ahead of UTC. */
+interface SunPlace {
+    name: string;
+    latitude: number;
+    longitude: number;
+    timeZone: number;
+}
+/** The places the sun menu offers (standard time: no summer time). */
+declare const SUN_PLACES: readonly SunPlace[];
+/**
+ * Where the sun stands for a site: altitude and azimuth (a compass bearing, from true north),
+ * and the direction toward it in the model (Z-up), turned by the site's `north`.
+ */
+declare function sunFor(site: SunSite): SunPositionResult;
 
 /** What the host wants said about one thing in the scene. */
 interface CalloutItem {
@@ -434,48 +487,6 @@ interface AmbientOcclusionOptions {
 }
 
 /**
- * Tekto GUI theme — the single source of panel chrome colors.
- *
- * Every tekto panel (sketch, sketch2d, appShell, LayerPanel, ControlPanel)
- * derives its colors from here instead of re-declaring hex literals inline.
- *
- * Chrome is WHITE on the dark background by design: white slider accents and
- * value labels, white toggle tracks, plain white titles — no colored accents
- * in panel chrome. (Content colors — e.g. a colorPicker's default value — are
- * the sketch's business, not the theme's.)
- */
-/** The colours of tekto's panel chrome (white on dark by default), from `getTheme`; every panel reads them instead of its own hex literals. */
-interface Theme {
-    isDark: boolean;
-    /** App background behind the viewport */
-    bg: string;
-    /** Panel / header background */
-    panelBg: string;
-    /** Elevated surface (dropdowns, popovers) */
-    popupBg: string;
-    /** Hairline borders between panel sections */
-    border: string;
-    /** Borders on individual controls (inputs, selects, buttons) */
-    controlBorder: string;
-    /** Primary text */
-    text: string;
-    /** Secondary text (control labels) */
-    textDim: string;
-    /** Tertiary text (group headers, disabled) */
-    textFaint: string;
-    /** Chrome accent — white on dark, near-black on light */
-    accent: string;
-    /** Hover wash for rows / buttons */
-    hoverBg: string;
-    /** Input field background (selects, text inputs) */
-    fieldBg: string;
-    /** Panel font stack */
-    font: string;
-}
-/** The panel chrome colours for dark (default, white-on-dark) or light mode. */
-declare function getTheme(mode?: "dark" | "light"): Theme;
-
-/**
  * What a pointer does in a ThreeRenderer's viewport: picking (a click, the object under a
  * point, the ground under a point), hover, drag handles, and the transform gizmo that moves
  * an object and writes its transform back to the Scene.
@@ -532,12 +543,14 @@ interface ThreeRendererConfig {
      *  elevation, drag it to orbit, double-click to square up, toggle persp/ortho under it. */
     navGizmo: boolean | "top-left" | "top-right" | "bottom-left" | "bottom-right";
     /** The shading bar in a corner of the view (`true` = top left): minimal icons for the
-     *  render style, the lighting and the sun (morning, noon, sunset), as Blender has in its
+     *  render style, the lighting and the sun (morning, noon, sunset, or a date and a place), as Blender has in its
      *  viewport header. The renderer draws it, so an app only switches it on. `"header"`: a strip
      *  across the top of the view (Blender's viewport header) with slots for the app's controls
      *  (`viewerHeader`), the axis widget top right under it and zoom in / out / to bounds below that
      *  (and, in a strict-2D view, the hand). */
     shadingBar: boolean | ShadingBarPlacement;
+    /** Which of the shading bar's tools are shown: each is on unless set to false (`{ sun: false }`). */
+    viewerTools: ViewerTools;
     /**
      * The scene's unit, as a label (`"m"`, `"mm"`, `"ft"`): readouts such as the shading bar's
      * section show coordinates in it, and a cut stays at its coordinate. Unset (null, the
@@ -560,6 +573,12 @@ interface ThreeRendererConfig {
      * mapping, so a colour stays readable against a key on the side turned from the sun too.
      */
     studioLighting: StudioLighting;
+    /**
+     * How a hidden-line drawing is drawn. False (the default): dark lines on light paper,
+     * whatever the background — the view turns white while the mode is on (the background
+     * itself, if it is light). True: inverse, light lines on a dark page.
+     */
+    hiddenLineInverse: boolean;
 }
 /**
  * The one 3D renderer under `sketch()` and `appShell()`: keeps a three.js scene in step with a tekto `Scene` and draws it on demand.
@@ -615,6 +634,22 @@ declare class ThreeRenderer {
     private clearThree;
     /** Rebuild all mesh objects (called when render mode changes). */
     private rebuildAllMeshes;
+    /** Rebuild every object (the page changed: lines and marks are drawn for the page they are on). */
+    private rebuildAll;
+    /** The colour behind the model now: the background, or in hidden line the drawing's page. */
+    private pageColor;
+    private page;
+    /** Put the page behind the model and rule the grid for it. True if the page changed. */
+    private syncPage;
+    /** The grid of lines, ruled for the page it lies on: dark greys on a dark page, pale ones on paper. */
+    private buildLineGrid;
+    /**
+     * Draw hidden line inverse — light lines on a dark page — or, with false, as a drawing
+     * on light paper (the default; `hiddenLineInverse` in the config).
+     */
+    setHiddenLineInverse(on: boolean): void;
+    /** Whether hidden line is drawn inverse (`setHiddenLineInverse`). */
+    get hiddenLineInverse(): boolean;
     private _isHelper;
     /**
      * Add a raw THREE.Object3D (e.g. a loaded glTF/GLB scene) to the renderer,
@@ -736,9 +771,18 @@ declare class ThreeRenderer {
     /** The sun preset last set (`setSunPreset`), or null once the sun was moved another way. */
     get sunPreset(): SunPreset | null;
     /**
+     * The sun for a date, an hour and a place, as the sun menu's "Date" sets it: Studio, the
+     * light following the sun, so the hour gives the evening and the night too.
+     *
+     *   renderer.setSunAt({ latitude: 47.37, longitude: 8.55, date: "2026-06-21", hour: 17 });
+     */
+    setSunAt(site: SunSite): void;
+    /** The date and place last set (`setSunAt`), or null once the sun was moved another way. */
+    get sunSite(): SunSite | null;
+    /**
      * Let Studio's light follow the sun: with it on, the sun's colour and strength, the sky,
      * the exposure and the background come from the sun's altitude (`setSunDirection`, which
-     * the shell's Sun popover drives by date and hour), so evening and dusk follow from the
+     * `setSunAt` drives by date and hour), so evening and dusk follow from the
      * hour: noon as Studio is, a warm low sun, a blue dusk, night. Flat lighting is unchanged.
      * Off by default.
      */
@@ -803,6 +847,10 @@ declare class ThreeRenderer {
     /** Enable/disable orbit ROTATION (pan + zoom stay). Off → a strict-2D view: the shading bar
      *  shows its 2D palette (the hand, zoom in, zoom out, zoom to bounds) and the axis widget hides. */
     setOrbitRotateEnabled(enabled: boolean): void;
+    /** Hide or show the viewer's tools (the shading bar's icons, the zoom column, the axis widget)
+     *  while the view shows something they do not apply to, such as a drawing laid over it. The
+     *  header strip stays, with the app's own slots and ✎ Markup. */
+    setViewerToolsVisible(visible: boolean): void;
     /** The hand, a strict-2D view's tool (the 2D palette has its button): on, the left button drags
      *  the view along — over drag handles too — under a grab cursor; a click still picks. Off again
      *  when the view turns 3D; ignored in a 3D view. */
@@ -1055,7 +1103,7 @@ declare function viewerToolbar(scene: Scene, renderer: ThreeRenderer, opts?: Top
  *
  * A `NotesLayer` draws the notes over the view from any camera: their strokes, and a numbered
  * pin each. A pin opens the note, with "Go to view" (the camera it was drawn from) and
- * "Delete". Markup's "Keep as notes" turns marks into notes (`markup(…, { notes })`,
+ * "Delete". Markup's "Pin notes to the model" turns marks into notes (`markup(…, { notes })`,
  * `appShell({ notes: doc })`).
  *
  * A note is also how a person tells an agent what to change: it is open until someone marks
@@ -1164,7 +1212,7 @@ declare class NotesLayer {
     resolve(id: string, text?: string, author?: string): void;
     /** Open a done note again. */
     reopen(id: string): void;
-    /** Keep several notes as one undo step ("Keep as notes"). Returns their ids. */
+    /** Keep several notes as one undo step ("Pin notes to the model"). Returns their ids. */
     keep(notes: readonly Note[]): string[];
     remove(id: string): void;
     /** Back to the view the note was drawn from. */
@@ -1280,7 +1328,7 @@ declare function markup(renderer: MarkupRenderer, scene: Scene, opts?: {
     title?: string;
     context?: () => Record<string, unknown>;
     host?: HTMLElement;
-    /** Offer "Keep as notes", keeping marks in this layer's document. */
+    /** Offer "Pin notes to the model", keeping marks in this layer's document. */
     notes?: NotesLayer;
     /** Who is drawing, written into kept notes. */
     author?: string;
@@ -1289,4 +1337,4 @@ declare function markup(renderer: MarkupRenderer, scene: Scene, opts?: {
     dispose(): void;
 };
 
-export { type AmbientOcclusionOptions as A, modeBackground as B, type CalloutItem as C, DEFAULT_BACKGROUND as D, nearestAxis as E, type FlatLighting as F, notesLayer as G, orbitFor as H, orthoFrustum as I, sectionAppearance as J, sectionPlane as K, type LayoutOptions as L, type MarkupRenderer as M, NotesLayer as N, shortestTurn as O, type PickInfo as P, standardOrbit as Q, studioLights as R, type StudioLighting as S, ThreeRenderer as T, surfaceAppearance as U, type ViewMode as V, viewerToolbar as W, type TopBarOptions as a, type Theme as b, type ThreeRendererConfig as c, type NoteInfo as d, type Appearance as e, type CalloutOptions as f, Callouts as g, type MarkKind as h, type MarkupBundle as i, type MarkupCaptureOptions as j, type MarkupObjectRef as k, type Note as l, type NoteReply as m, type NotesRenderer as n, type Placement as o, type SunPreset as p, easeInOut as q, edgeStyle as r, fitRadius as s, flatLights as t, getTheme as u, groundAppearance as v, labelWidthFor as w, layoutLabels as x, lightBalance as y, markup as z };
+export { type AmbientOcclusionOptions as A, layoutLabels as B, type CalloutItem as C, DEFAULT_BACKGROUND as D, lightBalance as E, type FlatLighting as F, markup as G, modeBackground as H, nearestAxis as I, notesLayer as J, orbitFor as K, type LayoutOptions as L, type MarkupRenderer as M, NotesLayer as N, orthoFrustum as O, type PickInfo as P, sectionAppearance as Q, sectionPlane as R, SUN_PLACES as S, ThreeRenderer as T, shortestTurn as U, type ViewMode as V, standardOrbit as W, studioLights as X, sunFor as Y, surfaceAppearance as Z, viewerToolbar as _, type TopBarOptions as a, type ThreeRendererConfig as b, type NoteInfo as c, type Appearance as d, type CalloutOptions as e, Callouts as f, type MarkKind as g, type MarkupBundle as h, type MarkupCaptureOptions as i, type MarkupObjectRef as j, type Note as k, type NoteReply as l, type NotesRenderer as m, type Placement as n, type StudioLighting as o, type SunPlace as p, type SunPreset as q, type SunSite as r, easeInOut as s, edgeStyle as t, fitRadius as u, flatLights as v, groundAppearance as w, hiddenLinePage as x, inkOn as y, labelWidthFor as z };

@@ -1,4 +1,55 @@
-import { S as Scene } from './Scene-BsOKEQXC.mjs';
+import { V as Vec3, S as Scene } from './Scene-D4ExzRe1.js';
+
+/** A UTC instant and a site (latitude/longitude in degrees) for `SunPosition.compute`. */
+interface SunPositionInput {
+    /**
+     * UTC date+time. The algorithm internally converts to Julian Date in
+     * UT, so make sure the `Date` carries UTC fields (a `new Date()` is
+     * fine — `getUTC*()` methods are used).
+     */
+    date: Date;
+    /** Latitude in degrees, north positive. e.g. Zurich = +47.37. */
+    latitude: number;
+    /** Longitude in degrees, east positive. e.g. Zurich = +8.55. */
+    longitude: number;
+}
+/** The sun's altitude and azimuth (radians) and its unit direction in the Z-up frame (+X east, +Y north). */
+interface SunPositionResult {
+    /** Solar altitude above horizon (radians). Negative ⇒ below horizon (night). */
+    altitude: number;
+    /**
+     * Solar azimuth from north, clockwise (radians).
+     * 0 = N, π/2 = E, π = S, 3π/2 = W.
+     */
+    azimuth: number;
+    /**
+     * Unit vector pointing FROM the origin TO the sun, in Z-up scene
+     * coordinates (+X = east, +Y = north, +Z = up). When daytime, this
+     * is the direction a directional light "comes from" — set the light
+     * position to `direction × distance` and aim it at the origin.
+     */
+    direction: Vec3;
+    /** Convenience: `altitude > 0`. */
+    isDaytime: boolean;
+}
+/** Sun direction from a date and a site (Michalsky 1988, ~0.01° for 1950–2050), as a Z-up vector: +X east, +Y north, +Z sky. */
+declare const SunPosition: {
+    /**
+     * Compute the sun's position in the sky for a given UTC instant and
+     * geographic coordinates.
+     *
+     * @example
+     *   // Solar noon, summer solstice, Zurich:
+     *   const sun = SunPosition.compute({
+     *     date:      new Date(Date.UTC(2025, 5, 21, 11, 30)),
+     *     latitude:  47.37,
+     *     longitude: 8.55,
+     *   });
+     *   // sun.altitude ≈ 1.10 rad (≈ 63°), sun.azimuth ≈ π (south).
+     *   threeLight.position.copy(sun.direction).multiplyScalar(50);
+     */
+    readonly compute: (opts: SunPositionInput) => SunPositionResult;
+};
 
 /**
  * Tekto Parameter System
@@ -351,9 +402,14 @@ declare function memoryAdapter(opts?: {
  * The Vite dev server as backend: records live in `.tekto/collab/<doc>.json` (an agent can read
  * and edit that file — the browsers pick the change up). Guests pick a name (`signIn()`).
  * Needs `tektoCollab()` from "tekto/collab-vite" in vite.config.
+ *
+ * Outside a browser (an agent in Node joining the same document) give the server's full
+ * address and who it is: `devServerAdapter({ endpoint: "http://localhost:5173/__tekto/collab",
+ * user: { id: "agent-claude", name: "Claude" } })`.
  */
 declare function devServerAdapter(opts?: {
     endpoint?: string;
+    user?: CollabUser;
 }): CollabAdapter;
 /** The part of a supabase-js v2 client the adapter uses (typed loosely: no dependency). */
 interface SupabaseLike {
@@ -616,6 +672,7 @@ interface PatchResult {
  * (`"collection/id"`), that an updated or removed record exists, and — when `schema` has the
  * collection — the record (for an update, the record as it would be) against its
  * `RecordSchema`. A collection the schema does not list is rejected when a schema is given.
+ * `dryRun` checks only: the answer says what would change, and nothing does.
  *
  *   applyPatch(doc, { set: { "walls/w9": { storey: "eg", path: [[0, 0], [4, 0]] } }, remove: ["openings/o2"] },
  *              { schema: BUILDING_SCHEMA, label: "Agent: add a wall" });
@@ -623,6 +680,7 @@ interface PatchResult {
 declare function applyPatch<S extends DocSchema>(doc: Doc<S>, patch: DocPatch, opts?: {
     schema?: Partial<Record<string, RecordSchema>>;
     label?: string;
+    dryRun?: boolean;
 }): PatchResult;
 /** What `bindScene` returns: the record ↔ scene-object map, and a way out. */
 interface SceneBinding {
@@ -718,4 +776,4 @@ interface PresenceView {
  */
 declare function shareSelection(selection: Selection, store: SharedStore<any>, view?: PresenceView, scene?: Scene): () => void;
 
-export { type SharedStoreOptions as A, type BoolParam as B, type CollabAdapter as C, Doc as D, type StringParam as E, type FloatParam as F, type SupabaseLike as G, applyPatch as H, type IntParam as I, bindScene as J, checkRecord as K, collabColor as L, createLayout as M, createParams as N, devServerAdapter as O, ParamStore as P, localAdapter as Q, type RecordSchema as R, SharedStore as S, memoryAdapter as T, selectOnClick as U, type Vec3Param as V, shareSelection as W, supabaseAdapter as X, type ParamLayout as a, type ParamSchema as b, type ParamValues as c, type Presence as d, type DocPatch as e, type PatchResult as f, type ButtonParam as g, type CollabEvents as h, type CollabStatus as i, type CollabUser as j, type ColorParam as k, type DocChange as l, type DocChangeSource as m, type DocEditOptions as n, type DocJSON as o, type DocOptions as p, type DocSchema as q, type ParamDef as r, type ParamFolder as s, type PickingView as t, type PresenceView as u, type SceneBinding as v, type SchemaIssue as w, type SelectParam as x, Selection as y, type SharedRecord as z };
+export { type SharedRecord as A, type BoolParam as B, type CollabAdapter as C, Doc as D, type SharedStoreOptions as E, type FloatParam as F, type StringParam as G, SunPosition as H, type IntParam as I, type SunPositionInput as J, type SupabaseLike as K, applyPatch as L, bindScene as M, checkRecord as N, collabColor as O, ParamStore as P, createLayout as Q, type RecordSchema as R, type SunPositionResult as S, createParams as T, devServerAdapter as U, type Vec3Param as V, localAdapter as W, memoryAdapter as X, selectOnClick as Y, shareSelection as Z, supabaseAdapter as _, type ParamLayout as a, type ParamSchema as b, type ParamValues as c, SharedStore as d, type Presence as e, type DocPatch as f, type PatchResult as g, type ButtonParam as h, type CollabEvents as i, type CollabStatus as j, type CollabUser as k, type ColorParam as l, type DocChange as m, type DocChangeSource as n, type DocEditOptions as o, type DocJSON as p, type DocOptions as q, type DocSchema as r, type ParamDef as s, type ParamFolder as t, type PickingView as u, type PresenceView as v, type SceneBinding as w, type SchemaIssue as x, type SelectParam as y, Selection as z };

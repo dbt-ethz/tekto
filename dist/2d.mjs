@@ -4,8 +4,9 @@ import {
   drawSheet,
   fitSheet,
   sketch2d
-} from "./chunk-RPHIMVGY.mjs";
+} from "./chunk-3L2FI4NP.mjs";
 import {
+  Axonometric,
   Polygon2D,
   PolygonBool,
   Sheet,
@@ -13,8 +14,8 @@ import {
   createRandom,
   noise,
   pickPrim
-} from "./chunk-TR2ZDYFK.mjs";
-import "./chunk-OZQQS4QH.mjs";
+} from "./chunk-MPAWQFRS.mjs";
+import "./chunk-BXIU5T7I.mjs";
 import {
   Segment,
   Vec2,
@@ -24,8 +25,9 @@ import {
   segmentSegmentClosest,
   stampName,
   writeDxf2D
-} from "./chunk-56LGGW6L.mjs";
+} from "./chunk-K6X6LVYU.mjs";
 export {
+  Axonometric,
   Polygon2D,
   PolygonBool,
   Segment,

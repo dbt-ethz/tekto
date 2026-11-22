@@ -1,11 +1,11 @@
-import { P as ParamStore, a as ParamLayout, b as ParamSchema, c as ParamValues } from './Doc-iuxjrmk7.mjs';
+import { P as ParamStore, a as ParamLayout, b as ParamSchema, c as ParamValues } from './Doc-b-EFYvMi.mjs';
 import * as React from 'react';
 import React__default, { ReactNode, CSSProperties, SVGProps } from 'react';
-import { S as Scene, a as SceneObject, R as RenderMode } from './Scene-BsOKEQXC.mjs';
-import { T as ThreeRenderer, a as TopBarOptions, b as Theme, M as MarkupRenderer, N as NotesLayer } from './Markup-N4BViy-c.mjs';
+import { S as Scene, a as SceneObject, R as RenderMode } from './Scene-D4ExzRe1.mjs';
+import { T as ThreeRenderer, a as TopBarOptions, M as MarkupRenderer, N as NotesLayer } from './Markup-BwsIkInf.mjs';
+import { T as Theme } from './ShadingBar-hs0G1nnA.mjs';
 import 'three';
 import 'three/examples/jsm/controls/OrbitControls.js';
-import './ShadingBar-r-eRrCKI.mjs';
 
 /**
  * The `Scene` of the enclosing `<TektoApp>`; throws outside one.
@@ -202,7 +202,7 @@ declare function ViewerToolbar({ scene, renderer, options, theme, className, sty
     style?: CSSProperties;
 }): React.JSX.Element;
 
-/** ✎ Markup over a renderer's view while mounted (`markup()`): `<Markup scene={scene} renderer={renderer} title="7DHouse" />`; pass `notes` (a `notesLayer`) to offer "Keep as notes". */
+/** ✎ Markup over a renderer's view while mounted (`markup()`): `<Markup scene={scene} renderer={renderer} title="7DHouse" />`; pass `notes` (a `notesLayer`) to offer "Pin notes to the model". */
 declare function Markup({ scene, renderer, title, context, notes, author }: {
     scene: Scene;
     renderer: MarkupRenderer;

@@ -6,6 +6,12 @@ before 1.0, breaking changes bump the minor version. See
 
 ## Unreleased
 
+## 0.11.0 — 2026-11-22
+
+An agent on the live model and a person who decides: the MCP server joins a shared document with nobody's app open (or works on a file), looks at floor plans it draws itself, and proposes changes that wait for a person to accept or reject. One interface for every app: a shared panel frame, a paper style for 2D figures, a menu bar with Undo, the viewer header in every 3D view, a grey dark theme, the sun by date and place, hidden line on paper. Also: closed round meshes, contours as polylines, drag handles and axonometric views for 2D sketches, timber/steel/concrete stairs, drawings in an architectural graphic language, and the 28 lecture apps in the playground.
+
+**Breaking:** `MeshFactory.sphere`, `torus`, `cylinder` and a full `revolve` have fewer vertices (seams, poles and axis points are shared): code that counts their vertices or reads them by index in the old layout must change. A sketch's Export ▾ / Import ▾ buttons are now File menu items (`lab.registerExport` / `registerImport` as before). **Changed defaults:** the dark theme is neutral grey (`getTheme()`; the view `#0b0b0b`, was `#0a0b14`); hidden line draws on white paper in a dark app (`hiddenLineInverse: true` keeps it dark); `sketch`, `sketch2d` and `appShell` show a menu bar and a panel top row, and an app without controls has no panel; `appShell` shows the viewer header; a 2D sketch redraws after its pointer handlers; drawings' annotation is smaller (text 2 mm, dimensions 1.8 mm) and view titles carry their scale.
+
 - **The panel has a top row of its own, and an empty panel is not there.** The first row of
   the panel in `sketch`, `sketch2d` and `appShell` belongs to its frame: the panel's name on
   the left ("Parameters"; `panelTitle` changes it, `""` leaves it free; a paper figure shows

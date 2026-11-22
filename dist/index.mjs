@@ -1,12 +1,20 @@
 import {
+  Commands,
   ControlPanel,
+  ParamHistory,
   SheetCanvas,
   Sketch2DInstance,
   drawSheet,
   ensureSliderStyle,
   fitSheet,
-  sketch2d
-} from "./chunk-RPHIMVGY.mjs";
+  formatKeys,
+  keyMatches,
+  menuBar,
+  menuSlot,
+  panelFrame,
+  sketch2d,
+  viewCommands
+} from "./chunk-3L2FI4NP.mjs";
 import {
   Algo,
   ArcCurve,
@@ -16,6 +24,7 @@ import {
   BlobDetect,
   BspTree,
   Building,
+  BuildingSession,
   Capsule2D,
   CltConstruction,
   CubicBezierCurve,
@@ -121,6 +130,7 @@ import {
   boundingWalls,
   boxOf,
   buildCutList,
+  buildingPlan,
   buildingSchema,
   chooseJoistDirection,
   clampedUniformKnots,
@@ -146,9 +156,11 @@ import {
   repelBodies,
   reverse,
   validateBuilding
-} from "./chunk-5HDWJPWQ.mjs";
+} from "./chunk-NVFBXJTP.mjs";
 import {
+  Axonometric,
   DASH_PATTERNS,
+  DRAWING_PALETTE,
   OBB2D,
   ParamStore,
   Polygon2D,
@@ -158,11 +170,14 @@ import {
   createLayout,
   createParams,
   createRandom,
+  encodePNG,
   noise,
   pickPrim,
   polygonIntersection,
-  setClipSnap
-} from "./chunk-TR2ZDYFK.mjs";
+  rasterizeSheet,
+  setClipSnap,
+  sheetToPNG
+} from "./chunk-MPAWQFRS.mjs";
 import {
   MarkupOverlay,
   VIEW_MODE_ICON_CORNERS,
@@ -171,8 +186,9 @@ import {
   viewModeIconShapes,
   viewModeIconSvg,
   viewerToolbar
-} from "./chunk-Y4TQNWTE.mjs";
+} from "./chunk-BDOEIXHP.mjs";
 import {
+  VIEW_BG_DARK,
   addOverlay,
   agentDoc,
   callSite,
@@ -183,7 +199,7 @@ import {
   plainBundle,
   sceneSummary,
   snapshotWithOverlays
-} from "./chunk-OZQQS4QH.mjs";
+} from "./chunk-BXIU5T7I.mjs";
 import {
   Mesh,
   ObjFile,
@@ -192,13 +208,14 @@ import {
   SunPosition,
   Triangle,
   writePdf2D
-} from "./chunk-F764YID7.mjs";
+} from "./chunk-PPIR23JZ.mjs";
 import {
   AABB,
   Doc,
   HMath,
   Mat4,
   MathUtils,
+  PROPOSALS,
   Segment,
   Selection,
   SharedStore,
@@ -209,6 +226,7 @@ import {
   _resolveLayers,
   _sanLayer,
   _writeR12Prologue,
+  acceptProposal,
   aciFromHex,
   applyPatch,
   bindScene,
@@ -217,8 +235,13 @@ import {
   collabColor,
   devServerAdapter,
   download,
+  listProposals,
   localAdapter,
   memoryAdapter,
+  patchChanges,
+  patchedCollections,
+  propose,
+  rejectProposal,
   segmentSegmentClosest,
   selectOnClick,
   shareSelection,
@@ -226,7 +249,7 @@ import {
   supabaseAdapter,
   writeDxf2D,
   writeDxf3D
-} from "./chunk-56LGGW6L.mjs";
+} from "./chunk-K6X6LVYU.mjs";
 
 // src/io/IdBufferHiddenLine.ts
 import * as THREE from "three";
@@ -1738,146 +1761,6 @@ function polylinesToSVG(segments, bounds, options) {
   return parts.join("\n");
 }
 
-// src/gui/Commands.ts
-var isMacPlatform = () => typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || "");
-function keyMatches(binding, e, mac = isMacPlatform()) {
-  const parts = binding.split("+").map((s) => s.trim()).filter(Boolean);
-  const key = binding.endsWith("++") ? "+" : parts.pop();
-  if (!key) return false;
-  const want = { meta: false, ctrl: false, alt: false, shift: false };
-  for (const m of parts) {
-    const k = m.toLowerCase();
-    if (k === "mod") mac ? want.meta = true : want.ctrl = true;
-    else if (k === "meta" || k === "cmd") want.meta = true;
-    else if (k === "ctrl" || k === "control") want.ctrl = true;
-    else if (k === "alt" || k === "option") want.alt = true;
-    else if (k === "shift") want.shift = true;
-  }
-  if (e.metaKey !== want.meta || e.ctrlKey !== want.ctrl || e.altKey !== want.alt) return false;
-  const letterOrNamed = key.length > 1 || /^[a-z0-9]$/i.test(key);
-  if (letterOrNamed && e.shiftKey !== want.shift) return false;
-  return e.key.length === 1 ? e.key.toLowerCase() === key.toLowerCase() : e.key === key;
-}
-function formatKeys(binding, mac = isMacPlatform()) {
-  const parts = binding.split("+").map((s) => s.trim()).filter(Boolean);
-  const key = binding.endsWith("++") ? "+" : parts.pop() ?? "";
-  const has = (...names) => parts.some((p) => names.includes(p.toLowerCase()));
-  const named = mac ? { ArrowUp: "\u2191", ArrowDown: "\u2193", ArrowLeft: "\u2190", ArrowRight: "\u2192", Delete: "\u2326", Backspace: "\u232B", Escape: "\u238B", Enter: "\u21A9" } : { ArrowUp: "\u2191", ArrowDown: "\u2193", ArrowLeft: "\u2190", ArrowRight: "\u2192", Escape: "Esc" };
-  const k = named[key] ?? (key.length === 1 ? key.toUpperCase() : key);
-  if (mac) {
-    return (has("ctrl", "control") ? "\u2303" : "") + (has("alt", "option") ? "\u2325" : "") + (has("shift") ? "\u21E7" : "") + (has("mod", "meta", "cmd") ? "\u2318" : "") + k;
-  }
-  const mods = [has("mod", "ctrl", "control") && "Ctrl", has("meta", "cmd") && "Win", has("alt", "option") && "Alt", has("shift") && "Shift"].filter(Boolean);
-  return [...mods, k].join("+");
-}
-function typing(target) {
-  const el = target;
-  if (!el || typeof el.tagName !== "string") return false;
-  return el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable;
-}
-function viewCommands(view) {
-  const v = (id, label) => ({ id: `view.${id}`, label, group: "View", run: () => view.setView(id) });
-  return [
-    { id: "view.fitAll", label: "Frame all", group: "View", run: () => view.fitAll() },
-    v("top", "Plan (top)"),
-    v("front", "Front"),
-    v("right", "Right"),
-    v("back", "Back"),
-    v("left", "Left"),
-    v("iso", "Iso"),
-    {
-      id: "view.toggleProjection",
-      label: "Perspective / orthographic",
-      group: "View",
-      run: () => view.setProjection(view.projection === "perspective" ? "orthographic" : "perspective")
-    }
-  ];
-}
-var Commands = class {
-  constructor() {
-    this.byId = /* @__PURE__ */ new Map();
-    this.listeners = /* @__PURE__ */ new Set();
-  }
-  /** Add commands (an id already there is replaced). Returns a function that removes them. */
-  add(commands) {
-    const list = Array.isArray(commands) ? commands : [commands];
-    for (const c of list) {
-      if (!c.id || typeof c.run !== "function") throw new Error(`Commands.add: a command needs an id and run(), got ${JSON.stringify(c)}`);
-      this.byId.set(c.id, c);
-    }
-    this.emit();
-    return () => {
-      for (const c of list) if (this.byId.get(c.id) === c) this.byId.delete(c.id);
-      this.emit();
-    };
-  }
-  remove(id) {
-    if (this.byId.delete(id)) this.emit();
-  }
-  get(id) {
-    return this.byId.get(id);
-  }
-  has(id) {
-    return this.byId.has(id);
-  }
-  /** Every command, in the order added, with its keys and whether it can run now. */
-  list() {
-    return [...this.byId.values()].map((c) => ({
-      id: c.id,
-      label: c.label,
-      group: c.group,
-      keys: c.keys === void 0 ? [] : typeof c.keys === "string" ? [c.keys] : [...c.keys],
-      enabled: this.canRun(c)
-    }));
-  }
-  /** Run a command by id. False if there is none or it can't run now. */
-  async run(id) {
-    const c = this.byId.get(id);
-    if (!c || !this.canRun(c)) return false;
-    await c.run();
-    return true;
-  }
-  /** The command a key event presses, if any (and enabled). */
-  match(e, mac) {
-    for (const c of this.byId.values()) {
-      const keys = c.keys === void 0 ? [] : typeof c.keys === "string" ? [c.keys] : c.keys;
-      if (keys.some((k) => keyMatches(k, e, mac)) && this.canRun(c)) return c;
-    }
-    return void 0;
-  }
-  /**
-   * Run commands from their keys on `target` (default: the window). Keys typed into a
-   * field stay with the field; a matched key's default is prevented. Returns the unbind.
-   */
-  bindKeys(target = window) {
-    const onKey = (ev) => {
-      const e = ev;
-      if (e.defaultPrevented || typing(e.target)) return;
-      const c = this.match(e);
-      if (!c) return;
-      e.preventDefault();
-      void Promise.resolve(c.run()).catch((err) => console.error(`command ${c.id}:`, err));
-    };
-    target.addEventListener("keydown", onKey);
-    return () => target.removeEventListener("keydown", onKey);
-  }
-  /** Hear when commands are added or removed. Returns the unsubscribe. */
-  onChange(cb) {
-    this.listeners.add(cb);
-    return () => this.listeners.delete(cb);
-  }
-  canRun(c) {
-    try {
-      return c.enabled ? c.enabled() !== false : true;
-    } catch {
-      return false;
-    }
-  }
-  emit() {
-    for (const l of this.listeners) l();
-  }
-};
-
 // src/render/ThreeRenderer.ts
 import * as THREE12 from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
@@ -1888,6 +1771,18 @@ import * as THREE4 from "three";
 // src/render/viewRules.ts
 import * as THREE3 from "three";
 var DEFAULT_BACKGROUND = 16119802;
+var PAPER = 16777215;
+var DARK_PAGE = 723723;
+function hiddenLinePage(background, inverse = false) {
+  const light = luminance(background) > 0.5;
+  if (inverse) return light ? DARK_PAGE : new THREE3.Color(background).getHex();
+  return light ? new THREE3.Color(background).getHex() : PAPER;
+}
+function inkOn(page, colour) {
+  const a = luminance(page), b = luminance(colour);
+  const contrast = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+  return contrast >= 1.6 ? colour : a > 0.5 ? "#2f2f2f" : "#d8d8d8";
+}
 function edgeStyle(mode, background = modeBackground(mode, DEFAULT_BACKGROUND)) {
   if (mode === "hidden-line") return { colour: 1779507, opacity: 1 };
   if (mode === "ghost" && luminance(background) > 0.5) return { colour: 1779507, opacity: 0.6 };
@@ -2189,10 +2084,14 @@ var ObjectBuilder = class {
     this._stripeTexCache.set(layerH, tex);
     return tex;
   }
+  /** A colour as drawn: its own, except in a hidden-line drawing where it would vanish into the page. */
+  ink(colour) {
+    return this.core.gScene.renderMode === "hiddenline" ? inkOn(this.core.pageColor(), colour) : colour;
+  }
   /** Build a THREE.Line for a line-type object — dashed material (+ line distances)
    *  when the style requests it, else a basic line material. */
   _makeLine(geo, s) {
-    const mat = s.dash ? new THREE4.LineDashedMaterial({ color: s.color, opacity: s.opacity, transparent: s.opacity < 1, dashSize: s.dash.size, gapSize: s.dash.gap }) : new THREE4.LineBasicMaterial({ color: s.color, opacity: s.opacity, transparent: s.opacity < 1 });
+    const mat = s.dash ? new THREE4.LineDashedMaterial({ color: this.ink(s.color), opacity: s.opacity, transparent: s.opacity < 1, dashSize: s.dash.size, gapSize: s.dash.gap }) : new THREE4.LineBasicMaterial({ color: this.ink(s.color), opacity: s.opacity, transparent: s.opacity < 1 });
     const line = new THREE4.Line(geo, mat);
     if (s.dash) line.computeLineDistances();
     return line;
@@ -2203,8 +2102,8 @@ var ObjectBuilder = class {
       case "point": {
         const geo = new THREE4.SphereGeometry(s.pointSize, 12, 12);
         const mat = this.makeMaterial({
-          color: s.color,
-          emissive: s.color,
+          color: this.ink(s.color),
+          emissive: this.ink(s.color),
           emissiveIntensity: 0.3,
           opacity: s.opacity,
           transparent: s.opacity < 1,
@@ -2216,7 +2115,7 @@ var ObjectBuilder = class {
         if (s.label) {
           const group = new THREE4.Group();
           group.add(mesh);
-          const sprite = this.createTextSprite(s.label, s.labelColor ?? s.color, s.labelScale ?? 1);
+          const sprite = this.createTextSprite(s.label, this.ink(s.labelColor ?? s.color), s.labelScale ?? 1);
           if (obj.position) sprite.position.set(obj.position.x, obj.position.y, obj.position.z);
           if (this.core.isZUp) sprite.position.z += s.pointSize + 0.15;
           else sprite.position.y += s.pointSize + 0.15;
@@ -2270,7 +2169,7 @@ var ObjectBuilder = class {
         const pts = obj.vertices.map((v) => new THREE4.Vector3(v.x, v.y, v.z));
         if (pts.length > 2) pts.push(pts[0].clone());
         const lineGeo = new THREE4.BufferGeometry().setFromPoints(pts);
-        group.add(new THREE4.Line(lineGeo, new THREE4.LineBasicMaterial({ color: s.color })));
+        group.add(new THREE4.Line(lineGeo, new THREE4.LineBasicMaterial({ color: this.ink(s.color) })));
         if (obj.vertices.length >= 3) {
           if (this.core.isZUp) {
             const shape = new THREE4.Shape(obj.vertices.map((v) => new THREE4.Vector2(v.x, v.y)));
@@ -2437,7 +2336,7 @@ var ObjectBuilder = class {
       group.add(new THREE4.Mesh(geo, wireMat));
     } else if (mode === "hiddenline") {
       const occlusionMat = new THREE4.MeshBasicMaterial({
-        color: this.core.config.backgroundColor,
+        color: this.core.pageColor(),
         side,
         toneMapped: false,
         polygonOffset: true,
@@ -2446,10 +2345,11 @@ var ObjectBuilder = class {
       });
       group.add(new THREE4.Mesh(geo, occlusionMat));
       const edgeAngle = s.edgeAngle ?? 30;
-      const wireMat = new THREE4.LineBasicMaterial({ color: s.edgeColor ?? 3092271, toneMapped: false });
+      const ink = inkOn(this.core.pageColor(), s.edgeColor ?? 3092271);
+      const wireMat = new THREE4.LineBasicMaterial({ color: ink, toneMapped: false });
       group.add(this._edgeLines(geo, edgeAngle, wireMat));
       const rimMat = new THREE4.MeshBasicMaterial({
-        color: s.edgeColor ?? 3092271,
+        color: ink,
         side: THREE4.BackSide,
         toneMapped: false
       });
@@ -2589,6 +2489,57 @@ var ObjectBuilder = class {
 
 // src/render/Lighting.ts
 import * as THREE5 from "three";
+
+// src/render/sunSite.ts
+var SUN_PLACES = [
+  { name: "Zurich", latitude: 47.37, longitude: 8.55, timeZone: 1 },
+  { name: "Berlin", latitude: 52.52, longitude: 13.4, timeZone: 1 },
+  { name: "Paris", latitude: 48.86, longitude: 2.35, timeZone: 1 },
+  { name: "London", latitude: 51.51, longitude: -0.13, timeZone: 0 },
+  { name: "Madrid", latitude: 40.42, longitude: -3.7, timeZone: 1 },
+  { name: "Rome", latitude: 41.9, longitude: 12.5, timeZone: 1 },
+  { name: "Stockholm", latitude: 59.33, longitude: 18.07, timeZone: 1 },
+  { name: "Reykjavik", latitude: 64.13, longitude: -21.95, timeZone: 0 },
+  { name: "Moscow", latitude: 55.76, longitude: 37.62, timeZone: 3 },
+  { name: "Dubai", latitude: 25.27, longitude: 55.3, timeZone: 4 },
+  { name: "Mumbai", latitude: 19.08, longitude: 72.88, timeZone: 5.5 },
+  { name: "Singapore", latitude: 1.35, longitude: 103.82, timeZone: 8 },
+  { name: "Beijing", latitude: 39.9, longitude: 116.41, timeZone: 8 },
+  { name: "Tokyo", latitude: 35.68, longitude: 139.69, timeZone: 9 },
+  { name: "Sydney", latitude: -33.87, longitude: 151.21, timeZone: 10 },
+  { name: "Honolulu", latitude: 21.31, longitude: -157.86, timeZone: -10 },
+  { name: "Anchorage", latitude: 61.22, longitude: -149.9, timeZone: -9 },
+  { name: "San Francisco", latitude: 37.77, longitude: -122.42, timeZone: -8 },
+  { name: "Mexico City", latitude: 19.43, longitude: -99.13, timeZone: -6 },
+  { name: "Chicago", latitude: 41.88, longitude: -87.63, timeZone: -6 },
+  { name: "New York", latitude: 40.71, longitude: -74.01, timeZone: -5 },
+  { name: "Buenos Aires", latitude: -34.61, longitude: -58.38, timeZone: -3 },
+  { name: "S\xE3o Paulo", latitude: -23.55, longitude: -46.63, timeZone: -3 },
+  { name: "Cape Town", latitude: -33.92, longitude: 18.42, timeZone: 2 }
+];
+function sunTimeZone(site) {
+  return site.timeZone ?? Math.round(site.longitude / 15);
+}
+function sunFor(site) {
+  const [y, m, d] = site.date.split("-").map(Number);
+  if (![y, m, d].every(Number.isFinite)) throw new Error(`sunFor: date "${site.date}" is not "YYYY-MM-DD"`);
+  const utc = site.hour - sunTimeZone(site);
+  const date = new Date(Date.UTC(y, m - 1, d, 0, Math.round(utc * 60)));
+  const sun = SunPosition.compute({ date, latitude: site.latitude, longitude: site.longitude });
+  if (!site.north) return sun;
+  const a = site.north * Math.PI / 180, { x: e, y: n, z } = sun.direction;
+  return { ...sun, direction: new Vec3(e * Math.cos(a) + n * Math.sin(a), n * Math.cos(a) - e * Math.sin(a), z) };
+}
+function hhmm(hour) {
+  const min = Math.round(hour * 60);
+  return `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+}
+function sunNow(site, now = /* @__PURE__ */ new Date()) {
+  const local = new Date(now.getTime() + sunTimeZone(site) * 36e5);
+  return { date: local.toISOString().slice(0, 10), hour: local.getUTCHours() + local.getUTCMinutes() / 60 };
+}
+
+// src/render/Lighting.ts
 var Lighting = class {
   constructor(core) {
     this.core = core;
@@ -2627,6 +2578,8 @@ var Lighting = class {
     this.daylightOn = false;
     /** The last preset `sunPreset` set, until the sun is moved another way. */
     this.currentSunPreset = null;
+    /** The date and place `sunAt` last set, until the sun is moved another way. */
+    this.currentSunSite = null;
     const isZUp = core.isZUp;
     this.ambientLight = new THREE5.AmbientLight(16777215, 0.5);
     core.threeScene.add(this.ambientLight);
@@ -2682,6 +2635,7 @@ var Lighting = class {
   }
   setSunDirection(direction, distance = 50) {
     this.currentSunPreset = null;
+    this.currentSunSite = null;
     const x = direction.x;
     const y = this.core.isZUp ? direction.y : direction.z;
     const z = this.core.isZUp ? direction.z : -direction.y;
@@ -2730,6 +2684,14 @@ var Lighting = class {
     this.setSunDirection(new Vec3(d.x, d.y, d.z));
     this.currentSunPreset = name;
   }
+  /** The sun for a date, an hour and a place: Studio, the light following the sun (night included). */
+  sunAt(site) {
+    const sun = sunFor(site);
+    this.core.gScene.setLightingMode("studio");
+    this.setDaylight(true);
+    this.setSunDirection(sun.direction);
+    this.currentSunSite = { ...site };
+  }
   setDaylight(on) {
     this.daylightOn = on;
     if (on) this.sunDirty = true;
@@ -2747,14 +2709,25 @@ var Lighting = class {
     this.hemiLight.intensity = d.skyIntensity;
     this.ambientLight.intensity = d.ambient;
     this.core.renderer.toneMappingExposure = d.exposure;
-    if (!(this.envBackground && this.envSourceTex)) {
-      this.core.threeScene.background = new THREE5.Color(this.core.config.backgroundColor).lerp(new THREE5.Color(d.background), d.backgroundAmount);
+    this.applyPage();
+  }
+  /**
+   * The colour behind the model: the page, tinted by the sky while Studio's light follows
+   * the sun. A hidden-line drawing keeps its page plain. An image as background stays.
+   */
+  applyPage() {
+    if (this.envBackground && this.envSourceTex) return;
+    const page = new THREE5.Color(this.core.pageColor());
+    if (this.daylightOn && this.currentLighting === "studio" && this.core.gScene.renderMode !== "hiddenline") {
+      const d = daylight(this.sunAltitude());
+      page.lerp(new THREE5.Color(d.background), d.backgroundAmount);
     }
+    this.core.threeScene.background = page;
   }
   /** Back to the plain balance of the current mode. */
   _resetDaylight() {
     this.dirLight.color.setHex(16777215);
-    if (!(this.envBackground && this.envSourceTex)) this.core.threeScene.background = new THREE5.Color(this.core.config.backgroundColor);
+    this.applyPage();
     this.applyMode(this.currentLighting);
   }
   /**
@@ -2790,7 +2763,7 @@ var Lighting = class {
       this.dirLight.castShadow = false;
       if (this.daylightOn) {
         this.dirLight.color.setHex(16777215);
-        if (!(this.envBackground && this.envSourceTex)) this.core.threeScene.background = new THREE5.Color(this.core.config.backgroundColor);
+        this.applyPage();
       }
     }
     const cast = studio && this.core.gScene.renderMode !== "ghost";
@@ -2861,7 +2834,8 @@ var Lighting = class {
       this.envSourceTex.mapping = THREE5.EquirectangularReflectionMapping;
       this.core.threeScene.background = this.envSourceTex;
     } else if (this.core.threeScene.background?.isTexture) {
-      this.core.threeScene.background = new THREE5.Color(this.core.config.backgroundColor);
+      this.core.threeScene.background = null;
+      this.applyPage();
     }
   }
   /** A sky: an equirectangular image lighting the scene and, by default, behind it. */
@@ -3178,6 +3152,7 @@ var CameraRig = class {
     this.projectionListeners = /* @__PURE__ */ new Set();
     // The hand (setHandMode): what the left button and one finger did before it took them.
     this.handPrev = null;
+    this._gizmoShown = true;
     this.onHandDown = () => {
       this.core.renderer.domElement.style.cursor = "grabbing";
     };
@@ -3214,10 +3189,15 @@ var CameraRig = class {
     const visible = v.z > -1 && v.z < 1;
     return { x, y, visible };
   }
+  /** Show or hide the axis widget (with the viewer's other tools); it stays hidden in a strict-2D view. */
+  setGizmoShown(shown2) {
+    this._gizmoShown = shown2;
+    this.navGizmo?.setVisible(shown2 && this._rotateEnabled);
+  }
   setOrbitRotateEnabled(enabled) {
     this._rotateEnabled = enabled;
     if (this.core.controls) this.core.controls.enableRotate = enabled;
-    this.navGizmo?.setVisible(enabled);
+    this.navGizmo?.setVisible(enabled && this._gizmoShown);
     if (enabled) this.setHandMode(false);
   }
   /** The hand, a strict-2D view's tool: on, the left button (and one finger) drags the view along
@@ -4813,6 +4793,10 @@ var Marks = class {
 import * as THREE10 from "three";
 var srgb = (hex) => new THREE10.Vector3((hex >> 16 & 255) / 255, (hex >> 8 & 255) / 255, (hex & 255) / 255);
 var FadingGrid = class {
+  /** The page changed (a hidden-line drawing's paper): the lines a step off the new one. */
+  setBackground(background) {
+    this.mesh.material.uniforms.uLine.value = srgb(gridLineColour(background));
+  }
   constructor(background, zUp) {
     const material = new THREE10.ShaderMaterial({
       transparent: true,
@@ -4902,6 +4886,8 @@ var SHADING_ICONS = {
   noon: svg(`<circle cx="12" cy="12" r="4"/><path d="${RAYS}"/>`),
   morning: HORIZON("M9 5.5 12 2.5l3 3"),
   sunset: HORIZON("M9 6.5l3 3 3-3"),
+  // The sun for a date: a calendar sheet.
+  date: svg(`<rect x="4" y="5.5" width="16" height="14" rx="1.5"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/>`),
   // Ambient occlusion: two faces meeting, darkened into the corner.
   ao: svg(`<path d="M5 4v15h15"/><path d="M5 9.5v9.5h9.5A9.5 9.5 0 0 0 5 9.5z" fill="currentColor" fill-opacity="0.5" stroke="none"/>`),
   // Overlays: two overlapping rings, as Blender draws it.
@@ -4922,11 +4908,12 @@ var SHADING_ICONS = {
 var ZOOM_STEP = 1.25;
 var MODES = [["solid", "Solid"], ["wireframe", "Wireframe"], ["hiddenline", "Hidden line"], ["ghost", "Ghost"]];
 var LIGHTS = [["flat", "Flat lighting"], ["studio", "Studio lighting: soft shadows"]];
+var SUN_PLACE_KEY = "tekto.sunPlace";
 var SUNS = [["morning", "Morning"], ["noon", "Noon"], ["sunset", "Sunset"]];
 var OVERLAY_LABELS = { grid: "Grid", axes: "Axes", wireframe: "Wireframe", labels: "Labels", notes: "Notes" };
 var VIEWER_HEADER_H = 34;
 var ShadingBar = class {
-  constructor(core, lighting, marks, ao, view, placement = "top-left", headerHost = null) {
+  constructor(core, lighting, marks, ao, view, placement = "top-left", headerHost = null, tools = {}) {
     this.core = core;
     this.lighting = lighting;
     this.marks = marks;
@@ -4952,6 +4939,21 @@ var ShadingBar = class {
     this.overlayPaints = [];
     this.setCut = null;
     this.paints = [];
+    this.toolsHidden = false;
+    // ── The sun for a date and a place ──────────────────────────────────────────────────────
+    /** What the Date sun's fields hold: the place last chosen (remembered), today, 13:30. */
+    this.sunState = (() => {
+      const z = SUN_PLACES[0];
+      let place = { place: z.name, latitude: z.latitude, longitude: z.longitude, timeZone: z.timeZone };
+      try {
+        const stored = JSON.parse(localStorage.getItem(SUN_PLACE_KEY) ?? "null");
+        if (stored && Number.isFinite(stored.latitude) && Number.isFinite(stored.longitude)) {
+          place = { place: stored.place, latitude: stored.latitude, longitude: stored.longitude, timeZone: stored.timeZone };
+        }
+      } catch {
+      }
+      return { ...place, date: (/* @__PURE__ */ new Date()).toISOString().slice(0, 10), hour: 13.5 };
+    })();
     const host = core.container;
     if (getComputedStyle(host).position === "static") host.style.position = "relative";
     const rootHost = placement === "header" && headerHost ? headerHost : host;
@@ -4963,7 +4965,7 @@ var ShadingBar = class {
     this.full.style.display = "contents";
     this.flat.style.display = "contents";
     if (isHeader) {
-      this.root.style.cssText = `position:absolute;top:0;left:0;right:0;height:${VIEWER_HEADER_H}px;box-sizing:border-box;z-index:23;display:flex;align-items:center;gap:2px;padding:0 6px;background:rgba(16,18,26,.9);border-bottom:1px solid rgba(255,255,255,.08);user-select:none;`;
+      this.root.style.cssText = `position:absolute;top:0;left:0;right:0;height:${VIEWER_HEADER_H}px;box-sizing:border-box;z-index:23;display:flex;align-items:center;gap:2px;padding:0 6px;background:rgba(30,30,30,.96);border-bottom:1px solid rgba(255,255,255,.08);user-select:none;`;
       this.root.dataset.tektoViewerHeader = "";
       const slot = () => {
         const d = document.createElement("div");
@@ -4973,92 +4975,140 @@ var ShadingBar = class {
       const left = slot(), right = slot(), end = slot(), spacer = document.createElement("div");
       spacer.style.cssText = "flex:1;min-width:8px;";
       right.style.marginLeft = end.style.marginLeft = "8px";
+      left.dataset.tektoHeaderSlot = "left";
+      right.dataset.tektoHeaderSlot = "right";
+      end.dataset.tektoHeaderSlot = "end";
       this.header = { left, right, end };
       this.root.append(left, spacer, this.full, this.flat, right, end);
       this.nav = document.createElement("div");
       this.nav.dataset.tektoNavColumn = "";
-      this.nav.style.cssText = "position:absolute;z-index:5;display:flex;flex-direction:column;gap:2px;padding:3px;border-radius:7px;background:rgba(16,18,26,.78);border:1px solid rgba(255,255,255,.08);user-select:none;";
+      this.nav.style.cssText = "position:absolute;z-index:5;display:flex;flex-direction:column;gap:2px;padding:3px;border-radius:7px;background:rgba(30,30,30,.9);border:1px solid rgba(255,255,255,.08);user-select:none;";
       host.appendChild(this.nav);
     } else {
-      this.root.style.cssText = `position:absolute;${v}:10px;${h}:10px;z-index:5;display:flex;align-items:center;gap:2px;padding:3px;border-radius:7px;background:rgba(16,18,26,.78);border:1px solid rgba(255,255,255,.08);box-shadow:0 2px 8px rgba(0,0,0,.3);user-select:none;`;
+      this.root.style.cssText = `position:absolute;${v}:10px;${h}:10px;z-index:5;display:flex;align-items:center;gap:2px;padding:3px;border-radius:7px;background:rgba(30,30,30,.9);border:1px solid rgba(255,255,255,.08);box-shadow:0 2px 8px rgba(0,0,0,.3);user-select:none;`;
       this.root.append(this.full, this.flat);
     }
     const scene = core.gScene;
-    for (const [mode, label] of MODES) this.button(viewModeIconSvg(mode, 16), label, () => scene.renderMode === mode, () => scene.setRenderMode(mode));
-    this.separator();
-    for (const [mode, label] of LIGHTS) this.button(SHADING_ICONS[mode], label, () => scene.lightingMode === mode, () => scene.setLightingMode(mode));
-    this.button(SHADING_ICONS.ao, "Ambient occlusion: darker where surfaces meet (Solid, perspective)", () => this.ao.enabled, () => this.ao.set(!this.ao.enabled));
-    this.separator();
-    const sunPop = this.popover(v, h);
-    const sun = this.button(SHADING_ICONS.noon, "Sun: morning, noon, sunset", () => this.openPop === sunPop, () => this.toggle(sunPop));
-    this.openers.set(sunPop, sun);
-    this.paints.push(() => {
-      sun.innerHTML = SHADING_ICONS[this.lighting.currentSunPreset ?? "noon"];
-    });
-    for (const [preset, label] of SUNS) {
-      const b = this.button(
-        `${SHADING_ICONS[preset]}<span style="font:500 9.5px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${label}</span>`,
-        `${label}: Studio, the light following the sun`,
-        () => this.lighting.currentSunPreset === preset,
-        () => {
-          this.lighting.sunPreset(preset);
-          this.toggle(null);
-        },
-        sunPop
-      );
-      b.style.width = "54px";
-      b.style.height = "42px";
-      b.style.flexDirection = "column";
-      b.style.gap = "4px";
-    }
-    const cutPop = this.popover(v, h);
-    cutPop.style.flexDirection = "column";
-    cutPop.style.gap = "6px";
-    this.openers.set(cutPop, this.button(SHADING_ICONS.section, "Section: cut the model", () => this.openPop === cutPop || !!this.marks.section, () => this.toggle(cutPop)));
-    this.sectionControls(cutPop);
-    this.separator();
-    const overlayPop = this.popover(v, h);
-    overlayPop.style.flexDirection = "column";
-    overlayPop.style.minWidth = "120px";
-    this.openers.set(overlayPop, this.button(SHADING_ICONS.overlays, "Overlays: grid, axes, wireframe, labels, notes", () => this.openPop === overlayPop, () => this.toggle(overlayPop)));
-    let listed = "";
-    this.paints.push(() => {
-      const names = Object.keys(this.view.overlays);
-      if (names.join() === listed) return;
-      listed = names.join();
-      overlayPop.replaceChildren();
-      this.overlayPaints = [];
-      for (const name of names) {
-        const label = OVERLAY_LABELS[name] ?? name[0].toUpperCase() + name.slice(1);
-        const b = this.button(
-          `<span style="width:14px;font:600 11px/1 system-ui,sans-serif">${"\u2713"}</span><span style="font:500 11px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${escapeHtml(label)}</span>`,
-          `${label}: show or hide`,
-          () => false,
-          // a checklist: a tick, not a filled button
-          () => this.view.setOverlays({ [name]: !(this.view.overlays[name] ?? false) }),
-          overlayPop,
-          this.overlayPaints
+    let any = false;
+    const group = (shown2, build) => {
+      if (shown2 === false) return;
+      if (any) this.separator();
+      any = true;
+      build();
+    };
+    group(tools.modes, () => {
+      for (const [mode, label] of MODES) {
+        const again = mode === "hiddenline";
+        this.button(
+          viewModeIconSvg(mode, 16),
+          again ? `${label}: dark lines on paper (click again for the inverse)` : label,
+          () => scene.renderMode === mode,
+          () => {
+            if (again && scene.renderMode === mode) this.view.setHiddenLineInverse(!this.view.hiddenLineInverse);
+            else scene.setRenderMode(mode);
+          }
         );
-        b.style.width = "auto";
-        b.style.justifyContent = "flex-start";
-        b.style.gap = "6px";
-        b.style.padding = "0 10px 0 6px";
-        const tick = b.firstElementChild;
-        this.overlayPaints.push(() => {
-          const on = !!this.view.overlays[name];
-          tick.style.visibility = on ? "visible" : "hidden";
-          b.style.color = on ? "#e8ebf0" : "rgba(232,235,240,.5)";
-          b.setAttribute("aria-pressed", String(on));
-        });
       }
     });
-    this.paints.push(() => {
-      for (const p of this.overlayPaints) p();
+    group(tools.light, () => {
+      for (const [mode, label] of LIGHTS) this.button(SHADING_ICONS[mode], label, () => scene.lightingMode === mode, () => scene.setLightingMode(mode));
+      this.button(SHADING_ICONS.ao, "Ambient occlusion: darker where surfaces meet (Solid, perspective)", () => this.ao.enabled, () => this.ao.set(!this.ao.enabled));
     });
-    if (!isHeader) this.button(SHADING_ICONS.frame, "Frame: the selection, or everything", () => false, () => this.view.frame());
-    this.button(SHADING_ICONS.snapshot, "Snapshot: save the view as a PNG", () => false, () => this.view.saveSnapshot());
+    const sunAndSection = tools.sun !== false || tools.section !== false;
+    group(sunAndSection, () => {
+      if (tools.sun !== false) {
+        const sunPop = this.popover(v, h);
+        sunPop.style.flexDirection = "column";
+        const row = document.createElement("div");
+        row.style.cssText = "display:flex;gap:2px;";
+        sunPop.appendChild(row);
+        const sun = this.button(SHADING_ICONS.noon, "Sun: morning, noon, sunset, or a date and a place", () => this.openPop === sunPop, () => this.toggle(sunPop));
+        this.openers.set(sunPop, sun);
+        this.paints.push(() => {
+          sun.innerHTML = SHADING_ICONS[this.sunIcon()];
+        });
+        const tile = (b) => {
+          b.style.width = "54px";
+          b.style.height = "42px";
+          b.style.flexDirection = "column";
+          b.style.gap = "4px";
+        };
+        const caption = (label) => `<span style="font:500 9.5px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${label}</span>`;
+        for (const [preset, label] of SUNS) {
+          tile(this.button(
+            `${SHADING_ICONS[preset]}${caption(label)}`,
+            `${label}: Studio, the light following the sun`,
+            () => this.lighting.currentSunPreset === preset,
+            () => {
+              this.lighting.sunPreset(preset);
+              this.toggle(null);
+            },
+            row
+          ));
+        }
+        tile(this.button(
+          `${SHADING_ICONS.date}${caption("Date")}`,
+          "Date: the sun for a date, an hour and a place",
+          () => !!this.lighting.currentSunSite,
+          () => this.lighting.sunAt(this.sunState),
+          row
+        ));
+        this.sunControls(sunPop);
+      }
+      if (tools.section !== false) {
+        const cutPop = this.popover(v, h);
+        cutPop.style.flexDirection = "column";
+        cutPop.style.gap = "6px";
+        this.openers.set(cutPop, this.button(SHADING_ICONS.section, "Section: cut the model", () => this.openPop === cutPop || !!this.marks.section, () => this.toggle(cutPop)));
+        this.sectionControls(cutPop);
+      }
+    });
+    group(tools.overlays !== false || tools.snapshot !== false || !isHeader && tools.zoom !== false, () => {
+      if (tools.overlays !== false) {
+        const overlayPop = this.popover(v, h);
+        overlayPop.style.flexDirection = "column";
+        overlayPop.style.minWidth = "120px";
+        this.openers.set(overlayPop, this.button(SHADING_ICONS.overlays, "Overlays: grid, axes, wireframe, labels, notes", () => this.openPop === overlayPop, () => this.toggle(overlayPop)));
+        let listed = "";
+        this.paints.push(() => {
+          const names = Object.keys(this.view.overlays);
+          if (names.join() === listed) return;
+          listed = names.join();
+          overlayPop.replaceChildren();
+          this.overlayPaints = [];
+          for (const name of names) {
+            const label = OVERLAY_LABELS[name] ?? name[0].toUpperCase() + name.slice(1);
+            const b = this.button(
+              `<span style="width:14px;font:600 11px/1 system-ui,sans-serif">${"\u2713"}</span><span style="font:500 11px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${escapeHtml(label)}</span>`,
+              `${label}: show or hide`,
+              () => false,
+              // a checklist: a tick, not a filled button
+              () => this.view.setOverlays({ [name]: !(this.view.overlays[name] ?? false) }),
+              overlayPop,
+              this.overlayPaints
+            );
+            b.style.width = "auto";
+            b.style.justifyContent = "flex-start";
+            b.style.gap = "6px";
+            b.style.padding = "0 10px 0 6px";
+            const tick = b.firstElementChild;
+            this.overlayPaints.push(() => {
+              const on = !!this.view.overlays[name];
+              tick.style.visibility = on ? "visible" : "hidden";
+              b.style.color = on ? "#e8ebf0" : "rgba(232,235,240,.5)";
+              b.setAttribute("aria-pressed", String(on));
+            });
+          }
+        });
+        this.paints.push(() => {
+          for (const p of this.overlayPaints) p();
+        });
+      }
+      if (!isHeader && tools.zoom !== false) this.button(SHADING_ICONS.frame, "Frame: the selection, or everything", () => false, () => this.view.frame());
+      if (tools.snapshot !== false) this.button(SHADING_ICONS.snapshot, "Snapshot: save the view as a PNG", () => false, () => this.view.saveSnapshot());
+    });
     this.group = this.flat;
-    if (isHeader) this.button(SHADING_ICONS.snapshot, "Snapshot: save the view as a PNG", () => false, () => this.view.saveSnapshot());
+    if (isHeader && tools.snapshot !== false) this.button(SHADING_ICONS.snapshot, "Snapshot: save the view as a PNG", () => false, () => this.view.saveSnapshot());
     this.group = this.nav ?? this.flat;
     const hand = this.button(
       SHADING_ICONS.hand,
@@ -5072,8 +5122,9 @@ var ShadingBar = class {
     this.paints.push(() => {
       const flat = !this.view.orbitRotateEnabled;
       this.root.dataset.palette = flat ? "2d" : "3d";
-      this.full.style.display = flat ? "none" : "contents";
-      this.flat.style.display = flat ? "contents" : "none";
+      this.full.style.display = flat || this.toolsHidden ? "none" : "contents";
+      this.flat.style.display = flat && !this.toolsHidden ? "contents" : "none";
+      if (this.nav) this.nav.style.display = this.toolsHidden || tools.zoom === false ? "none" : "flex";
       hand.style.display = flat ? "flex" : "none";
       if (flat && this.openPop) {
         this.openPop.style.display = "none";
@@ -5086,6 +5137,15 @@ var ShadingBar = class {
     this.off = scene.on((e) => {
       if (e.type === "scene:renderMode" || e.type === "scene:lightingMode") this.paint();
     });
+    this.paint();
+  }
+  /** Hide or show the tools (the header strip itself stays, with the app's slots and ✎ Markup). */
+  setToolsVisible(visible) {
+    this.toolsHidden = !visible;
+    if (!visible && this.openPop) {
+      this.openPop.style.display = "none";
+      this.openPop = null;
+    }
     this.paint();
   }
   /** Redraw which buttons are on (after a change made elsewhere, such as the sun moved in code). */
@@ -5102,7 +5162,7 @@ var ShadingBar = class {
   /** A popover under the bar (above it when the bar sits at the bottom). */
   popover(v, h) {
     const pop = document.createElement("div");
-    pop.style.cssText = `position:absolute;${v === "top" ? "top" : "bottom"}:calc(100% + 6px);${h}:0;display:none;gap:2px;padding:4px;border-radius:7px;background:rgba(16,18,26,.92);border:1px solid rgba(255,255,255,.08);box-shadow:0 4px 14px rgba(0,0,0,.4);`;
+    pop.style.cssText = `position:absolute;${v === "top" ? "top" : "bottom"}:calc(100% + 6px);${h}:0;display:none;gap:2px;padding:4px;border-radius:7px;background:rgba(37,37,38,.98);border:1px solid rgba(255,255,255,.08);box-shadow:0 4px 14px rgba(0,0,0,.4);`;
     this.root.appendChild(pop);
     return pop;
   }
@@ -5111,12 +5171,135 @@ var ShadingBar = class {
     const next = pop && this.openPop !== pop ? pop : null;
     if (this.openPop) this.openPop.style.display = "none";
     if (next) next.style.display = "flex";
-    const opener = next && this.header ? this.openers.get(next) : void 0;
-    if (next && opener) {
-      next.style.left = `${Math.max(0, Math.min(opener.offsetLeft, this.root.clientWidth - next.offsetWidth - 4))}px`;
-    }
     this.openPop = next;
+    if (next) this.placePop(next);
     this.paint();
+  }
+  /** In the header: a popover under its button, kept inside the header's width. */
+  placePop(pop) {
+    const opener = this.header ? this.openers.get(pop) : void 0;
+    if (opener) pop.style.left = `${Math.max(0, Math.min(opener.offsetLeft, this.root.clientWidth - pop.offsetWidth - 4))}px`;
+  }
+  /** The sun button's icon: the named sun, or for a date the one nearest its hour. */
+  sunIcon() {
+    const site = this.lighting.currentSunSite;
+    if (!site) return this.lighting.currentSunPreset ?? "noon";
+    return this.lighting.sunAltitude() > 20 ? "noon" : site.hour < 12 ? "morning" : "sunset";
+  }
+  /** The Date sun's fields under the sun popover's row: place, latitude and longitude, north, date, hour. */
+  sunControls(pop) {
+    ensureSliderStyle(document);
+    const form = document.createElement("div");
+    form.dataset.tektoSunDate = "";
+    form.style.cssText = "display:none;flex-direction:column;gap:6px;padding:6px 4px 4px;margin-top:2px;border-top:1px solid rgba(255,255,255,.1);color:rgba(232,235,240,.72);font:11px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;";
+    const FIELD = "box-sizing:border-box;height:22px;min-width:0;padding:0 5px;border:1px solid rgba(255,255,255,.14);border-radius:4px;background:#141414;color:#e8ebf0;font:inherit;color-scheme:dark;";
+    const line = (label, ...controls) => {
+      const l = document.createElement("div");
+      l.style.cssText = "display:flex;align-items:center;gap:6px;";
+      const name = document.createElement("span");
+      name.textContent = label;
+      name.style.cssText = "flex:0 0 38px;";
+      l.append(name, ...controls);
+      form.appendChild(l);
+    };
+    const field = (tag, label, type) => {
+      const f = document.createElement(tag);
+      if (type) f.type = type;
+      f.setAttribute("aria-label", label);
+      f.title = label;
+      f.style.cssText = `${FIELD}flex:1;`;
+      return f;
+    };
+    const place = field("select", "Place");
+    for (const p of SUN_PLACES) place.add(new Option(p.name, p.name));
+    place.add(new Option("Other", ""));
+    const lat = field("input", "Latitude, north positive", "number");
+    const lon = field("input", "Longitude, east positive", "number");
+    lat.step = lon.step = "0.01";
+    [lat.min, lat.max, lon.min, lon.max] = ["-85", "85", "-180", "180"];
+    const north = field("input", "North: degrees clockwise from the model's +Y axis (up on the plan)", "range");
+    [north.min, north.max, north.step] = ["0", "360", "1"];
+    const date = field("input", "Date", "date");
+    const time = field("input", "Time of day (standard time)", "range");
+    [time.min, time.max, time.step] = ["0", "24", "0.25"];
+    const value = () => {
+      const v = document.createElement("span");
+      v.style.cssText = "flex:0 0 38px;text-align:right;color:#e8ebf0;font:11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;";
+      return v;
+    };
+    for (const slider of [time, north]) {
+      slider.className = "tekto-slider";
+      slider.style.cssText = "flex:1;width:0;min-width:40px;--tekto-track:rgba(255,255,255,.18);--tekto-thumb:#e8ebf0;";
+    }
+    const clock = value(), bearing = value();
+    const readout = document.createElement("span");
+    readout.dataset.tektoSunReadout = "";
+    readout.style.cssText = "flex:1;white-space:nowrap;";
+    const now = document.createElement("button");
+    now.type = "button";
+    now.textContent = "Now";
+    now.title = "Today, at this hour";
+    now.style.cssText = `${FIELD}cursor:pointer;padding:0 9px;`;
+    line("Place", place);
+    line("Lat", lat, lon);
+    line("North", north, bearing);
+    line("Date", date);
+    line("Time", time, clock);
+    const foot = document.createElement("div");
+    foot.style.cssText = "display:flex;align-items:center;gap:6px;padding-top:2px;";
+    foot.append(readout, now);
+    form.appendChild(foot);
+    pop.appendChild(form);
+    const apply = (change) => {
+      this.sunState = { ...this.sunState, ...change };
+      const { place: name, latitude, longitude, timeZone } = this.sunState;
+      try {
+        localStorage.setItem(SUN_PLACE_KEY, JSON.stringify({ place: name, latitude, longitude, timeZone }));
+      } catch {
+      }
+      this.lighting.sunAt(this.sunState);
+      this.paint();
+    };
+    const num = (el, fallback) => {
+      const v = Number(el.value);
+      return el.value === "" || !Number.isFinite(v) ? fallback : Math.min(Number(el.max), Math.max(Number(el.min), v));
+    };
+    place.addEventListener("change", () => {
+      const p = SUN_PLACES.find((q) => q.name === place.value);
+      if (p) apply({ place: p.name, latitude: p.latitude, longitude: p.longitude, timeZone: p.timeZone });
+      else apply({ place: void 0, timeZone: void 0 });
+    });
+    const moved = () => apply({ place: void 0, timeZone: void 0, latitude: num(lat, this.sunState.latitude), longitude: num(lon, this.sunState.longitude) });
+    lat.addEventListener("change", moved);
+    lon.addEventListener("change", moved);
+    date.addEventListener("change", () => {
+      if (date.value) apply({ date: date.value });
+    });
+    time.addEventListener("input", () => apply({ hour: Number(time.value) }));
+    north.addEventListener("input", () => apply({ north: Number(north.value) % 360 }));
+    now.addEventListener("click", () => apply(sunNow(this.sunState)));
+    const set = (el, value2) => {
+      if (document.activeElement !== el && el.value !== value2) el.value = value2;
+    };
+    this.paints.push(() => {
+      const site = this.lighting.currentSunSite;
+      const shown2 = form.style.display !== "none";
+      form.style.display = site ? "flex" : "none";
+      if (!site) return;
+      this.sunState = { ...site };
+      set(place, site.place && SUN_PLACES.some((p) => p.name === site.place) ? site.place : "");
+      set(lat, site.latitude.toFixed(2));
+      set(lon, site.longitude.toFixed(2));
+      set(date, site.date);
+      set(time, String(site.hour));
+      clock.textContent = hhmm(site.hour);
+      const turned = ((site.north ?? 0) % 360 + 360) % 360;
+      set(north, String(turned));
+      bearing.textContent = `${Math.round(turned)}\xB0`;
+      const s = sunFor(site), deg = (r) => Math.round(r * 180 / Math.PI), tz = sunTimeZone(site);
+      readout.textContent = `${s.isDaytime ? `Alt ${deg(s.altitude)}\xB0 \xB7 Az ${deg(s.azimuth)}\xB0` : "Below the horizon"} \xB7 UTC${tz < 0 ? "\u2212" : "+"}${Math.abs(tz)}`;
+      if (!shown2 && this.openPop === pop) this.placePop(pop);
+    });
   }
   /** The section popover's controls, kept in step with the cut however it was set. */
   sectionControls(pop) {
@@ -5150,7 +5333,7 @@ var ShadingBar = class {
       this.marks.setSection({ axis, ...w, ...flip ? { flip } : {} });
       this.paint();
     };
-    const show = (c, r) => units ? `${c.toFixed(2)} ${units}` : `${Math.round((c - r[0]) / Math.max(r[1] - r[0], 1e-12) * 100)} %`;
+    const show2 = (c, r) => units ? `${c.toFixed(2)} ${units}` : `${Math.round((c - r[0]) / Math.max(r[1] - r[0], 1e-12) * 100)} %`;
     for (const [label, axis, title] of axes) {
       const b = this.button(
         `<span style="font:600 10px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${label}</span>`,
@@ -5209,7 +5392,7 @@ var ShadingBar = class {
           slider.value = String(near);
         }
       }
-      value.textContent = show(pending, [Number(slider.min), Number(slider.max)]);
+      value.textContent = show2(pending, [Number(slider.min), Number(slider.max)]);
       this.marks.showSectionPlane(true);
       clearTimeout(hide);
       if (!frame) frame = requestAnimationFrame(() => {
@@ -5241,7 +5424,7 @@ var ShadingBar = class {
         slider.step = String(Math.max((r[1] - r[0]) / 500, 1e-4));
         const c = this.marks.sectionCoordinate() ?? r[0];
         if (document.activeElement !== slider) slider.value = String(c);
-        value.textContent = show(c, r);
+        value.textContent = show2(c, r);
       } else {
         value.textContent = "\u2014";
       }
@@ -5292,7 +5475,7 @@ var ShadingBar = class {
       const active = on();
       b.setAttribute("aria-pressed", String(active));
       b.style.background = active ? "#e8ebf0" : "transparent";
-      b.style.color = active ? "#11131a" : "rgba(232,235,240,.72)";
+      b.style.color = active ? "#1e1e1e" : "rgba(232,235,240,.72)";
     };
     b.onmouseenter = () => {
       if (!on()) b.style.color = "#fff";
@@ -5402,7 +5585,7 @@ var AmbientOcclusion = class {
 var INERT_STYLE_KEYS = /* @__PURE__ */ new Set(["layer", "lineWidth", "noExport"]);
 var DEFAULTS = {
   antialias: true,
-  backgroundColor: 658196,
+  backgroundColor: 723723,
   showGrid: true,
   gridStyle: "lines",
   gridSize: 20,
@@ -5417,10 +5600,12 @@ var DEFAULTS = {
   up: "y",
   navGizmo: false,
   shadingBar: false,
+  viewerTools: {},
   units: null,
   headerHost: null,
   flatLighting: "sketch",
-  studioLighting: "filmic"
+  studioLighting: "filmic",
+  hiddenLineInverse: false
 };
 var EDGE_BUDGET_MS = 8;
 var ThreeRenderer = class {
@@ -5446,6 +5631,7 @@ var ThreeRenderer = class {
     // sketch re-runs (clearThree only touches objectMap-managed objects).
     this.externalObjects = /* @__PURE__ */ new Map();
     this.resizeObserver = null;
+    this.page = null;
     this.drawListeners = /* @__PURE__ */ new Set();
     this.gScene = gScene;
     this.container = container;
@@ -5479,6 +5665,7 @@ var ThreeRenderer = class {
       config: this.config,
       camera: this.camera,
       overlay: (name) => this.overlayState[name] ?? true,
+      pageColor: () => this.pageColor(),
       get controls() {
         return self.controls;
       },
@@ -5495,19 +5682,17 @@ var ThreeRenderer = class {
     this.lighting.applyMode(this.gScene.lightingMode);
     this.builder = new ObjectBuilder(this.core, this.lighting);
     if (cfg.showGrid && cfg.gridStyle === "fading") {
-      this.fadingGrid = new FadingGrid(cfg.backgroundColor, this.isZUp);
+      this.fadingGrid = new FadingGrid(this.pageColor(), this.isZUp);
       this.gridHelper = this.fadingGrid.mesh;
       this.threeScene.add(this.fadingGrid.mesh);
     } else if (cfg.showGrid) {
-      const grid = new THREE12.GridHelper(cfg.gridSize, cfg.gridDivisions, 3816538, 2763850);
-      if (this.isZUp) grid.rotation.x = Math.PI / 2;
-      this.gridHelper = grid;
-      this.threeScene.add(grid);
+      this.buildLineGrid(this.pageColor());
     }
     if (cfg.showAxes) {
       this.axesHelper = new THREE12.AxesHelper(cfg.axesSize);
       this.threeScene.add(this.axesHelper);
     }
+    this.syncPage();
     if (cfg.enableOrbitControls) {
       this.controls = new OrbitControls(this.camera, this.renderer.domElement);
       this.controls.enableDamping = cfg.enableDamping;
@@ -5517,7 +5702,7 @@ var ThreeRenderer = class {
     }
     this.rig = new CameraRig(this.core, this.camera, orthoCam, cfg.navGizmo, cfg.shadingBar === "header" ? VIEWER_HEADER_H : 0);
     this.pointer = new Pointer(this.core, this.builder, this.marks);
-    if (cfg.shadingBar) this.shadingBar = new ShadingBar(this.core, this.lighting, this.marks, this.ao, this, cfg.shadingBar === true ? "top-left" : cfg.shadingBar, cfg.headerHost);
+    if (cfg.shadingBar) this.shadingBar = new ShadingBar(this.core, this.lighting, this.marks, this.ao, this, cfg.shadingBar === true ? "top-left" : cfg.shadingBar, cfg.headerHost, cfg.viewerTools);
     this.renderer.domElement.addEventListener("webglcontextrestored", () => this.requestRender());
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(container);
@@ -5566,7 +5751,8 @@ var ThreeRenderer = class {
         this.clearThree();
         break;
       case "scene:renderMode":
-        this.rebuildAllMeshes();
+        if (this.syncPage()) this.rebuildAll();
+        else this.rebuildAllMeshes();
         break;
       case "scene:lightingMode":
         this.lighting.applyMode(event.mode);
@@ -5671,6 +5857,58 @@ var ThreeRenderer = class {
       this.removeFromThree(obj.id);
       this.addToThree(obj);
     }
+  }
+  /** Rebuild every object (the page changed: lines and marks are drawn for the page they are on). */
+  rebuildAll() {
+    for (const obj of this.gScene.all()) {
+      this.removeFromThree(obj.id);
+      this.addToThree(obj);
+    }
+  }
+  // ── The page ──
+  /** The colour behind the model now: the background, or in hidden line the drawing's page. */
+  pageColor() {
+    const background = new THREE12.Color(this.config.backgroundColor).getHex();
+    return this.gScene.renderMode === "hiddenline" ? hiddenLinePage(background, this.config.hiddenLineInverse) : background;
+  }
+  /** Put the page behind the model and rule the grid for it. True if the page changed. */
+  syncPage() {
+    const page = this.pageColor();
+    this.lighting.applyPage();
+    if (page === this.page) return false;
+    const first = this.page === null;
+    this.page = page;
+    this.fadingGrid?.setBackground(page);
+    if (!this.fadingGrid && this.gridHelper && !first) {
+      const visible = this.gridHelper.visible;
+      this.threeScene.remove(this.gridHelper);
+      this.gridHelper.dispose?.();
+      this.buildLineGrid(page);
+      this.gridHelper.visible = visible;
+    }
+    this.requestRender();
+    return !first;
+  }
+  /** The grid of lines, ruled for the page it lies on: dark greys on a dark page, pale ones on paper. */
+  buildLineGrid(page) {
+    const [major, minor] = luminance(page) > 0.5 && page !== new THREE12.Color(this.config.backgroundColor).getHex() ? [11842740, 14342874] : [3815994, 2500134];
+    const grid = new THREE12.GridHelper(this.config.gridSize, this.config.gridDivisions, major, minor);
+    if (this.isZUp) grid.rotation.x = Math.PI / 2;
+    this.gridHelper = grid;
+    this.threeScene.add(grid);
+  }
+  /**
+   * Draw hidden line inverse — light lines on a dark page — or, with false, as a drawing
+   * on light paper (the default; `hiddenLineInverse` in the config).
+   */
+  setHiddenLineInverse(on) {
+    this.config.hiddenLineInverse = on;
+    if (this.syncPage()) this.rebuildAll();
+    this.shadingBar?.paint();
+  }
+  /** Whether hidden line is drawn inverse (`setHiddenLineInverse`). */
+  get hiddenLineInverse() {
+    return this.config.hiddenLineInverse;
   }
   // Line/point "helper" object types (vs solid meshes/polygons/planes).
   _isHelper(type) {
@@ -5922,8 +6160,8 @@ var ThreeRenderer = class {
   }
   /** Set the viewport background color. */
   setBackground(color) {
-    this.threeScene.background = new THREE12.Color(color);
     this.config.backgroundColor = color;
+    if (this.syncPage()) this.rebuildAll();
     this.requestRender();
   }
   // ── Cleanup ──
@@ -6011,9 +6249,23 @@ var ThreeRenderer = class {
     return this.lighting.currentSunPreset;
   }
   /**
+   * The sun for a date, an hour and a place, as the sun menu's "Date" sets it: Studio, the
+   * light following the sun, so the hour gives the evening and the night too.
+   *
+   *   renderer.setSunAt({ latitude: 47.37, longitude: 8.55, date: "2026-06-21", hour: 17 });
+   */
+  setSunAt(site) {
+    this.lighting.sunAt(site);
+    this.shadingBar?.paint();
+  }
+  /** The date and place last set (`setSunAt`), or null once the sun was moved another way. */
+  get sunSite() {
+    return this.lighting.currentSunSite;
+  }
+  /**
    * Let Studio's light follow the sun: with it on, the sun's colour and strength, the sky,
    * the exposure and the background come from the sun's altitude (`setSunDirection`, which
-   * the shell's Sun popover drives by date and hour), so evening and dusk follow from the
+   * `setSunAt` drives by date and hour), so evening and dusk follow from the
    * hour: noon as Studio is, a warm low sun, a blue dusk, night. Flat lighting is unchanged.
    * Off by default.
    */
@@ -6097,6 +6349,13 @@ var ThreeRenderer = class {
     this.rig.setOrbitRotateEnabled(enabled);
     this.pointer.handMode = this.rig.handMode;
     this.shadingBar?.paint();
+  }
+  /** Hide or show the viewer's tools (the shading bar's icons, the zoom column, the axis widget)
+   *  while the view shows something they do not apply to, such as a drawing laid over it. The
+   *  header strip stays, with the app's own slots and ✎ Markup. */
+  setViewerToolsVisible(visible) {
+    this.shadingBar?.setToolsVisible(visible);
+    this.rig.setGizmoShown(visible);
   }
   /** The hand, a strict-2D view's tool (the 2D palette has its button): on, the left button drags
    *  the view along — over drag handles too — under a grab cursor; a click still picks. Off again
@@ -6380,7 +6639,7 @@ var DEFAULTS2 = {
   width: 800,
   height: 600,
   viewBox: { minX: -5, minY: -5, width: 10, height: 10 },
-  backgroundColor: "#0a0b14",
+  backgroundColor: "#0b0b0b",
   showGrid: true,
   gridSpacing: 1,
   gridColor: "#1a1c3a",
@@ -6765,10 +7024,10 @@ var LayerPanel = class {
     const isActive = node.id === this._active;
     const guarded = this._activePath.has(node.id);
     const d = this._isDark;
-    const labelColor = d ? effectiveVisible ? "#b8bdd4" : "#3a3f5a" : effectiveVisible ? "#2a2d3a" : "#b0b4c0";
+    const labelColor = d ? effectiveVisible ? "#cccccc" : "#3a3f5a" : effectiveVisible ? "#2a2d3a" : "#b0b4c0";
     const arrowColor = d ? "#3a3f5a" : "#b0b4c0";
     const hoverBg = d ? "rgba(255,255,255,.04)" : "rgba(0,0,0,.04)";
-    const iconOn = d ? "#b8bdd4" : "#2a2d3a";
+    const iconOn = d ? "#cccccc" : "#2a2d3a";
     const iconOff = d ? "#3a3f5a" : "#b0b4c0";
     const bulbOn = d ? "#fbbf24" : "#d97706";
     const checkColor = d ? "#ffffff" : "#16182c";
@@ -6876,17 +7135,13 @@ var LayerPanel = class {
 
 // src/sketch/sketchLayout.ts
 function buildSketchLayout(container, config, t) {
-  const defaultWidth = config.panelWidth ?? 320;
-  const storageKey = `tekto.panelWidth.${config.title ?? "default"}`;
-  const stored = parseInt(localStorage.getItem(storageKey) ?? "", 10);
-  const panelWidth = Number.isFinite(stored) && stored >= 200 && stored <= 800 ? stored : defaultWidth;
   const inShell = container instanceof HTMLElement && container.dataset.shell != null;
   const showHeader = config.showHeader ?? !inShell;
   const headerRow = showHeader ? "44px " : "";
-  let fileMenusEl = null;
+  let menuHost = null;
   const root = document.createElement("div");
   root.style.cssText = `
-    display:grid; grid-template-columns:${panelWidth}px 1fr; grid-template-rows:${headerRow}1fr;
+    display:grid; grid-template-columns:320px 1fr; grid-template-rows:${headerRow}1fr;
     height:100%; width:100%; overflow:hidden; position:relative;
     background:${t.bg};
     color:${t.text};
@@ -6906,9 +7161,9 @@ function buildSketchLayout(container, config, t) {
       <span style="font-size:9px;padding:2px 6px;border-radius:3px;
         background:${t.hoverBg};color:${t.accent}">LIVE</span>
     `;
-    fileMenusEl = document.createElement("div");
-    fileMenusEl.style.cssText = "margin-left:auto;display:flex;gap:8px;position:relative;";
-    header.appendChild(fileMenusEl);
+    menuHost = document.createElement("div");
+    menuHost.style.cssText = "display:flex;align-items:center;margin-left:8px;";
+    header.appendChild(menuHost);
     root.appendChild(header);
   }
   const panelEl = document.createElement("div");
@@ -6919,84 +7174,6 @@ function buildSketchLayout(container, config, t) {
     position:relative; grid-column:1;
   `;
   root.appendChild(panelEl);
-  const resizeHandle = document.createElement("div");
-  resizeHandle.title = "Drag to resize panel \xB7 double-click to reset";
-  const handleIdle = t.isDark ? "rgba(255,255,255,.14)" : "rgba(0,0,0,.14)";
-  const handleHover = t.isDark ? "rgba(255,255,255,.35)" : "rgba(0,0,0,.30)";
-  resizeHandle.style.cssText = `
-    position:absolute; top:${showHeader ? 44 : 0}px; bottom:0;
-    left:${panelWidth - 3}px; width:6px;
-    cursor:col-resize; z-index:10;
-    background:${handleIdle};
-    transition:background .15s;
-  `;
-  resizeHandle.addEventListener("mouseenter", () => {
-    resizeHandle.style.background = handleHover;
-  });
-  resizeHandle.addEventListener("mouseleave", () => {
-    resizeHandle.style.background = handleIdle;
-  });
-  resizeHandle.addEventListener("dblclick", () => applyWidth(defaultWidth));
-  resizeHandle.addEventListener("mousedown", (e) => {
-    e.preventDefault();
-    const startX = e.clientX;
-    const startWidth = parseInt(root.style.gridTemplateColumns, 10) || panelWidth;
-    const onMove = (ev) => {
-      const next = Math.max(200, Math.min(800, startWidth + (ev.clientX - startX)));
-      applyWidth(next);
-    };
-    const onUp = () => {
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
-      document.body.style.cursor = "";
-    };
-    document.body.style.cursor = "col-resize";
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
-  });
-  root.appendChild(resizeHandle);
-  let curWidth = panelWidth;
-  const applyWidth = (w) => {
-    curWidth = w;
-    root.style.gridTemplateColumns = `${w}px 1fr`;
-    resizeHandle.style.left = `${w - 3}px`;
-    collapseBtn.style.left = `${w - 26}px`;
-    localStorage.setItem(storageKey, String(w));
-    requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
-  };
-  const collapseKey = `tekto.panelCollapsed.${config.title ?? "default"}`;
-  const btnCss = (left) => `
-    position:absolute; top:${(showHeader ? 44 : 0) + 6}px; left:${left}px;
-    width:20px; height:24px; z-index:11; cursor:pointer; user-select:none;
-    display:flex; align-items:center; justify-content:center;
-    font:13px/1 ui-monospace,monospace;
-    border:1px solid ${t.controlBorder}; border-radius:4px;
-    background:${t.panelBg}; color:${t.accent};
-  `;
-  const collapseBtn = document.createElement("div");
-  collapseBtn.title = "Collapse panel";
-  collapseBtn.textContent = "\u2039";
-  collapseBtn.style.cssText = btnCss(panelWidth - 26);
-  root.appendChild(collapseBtn);
-  const expandBtn = document.createElement("div");
-  expandBtn.title = "Show panel";
-  expandBtn.textContent = "\u203A";
-  expandBtn.style.cssText = btnCss(4);
-  expandBtn.style.display = "none";
-  root.appendChild(expandBtn);
-  const applyCollapsed = (c) => {
-    root.style.gridTemplateColumns = c ? "28px 1fr" : `${curWidth}px 1fr`;
-    panelEl.style.display = c ? "none" : "";
-    resizeHandle.style.display = c ? "none" : "";
-    collapseBtn.style.display = c ? "none" : "flex";
-    collapseBtn.style.left = `${curWidth - 26}px`;
-    expandBtn.style.display = c ? "flex" : "none";
-    localStorage.setItem(collapseKey, c ? "1" : "0");
-    requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
-  };
-  collapseBtn.addEventListener("click", () => applyCollapsed(true));
-  expandBtn.addEventListener("click", () => applyCollapsed(false));
-  if (localStorage.getItem(collapseKey) === "1") applyCollapsed(true);
   const vpWrap = document.createElement("div");
   vpWrap.style.cssText = "position:relative;overflow:hidden;grid-column:2;";
   const viewportEl = document.createElement("div");
@@ -7006,10 +7183,10 @@ function buildSketchLayout(container, config, t) {
   logEl.style.cssText = `
     position:absolute; bottom:12px; left:12px;
     padding:8px 12px; border-radius:6px;
-    background:rgba(7,8,14,.85); backdrop-filter:blur(8px);
-    font-size:11px; line-height:1.7; color:#7a80a0;
+    background:rgba(30,30,30,.92); backdrop-filter:blur(8px);
+    font-size:11px; line-height:1.7; color:#a8a8a8;
     pointer-events:none; max-width:300px;
-    border:1px solid rgba(22,24,42,.8);
+    border:1px solid rgba(255,255,255,.1);
     display:none;
   `;
   vpWrap.appendChild(logEl);
@@ -7020,74 +7197,34 @@ function buildSketchLayout(container, config, t) {
     container.style.overflow = "hidden";
   }
   container.appendChild(root);
-  return { root, fileMenusEl, panelEl, viewportEl, viewportWrap: vpWrap, logEl };
+  return { root, menuHost, panelEl, viewportEl, viewportWrap: vpWrap, logEl, headerHeight: showHeader ? 44 : 0 };
 }
-function renderFileMenus(host, exports, imports, t) {
-  host.innerHTML = "";
-  const menu = (label, items) => {
-    if (!items.length) return;
-    const wrap = document.createElement("div");
-    wrap.style.cssText = "position:relative;";
-    const btn = document.createElement("button");
-    btn.textContent = `${label} \u25BE`;
-    btn.style.cssText = `font:12px ${t.font};padding:4px 10px;border-radius:4px;cursor:pointer;
-      background:${t.panelBg};color:${t.text};border:1px solid ${t.controlBorder};`;
-    const list = document.createElement("div");
-    list.style.cssText = `position:absolute;right:0;top:calc(100% + 4px);min-width:180px;z-index:30;display:none;
-      background:${t.panelBg};border:1px solid ${t.controlBorder};border-radius:6px;padding:4px;box-shadow:0 4px 16px rgba(0,0,0,.3);`;
-    for (const it of items) {
-      const b = document.createElement("button");
-      b.textContent = it.name;
-      if (it.title) b.title = it.title;
-      b.style.cssText = `display:block;width:100%;text-align:left;font:12px ${t.font};padding:6px 10px;border:0;border-radius:4px;
-        background:transparent;color:${t.text};cursor:pointer;`;
-      b.addEventListener("mouseenter", () => {
-        b.style.background = t.hoverBg;
-      });
-      b.addEventListener("mouseleave", () => {
-        b.style.background = "transparent";
-      });
-      b.addEventListener("click", async () => {
-        list.style.display = "none";
-        try {
-          await it.run();
-        } catch (e) {
-          console.error(`tekto ${label.toLowerCase()} "${it.name}":`, e);
-        }
-      });
-      list.appendChild(b);
-    }
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const open = list.style.display === "none";
-      for (const l of host.querySelectorAll("[data-tekto-menu]")) l.style.display = "none";
-      list.style.display = open ? "block" : "none";
-    });
-    list.dataset.tektoMenu = "";
-    document.addEventListener("click", () => {
-      list.style.display = "none";
-    });
-    wrap.append(btn, list);
-    host.appendChild(wrap);
-  };
-  menu("Export", exports.map((it) => ({
-    name: it.name,
-    title: `Download as ${it.fileName}`,
-    run: async () => download(await it.handler(), it.fileName, it.mimeType ? { type: it.mimeType } : {})
-  })));
-  menu("Import", imports.map((it) => ({
-    name: it.name,
-    run: () => {
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = it.accept ?? "";
-      input.onchange = async () => {
-        const f = input.files?.[0];
-        if (f) await it.handler(f);
-      };
-      input.click();
-    }
-  })));
+function fileCommands(exports, imports) {
+  const slug = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const verb = (v, name) => new RegExp(`^${v}\\b`, "i").test(name) ? name : `${v} ${name}`;
+  return [
+    ...imports.map((it) => ({
+      id: `file.import.${slug(it.name)}`,
+      label: verb("Import", it.name),
+      group: "File",
+      run: () => {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = it.accept ?? "";
+        input.onchange = async () => {
+          const f = input.files?.[0];
+          if (f) await it.handler(f);
+        };
+        input.click();
+      }
+    })),
+    ...exports.map((it) => ({
+      id: `file.export.${slug(it.name)}`,
+      label: verb("Export", it.name),
+      group: "File",
+      run: async () => download(await it.handler(), it.fileName, it.mimeType ? { type: it.mimeType } : {})
+    }))
+  ];
 }
 
 // src/sketch/handles.ts
@@ -7483,12 +7620,12 @@ var StepsPanel = class {
     this.pill.type = "button";
     this.pill.dataset.tektoSteps = "pill";
     this.pill.style.cssText = `position:absolute;bottom:12px;left:50%;transform:translateX(-50%);z-index:20;display:none;
-      padding:5px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.18);background:rgba(7,8,14,.85);
+      padding:5px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.18);background:rgba(30,30,30,.92);
       backdrop-filter:blur(8px);color:${t.text};font:500 11px/1.2 ${t.font};cursor:pointer;`;
     this.pill.addEventListener("click", () => this.setOpen(true));
     this.el.dataset.tektoSteps = "panel";
     this.el.style.cssText = `position:absolute;left:0;right:0;bottom:0;height:38%;min-height:200px;max-height:340px;z-index:20;
-      display:none;flex-direction:column;background:rgba(7,8,14,.92);backdrop-filter:blur(8px);
+      display:none;flex-direction:column;background:rgba(30,30,30,.96);backdrop-filter:blur(8px);
       border-top:1px solid rgba(255,255,255,.12);color:${t.textDim};font:11px/1.45 ${t.font};`;
     const head = document.createElement("div");
     head.style.cssText = "display:flex;align-items:center;gap:10px;padding:6px 10px 6px 14px;border-bottom:1px solid rgba(255,255,255,.08);";
@@ -7815,6 +7952,7 @@ var SketchInstance = class {
     // Param model: values live in the shared ParamStore, panel placement in
     // `items`, and the DOM is rendered by the shared ControlPanel (src/gui/).
     this.store = new ParamStore({});
+    this.panelFrame = null;
     this.items = /* @__PURE__ */ new Map();
     this.layerTrees = /* @__PURE__ */ new Map();
     this.buttons = [];
@@ -7886,8 +8024,9 @@ var SketchInstance = class {
     /** Notes on steps on their way into a snapshot (`saveStepMarks`). */
     this._stepMarks = [];
     // Export ▾ / Import ▾ in the sketch's own header (a shell's top bar does it otherwise).
-    this._fileMenusEl = null;
-    this._fileMenusSig = "";
+    this._menuHost = null;
+    this._menuBar = null;
+    this.history = new ParamHistory(this.store);
     this._trackSource = false;
     this._srcById = /* @__PURE__ */ new Map();
     this.separatorCount = 0;
@@ -7918,6 +8057,8 @@ var SketchInstance = class {
     // Layer ids locked in any layer tree (own or a parent's lock): objects on
     // them — by `.layer()` name or view layer — can't be picked or hovered.
     this._lockedLayers = /* @__PURE__ */ new Set();
+    /** File ▸ Import … / Export …: a command per registered entry, replaced when the entries change. */
+    this._fileCommandsOff = null;
     this.fn = fn;
     this.config = config;
     this.scene = new Scene();
@@ -7946,8 +8087,14 @@ var SketchInstance = class {
     this.scene.on((e) => {
       if (!this._running && (e.type === "scene:renderMode" && this._readsStyle.has("renderMode") || e.type === "scene:lightingMode" && this._readsStyle.has("lightingMode"))) this.runSketch();
     });
+    this.commands.add(this.history.commands());
     this.commands.add(viewCommands(this.renderer));
     this._unbindCommandKeys = this.commands.bindKeys();
+    const slot = menuSlot(this._menuHost);
+    if (slot) {
+      this._menuBar = menuBar(this.commands, { theme: this.theme });
+      slot.appendChild(this._menuBar.el);
+    }
     this.wireInput();
     this.runSketch();
     this.startLoop();
@@ -7957,7 +8104,7 @@ var SketchInstance = class {
   buildDOM() {
     this.theme = getTheme(this.config.theme);
     const layout = buildSketchLayout(this.container, this.config, this.theme);
-    this._fileMenusEl = layout.fileMenusEl;
+    this._menuHost = layout.menuHost;
     this.panelEl = layout.panelEl;
     this.viewportEl = layout.viewportEl;
     this.viewportWrap = layout.viewportWrap;
@@ -7968,15 +8115,28 @@ var SketchInstance = class {
       theme: t,
       getButtons: () => this.buttons,
       onCommit: (key) => {
+        this.history.commit();
         if (this.isDisplayChange(key)) this.runDisplayPass();
         else this.commitRun();
       },
       onAction: () => this.runSketch(),
       onTabChange: (tab) => {
         this._onTabChange?.(tab);
-      }
+      },
+      tabs: this.config.tabs,
+      onRender: () => this.panelFrame?.fit()
     });
     this.panelEl.appendChild(this.panel.el);
+    this.panelFrame = panelFrame({
+      root: layout.root,
+      panelEl: this.panelEl,
+      theme: t,
+      top: layout.headerHeight,
+      width: this.config.panelWidth ?? 320,
+      title: this.config.panelTitle ?? "Parameters",
+      storageKey: this.config.title ?? "default",
+      preferred: () => this.panel.preferredWidth()
+    });
     this.store.onChange((key) => {
       if (this._running || this._squelch) return;
       if (this.isDisplayChange(key)) this.runDisplayPass();
@@ -7991,15 +8151,16 @@ var SketchInstance = class {
   initRenderer() {
     const zUp = this.config.up === "z";
     this.renderer = new ThreeRenderer(this.scene, this.viewportEl, {
-      backgroundColor: this.config.background ?? 460814,
+      backgroundColor: this.config.background ?? VIEW_BG_DARK,
       showGrid: this.config.grid !== false,
       showAxes: this.config.axes !== false,
       cameraPosition: this.config.camera ?? (zUp ? [8, -10, 6] : [5, 6, 8]),
       cameraTarget: this.config.target ?? [0, 0, 0],
       up: this.config.up ?? "y",
-      navGizmo: this.config.navGizmo ?? false,
-      // On by default; a shell with its own bar (the testbench's data-shell) turns it off.
-      shadingBar: this.config.shadingBar ?? (this.container.dataset.shell == null ? "header" : false),
+      // The view's tools are the same in every 3D view: the header strip and the axis widget.
+      navGizmo: this.config.navGizmo ?? true,
+      shadingBar: this.config.shadingBar ?? "header",
+      viewerTools: this.config.viewerTools ?? {},
       headerHost: this.viewportWrap,
       // above overlay() layers and ✎ Markup's drawing layer
       units: this.config.units ?? null
@@ -8195,6 +8356,7 @@ var SketchInstance = class {
       if (!usedParams.has(key)) this.layerTrees.delete(key);
     }
     this.refreshLocks();
+    this.history.adopt();
     const hasTabControls = [...this.items.values()].some((it) => it.tab) || this.buttons.some((b) => b.tab) || [...this.layerTrees.values()].some((lt) => lt.tab);
     const hasInfoTab = hasTabControls && this.logs.length > 0;
     const fingerprint = [
@@ -8402,12 +8564,12 @@ var SketchInstance = class {
       registerExport(opts) {
         self.exports.set(opts.name, { ...opts });
         for (const l of self._exportListeners) l();
-        self.renderFileMenus();
+        self.syncFileCommands();
       },
       registerImport(opts) {
         self.imports.set(opts.name, { ...opts });
         for (const l of self._importListeners) l();
-        self.renderFileMenus();
+        self.syncFileCommands();
       },
       // ── Geometry Builders ──
       mesh(m, style) {
@@ -9124,13 +9286,9 @@ var SketchInstance = class {
       ...this._stepMarks.length ? { stepMarks: this._stepMarks } : {}
     };
   }
-  /** Rebuild the header's Export / Import menus when the registered names change. */
-  renderFileMenus() {
-    if (!this._fileMenusEl) return;
-    const sig = [...this.exports.keys()].join("\0") + "|" + [...this.imports.keys()].join("\0");
-    if (sig === this._fileMenusSig) return;
-    this._fileMenusSig = sig;
-    renderFileMenus(this._fileMenusEl, this.getExports(), this.getImports(), this.theme);
+  syncFileCommands() {
+    this._fileCommandsOff?.();
+    this._fileCommandsOff = this.commands.add(fileCommands(this.getExports(), this.getImports()));
   }
   /** The current value of every control, keyed for `setParams` — save it to reopen a design. */
   getParams() {
@@ -9141,7 +9299,9 @@ var SketchInstance = class {
    * returned — and re-run once. Reports names it could not apply instead of dropping them.
    */
   setParams(values) {
-    return this.store.setByName(values);
+    const result = this.store.setByName(values);
+    this.history.commit();
+    return result;
   }
   /** Destroy the sketch and clean up */
   dispose() {
@@ -9149,6 +9309,7 @@ var SketchInstance = class {
     this.markup?.dispose();
     this.bridge?.dispose();
     this._unbindCommandKeys?.();
+    this._menuBar?.dispose();
     if (this._boundKeyDown) window.removeEventListener("keydown", this._boundKeyDown);
     if (this._boundKeyUp) window.removeEventListener("keyup", this._boundKeyUp);
     this._boundKeyDown = null;
@@ -9231,7 +9392,7 @@ var NotesLayer = class {
   reopen(id) {
     this.doc.update(this.collection, id, (n) => ({ ...n, status: "open" }), { label: "Reopen note" });
   }
-  /** Keep several notes as one undo step ("Keep as notes"). Returns their ids. */
+  /** Keep several notes as one undo step ("Pin notes to the model"). Returns their ids. */
   keep(notes) {
     return this.doc.transact(notes.length > 1 ? "Add notes" : "Add note", () => notes.map((n) => this.doc.add(this.collection, n)));
   }
@@ -9340,7 +9501,7 @@ var NotesLayer = class {
     b.type = "button";
     b.dataset.note = id;
     b.setAttribute("aria-label", "Note");
-    b.style.cssText = `position:absolute;width:22px;height:22px;border-radius:50%;border:2px solid #fff;background:${INK};color:#14161e;font:700 11px/1 system-ui,sans-serif;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;pointer-events:auto;box-shadow:0 1px 4px rgba(0,0,0,.45);`;
+    b.style.cssText = `position:absolute;width:22px;height:22px;border-radius:50%;border:2px solid #fff;background:${INK};color:#1e1e1e;font:700 11px/1 system-ui,sans-serif;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;pointer-events:auto;box-shadow:0 1px 4px rgba(0,0,0,.45);`;
     b.addEventListener("click", (e) => {
       e.stopPropagation();
       this.openId === id ? this.closeCard() : this.openCard(id);
@@ -9357,7 +9518,7 @@ var NotesLayer = class {
     this.openId = id;
     const card = this.card = document.createElement("div");
     card.dataset.noteCard = id;
-    card.style.cssText = "position:absolute;z-index:17;width:230px;padding:10px 12px;border-radius:8px;pointer-events:auto;background:#11131a;border:1px solid rgba(255,255,255,.12);box-shadow:0 6px 18px rgba(0,0,0,.45);color:#e8ebf0;font:12px/1.45 system-ui,sans-serif;";
+    card.style.cssText = "position:absolute;z-index:17;width:230px;padding:10px 12px;border-radius:8px;pointer-events:auto;background:#1e1e1e;border:1px solid rgba(255,255,255,.12);box-shadow:0 6px 18px rgba(0,0,0,.45);color:#e8ebf0;font:12px/1.45 system-ui,sans-serif;";
     const text = document.createElement("div");
     text.textContent = n.text || "(no text)";
     text.style.cssText = "white-space:pre-wrap;margin-bottom:6px;";
@@ -9435,11 +9596,13 @@ function notesLayer(renderer, doc, opts = {}) {
 // src/sketch/AppShell.ts
 function appShell(config) {
   const t = getTheme(config.theme);
-  const panelWidth = config.panelWidth ?? 260;
+  const showHeader = config.showHeader ?? (config.container.dataset.shell == null || !!config.topBar);
+  const headerH = showHeader ? 36 : 0;
+  const bodyRow = showHeader ? 2 : 1;
   const root = document.createElement("div");
   root.style.cssText = `
-    display:grid; grid-template-columns:${panelWidth}px 1fr;
-    grid-template-rows:36px 1fr;
+    display:grid; grid-template-columns:260px 1fr;
+    grid-template-rows:${showHeader ? "36px " : ""}1fr; position:relative;
     width:100%; height:100%; font-family:${t.font};
     font-size:12px; color:${t.text}; background:${t.panelBg};
   `;
@@ -9455,15 +9618,15 @@ function appShell(config) {
     <span style="font-size:9px;padding:2px 6px;border-radius:3px;
       background:${t.hoverBg};color:${t.accent}">LIVE</span>
   `;
-  root.appendChild(header);
+  if (showHeader) root.appendChild(header);
   const panelEl = document.createElement("div");
   panelEl.style.cssText = `
-    overflow-y:auto; overflow-x:hidden; padding:0;
+    overflow-y:auto; overflow-x:hidden; padding:0; grid-column:1; grid-row:${bodyRow};
     background:${t.panelBg}; border-right:1px solid ${t.border};
   `;
   root.appendChild(panelEl);
   const vpWrap = document.createElement("div");
-  vpWrap.style.cssText = "position:relative;overflow:hidden;";
+  vpWrap.style.cssText = `position:relative;overflow:hidden;grid-column:2;grid-row:${bodyRow};`;
   const viewportEl = document.createElement("div");
   viewportEl.style.cssText = "width:100%;height:100%;isolation:isolate;";
   vpWrap.appendChild(viewportEl);
@@ -9472,10 +9635,10 @@ function appShell(config) {
   statusEl.style.cssText = `
     position:absolute; bottom:12px; left:12px;
     border-radius:6px;
-    background:rgba(7,8,14,.85); backdrop-filter:blur(8px);
+    background:rgba(30,30,30,.92); backdrop-filter:blur(8px);
     font-size:11px; line-height:1.7; color:${t.textDim};
     pointer-events:none; max-width:340px;
-    border:1px solid rgba(22,24,42,.8);
+    border:1px solid rgba(255,255,255,.1);
     font-family:${t.font};
     display:none; align-items:flex-start;
   `;
@@ -9524,7 +9687,9 @@ function appShell(config) {
   root.appendChild(vpWrap);
   config.container.appendChild(root);
   const params = new ParamStore(config.params);
-  const panel = new ControlPanel({ store: params, theme: t });
+  let frame = null;
+  const history = new ParamHistory(params);
+  const panel = new ControlPanel({ store: params, theme: t, tabs: config.tabs, onRender: () => frame?.fit(), onCommit: () => history.commit() });
   const groups = config.groups ?? { Parameters: Object.keys(config.params) };
   const items = [];
   for (const [groupName, keys] of Object.entries(groups)) {
@@ -9532,26 +9697,41 @@ function appShell(config) {
   }
   panel.render(items);
   panelEl.appendChild(panel.el);
+  frame = panelFrame({
+    root,
+    panelEl,
+    theme: t,
+    top: headerH,
+    width: config.panelWidth ?? 260,
+    title: config.panelTitle ?? "Parameters",
+    storageKey: config.title ?? "app",
+    preferred: () => panel.preferredWidth()
+  });
   const scene = new Scene();
   const renderer = new ThreeRenderer(scene, viewportEl, {
-    backgroundColor: config.background ?? 658196,
+    backgroundColor: config.background ?? VIEW_BG_DARK,
     cameraPosition: config.camera ?? [6, 8, 10],
     cameraTarget: config.target ?? [0, 0, 0],
     // Z-up by default — matches the tekto convention (XY = ground plane) and
     // the architectural / BIM / voxel geometry these apps usually build. Pass
     // `up: "y"` if you're showing the Y-up built-in primitives (box/cylinder/sphere).
     up: config.up ?? "z",
-    navGizmo: config.navGizmo ?? false,
-    shadingBar: config.shadingBar ?? false,
+    navGizmo: config.navGizmo ?? true,
+    shadingBar: config.shadingBar ?? "header",
+    viewerTools: config.viewerTools ?? {},
     headerHost: vpWrap,
     // the viewer header (shadingBar: "header") above overlays and ✎ Markup
     units: config.units ?? null,
     ...config.renderer
   });
   const commands = new Commands();
+  commands.add(history.commands());
   commands.add(viewCommands(renderer));
   const unbindKeys = commands.bindKeys();
-  const toolbar = config.topBar === false ? null : viewerToolbar(scene, renderer, { ...config.topBar === true || config.topBar === void 0 ? {} : config.topBar, theme: t });
+  const menuHost = menuSlot(showHeader ? header : null);
+  const menus = menuHost ? menuBar(commands, { theme: t }) : null;
+  if (menus) menuHost.appendChild(menus.el);
+  const toolbar = !config.topBar ? null : viewerToolbar(scene, renderer, { ...config.topBar === true ? {} : config.topBar, theme: t });
   if (toolbar) header.appendChild(toolbar.el);
   const notesCfg = config.notes ? "doc" in config.notes ? config.notes : { doc: config.notes } : null;
   const notes = notesCfg ? new NotesLayer(renderer, notesCfg.doc, {
@@ -9641,6 +9821,7 @@ function appShell(config) {
       bridge.dispose();
       unbindKeys();
       toolbar?.dispose();
+      menus?.dispose();
       notes?.dispose();
       panel.dispose();
       renderer.dispose();
@@ -9728,23 +9909,35 @@ function appShell(config) {
 }
 
 // src/collab/PresenceBar.ts
+function headerSlot(host) {
+  for (let el = host, up = 0; el && up < 4; el = el.parentElement, up++) {
+    const slot = el.querySelector(":scope > [data-tekto-viewer-header] > [data-tekto-header-slot=right]");
+    if (slot) return slot;
+  }
+  return null;
+}
 var STATUS_COL = { online: "#2f9e44", connecting: "#f08c00", offline: "#adb5bd", error: "#e03131" };
 var PresenceBar = class {
   constructor(store, host, opts = {}) {
     this.store = store;
     this.opts = opts;
     this.unsubs = [];
+    /** In the viewer header's (dark) row, not floating on its own white card. */
+    this.inHeader = false;
     this.el = document.createElement("div");
-    this.el.style.cssText = `position:absolute;${opts.position ?? "top:10px;right:100px;"}z-index:22;display:flex;gap:6px;align-items:center;font:12px system-ui,sans-serif;background:#fff;border:1px solid #d0d0d6;border-radius:7px;padding:3px 6px;box-shadow:0 2px 8px rgba(0,0,0,.12);`;
+    const slot = opts.position ? null : headerSlot(host);
+    this.inHeader = !!slot;
+    this.el.dataset.tektoPresence = slot ? "header" : "floating";
+    this.el.style.cssText = slot ? "display:flex;gap:6px;align-items:center;font:12px system-ui,sans-serif;" : `position:absolute;${opts.position ?? "top:10px;right:100px;"}z-index:22;display:flex;gap:6px;align-items:center;font:12px system-ui,sans-serif;background:#fff;border:1px solid #d0d0d6;border-radius:7px;padding:3px 6px;box-shadow:0 2px 8px rgba(0,0,0,.12);`;
     this.dot = document.createElement("span");
     this.dot.style.cssText = "width:8px;height:8px;border-radius:50%;display:inline-block;";
     this.people = document.createElement("div");
     this.people.style.cssText = "display:flex;gap:3px;align-items:center;";
     this.btn = document.createElement("button");
-    this.btn.style.cssText = "font:12px system-ui,sans-serif;padding:3px 8px;border-radius:5px;border:1px solid #d0d0d6;background:#fff;color:#222;cursor:pointer;";
+    this.btn.style.cssText = slot ? "font:11px system-ui,sans-serif;padding:3px 8px;border-radius:5px;border:1px solid rgba(255,255,255,.22);background:transparent;color:#e8ebf0;cursor:pointer;" : "font:12px system-ui,sans-serif;padding:3px 8px;border-radius:5px;border:1px solid #d0d0d6;background:#fff;color:#222;cursor:pointer;";
     this.btn.addEventListener("click", () => void (store.user ? store.signOut() : store.signIn()));
     this.el.append(this.dot, this.people, this.btn);
-    host.appendChild(this.el);
+    (slot ?? host).appendChild(this.el);
     this.unsubs.push(store.onPresence(() => this.render()), store.onStatus(() => this.render()), store.onUser(() => this.render()));
     this.render();
   }
@@ -9766,7 +9959,7 @@ var PresenceBar = class {
       seen.add(p.user.id);
       const b = document.createElement("span");
       const me = p.session === this.store.session;
-      b.style.cssText = `width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font:600 10px system-ui,sans-serif;color:#fff;background:${p.color};box-shadow:0 0 0 2px ${me ? "#222" : "#fff"};overflow:hidden;`;
+      b.style.cssText = `width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font:600 10px system-ui,sans-serif;color:#fff;background:${p.color};box-shadow:0 0 0 2px ${this.inHeader ? me ? "#fff" : "transparent" : me ? "#222" : "#fff"};overflow:hidden;`;
       if (p.user.avatarUrl) {
         const img = document.createElement("img");
         img.src = p.user.avatarUrl;
@@ -9785,7 +9978,7 @@ var PresenceBar = class {
       if (!agent?.name) continue;
       const b = document.createElement("span");
       b.dataset.agent = agent.name;
-      b.style.cssText = "height:22px;padding:0 6px;border-radius:5px;display:inline-flex;align-items:center;font:600 10px system-ui,sans-serif;color:#14161e;background:#ffb020;white-space:nowrap;";
+      b.style.cssText = "height:22px;padding:0 6px;border-radius:5px;display:inline-flex;align-items:center;font:600 10px system-ui,sans-serif;color:#1e1e1e;background:#ffb020;white-space:nowrap;";
       b.textContent = agent.name;
       const me = p.session === this.store.session;
       b.title = `${agent.name}, through ${me ? "your" : `${p.user.name}'s`} window${agent.doing ? `: ${agent.doing}` : ""}`;
@@ -9793,16 +9986,158 @@ var PresenceBar = class {
     }
   }
 };
+
+// src/collab/ProposalBar.ts
+var show = (v) => {
+  if (v === void 0) return "\u2014";
+  if (typeof v === "number") return String(Math.round(v * 1e3) / 1e3);
+  const s = typeof v === "string" ? v : JSON.stringify(v);
+  return s.length > 34 ? `${s.slice(0, 33)}\u2026` : s;
+};
+var ProposalBar = class {
+  constructor(doc, host, opts = {}) {
+    this.doc = doc;
+    this.opts = opts;
+    this.index = 0;
+    this.error = "";
+    this.pending = 0;
+    this.shown = "";
+    this.t = opts.theme ?? getTheme();
+    const t = this.t;
+    this.el = document.createElement("div");
+    this.el.dataset.tektoProposals = "";
+    this.el.setAttribute("role", "region");
+    this.el.setAttribute("aria-label", "Proposals");
+    this.el.style.cssText = `position:absolute;${opts.position ?? "left:50%;bottom:56px;transform:translateX(-50%);"}z-index:24;display:none;
+      width:min(420px,calc(100% - 32px));max-height:60%;overflow-y:auto;box-sizing:border-box;padding:10px 12px;
+      background:${t.popupBg};color:${t.text};border:1px solid ${t.controlBorder};border-radius:8px;
+      box-shadow:0 6px 22px rgba(0,0,0,${t.isDark ? ".45" : ".16"});font:12px/1.45 ${t.font};`;
+    host.appendChild(this.el);
+    this.off = doc.onChange(() => {
+      if (!this.pending) this.pending = requestAnimationFrame(() => {
+        this.pending = 0;
+        this.render();
+      });
+    });
+    this.render();
+  }
+  destroy() {
+    this.off();
+    if (this.pending) cancelAnimationFrame(this.pending);
+    this.el.remove();
+  }
+  decider() {
+    return this.opts.by?.() ?? this.doc.store.user?.name;
+  }
+  render() {
+    const t = this.t;
+    const open = listProposals(this.doc);
+    if (!open.length) {
+      this.el.style.display = "none";
+      this.el.replaceChildren();
+      this.shown = "";
+      this.error = "";
+      return;
+    }
+    this.index = Math.min(this.index, open.length - 1);
+    const p = open[this.index];
+    if (p.id !== this.shown) {
+      this.shown = p.id;
+      this.error = "";
+    }
+    this.el.style.display = "block";
+    const make = (tag, css, text) => {
+      const e = document.createElement(tag);
+      e.style.cssText = css;
+      if (text !== void 0) e.textContent = text;
+      return e;
+    };
+    const button2 = (label, solid, run) => {
+      const b = make("button", `padding:5px 12px;border-radius:5px;font:inherit;cursor:pointer;border:1px solid ${solid ? t.accent : t.controlBorder};
+        background:${solid ? t.accent : "transparent"};color:${solid ? t.popupBg : t.text};`, label);
+      b.type = "button";
+      b.addEventListener("click", run);
+      return b;
+    };
+    const head = make("div", `display:flex;align-items:center;gap:6px;color:${t.textDim};font-size:11px;`);
+    head.append(make("span", "flex:1;", `${p.by} proposes${open.length > 1 ? ` \xB7 ${this.index + 1} of ${open.length}` : ""}`));
+    if (open.length > 1) {
+      const step = (d, label, name) => {
+        const b = button2(label, false, () => {
+          this.index = (this.index + d + open.length) % open.length;
+          this.render();
+        });
+        b.style.padding = "1px 8px";
+        b.setAttribute("aria-label", name);
+        return b;
+      };
+      head.append(step(-1, "\u2039", "Previous proposal"), step(1, "\u203A", "Next proposal"));
+    }
+    const title = make("div", "font-weight:600;font-size:13px;margin:3px 0 2px;", p.label);
+    title.dataset.proposal = p.id;
+    const rows = [head, title];
+    if (p.note) rows.push(make("div", `color:${t.textDim};margin-bottom:6px;white-space:pre-wrap;`, p.note));
+    const list = make("div", `margin:6px 0;padding:6px 0;border-top:1px solid ${t.controlBorder};border-bottom:1px solid ${t.controlBorder};display:grid;gap:3px;`);
+    for (const c of p.changes) {
+      const row = make("button", `display:block;width:100%;text-align:left;padding:2px 4px;border:0;border-radius:4px;background:transparent;color:${t.text};font:inherit;cursor:${this.opts.onFocus ? "pointer" : "default"};`);
+      row.type = "button";
+      row.dataset.change = c.key;
+      const sign = c.kind === "add" ? "+" : c.kind === "remove" ? "\u2212" : "~";
+      row.append(make("span", `display:inline-block;width:14px;color:${t.textDim};`, sign), make("span", "", c.key));
+      if (c.kind === "change") for (const f of c.fields ?? []) row.append(make("div", `padding-left:14px;color:${t.textDim};`, `${f.name}: ${show(f.from)} \u2192 ${show(f.to)}`));
+      row.setAttribute("aria-label", `${c.kind === "add" ? "Adds" : c.kind === "remove" ? "Removes" : "Changes"} ${c.key}`);
+      if (this.opts.onFocus) {
+        row.addEventListener("click", () => this.opts.onFocus([c.key]));
+        row.addEventListener("mouseenter", () => {
+          row.style.background = t.hoverBg;
+        });
+        row.addEventListener("mouseleave", () => {
+          row.style.background = "transparent";
+        });
+      }
+      list.append(row);
+    }
+    rows.push(list);
+    if (p.stale.length) rows.push(make("div", `color:${t.textDim};margin-bottom:6px;`, `Changed since it was proposed: ${p.stale.join(", ")}`));
+    if (this.error) {
+      const e = make("div", "color:#ff8a80;margin-bottom:6px;white-space:pre-wrap;", this.error);
+      e.setAttribute("role", "alert");
+      rows.push(e);
+    }
+    const foot = make("div", "display:flex;gap:6px;align-items:center;");
+    const reason = make("input", `flex:1;min-width:0;padding:5px 8px;border-radius:5px;border:1px solid ${t.controlBorder};background:transparent;color:${t.text};font:inherit;`);
+    reason.placeholder = "Reason, if you reject";
+    reason.setAttribute("aria-label", "Reason for rejecting");
+    const reject = () => {
+      rejectProposal(this.doc, p.id, { by: this.decider(), reason: reason.value.trim() || void 0 });
+      this.render();
+    };
+    reason.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") reject();
+      e.stopPropagation();
+    });
+    foot.append(reason, button2("Reject", false, reject), button2("Accept", true, () => {
+      const r = acceptProposal(this.doc, p.id, { schema: this.opts.schema, by: this.decider() });
+      this.error = r.ok ? "" : `It no longer applies:
+${r.rejected.map((x) => `${x.key}: ${x.message}`).join("\n")}`;
+      this.render();
+    }));
+    rows.push(foot);
+    this.el.replaceChildren(...rows);
+  }
+};
 export {
   AABB,
   Algo,
   ArcCurve,
+  Axonometric,
   BUILDING_COLLECTIONS,
   BUILDING_SCHEMA,
   BalloonFrame,
   BlobDetect,
   BspTree,
   Building,
+  BuildingSession,
   Callouts,
   Capsule2D,
   CltConstruction,
@@ -9813,6 +10148,7 @@ export {
   CurveUtils,
   DASH_PATTERNS,
   DEFAULT_BACKGROUND,
+  DRAWING_PALETTE,
   Delaunay2D,
   DistanceTransform,
   Doc,
@@ -9854,6 +10190,8 @@ export {
   PGFace,
   PGHalfEdge,
   PGVertex,
+  PROPOSALS,
+  ParamHistory,
   ParamStore,
   Particles2D,
   PixelView,
@@ -9865,6 +10203,7 @@ export {
   PolygonBool,
   PolylineCurve,
   PresenceBar,
+  ProposalBar,
   Ray,
   RibbonEndTrim,
   RibbonFrame,
@@ -9873,6 +10212,7 @@ export {
   RibbonSystem,
   RigidBody2D,
   Roof,
+  SUN_PLACES,
   SVGRenderer,
   Scene,
   SdfBlend,
@@ -9945,6 +10285,7 @@ export {
   WallOpening,
   WallSystem,
   WallType,
+  acceptProposal,
   aciFromHex,
   activateLayer,
   agentDoc,
@@ -9955,6 +10296,7 @@ export {
   boundingWalls,
   boxOf,
   buildCutList,
+  buildingPlan,
   buildingSchema,
   checkRecord,
   chooseJoistDirection,
@@ -9976,6 +10318,7 @@ export {
   easeInOut,
   edgeOutwardVisibility,
   edgeStyle,
+  encodePNG,
   extractVisiblePolylines,
   findAdjacent,
   fitRadius,
@@ -9985,7 +10328,9 @@ export {
   getTheme,
   groundAppearance,
   hiddenLineIdBuffer,
+  hiddenLinePage,
   holzrahmenbauLayers,
+  inkOn,
   joistDirectionFromBounds,
   joistDirectionFromPCA,
   joistDirectionFromSupports,
@@ -9995,9 +10340,12 @@ export {
   layoutLabels,
   lightBalance,
   lineClipPolygon,
+  listProposals,
   localAdapter,
   markup,
   memoryAdapter,
+  menuBar,
+  menuSlot,
   modeBackground,
   nearestAxis,
   neighboursOf,
@@ -10006,6 +10354,8 @@ export {
   openingFill,
   orbitFor,
   orthoFrustum,
+  patchChanges,
+  patchedCollections,
   perpVisibility,
   perpVisibilityOfPolys,
   pickPrim,
@@ -10013,9 +10363,12 @@ export {
   polygonIntersection,
   polylinesToSVG,
   processWorkerRequest,
+  propose,
+  rasterizeSheet,
   realize,
   realizeBuilding,
   realizeSlab,
+  rejectProposal,
   repelBodies,
   reverse as reverseContact,
   sectionAppearance,
@@ -10024,12 +10377,14 @@ export {
   selectOnClick,
   setClipSnap,
   shareSelection,
+  sheetToPNG,
   shortestTurn,
   sketch,
   sketch2d,
   stampName,
   standardOrbit,
   studioLights,
+  sunFor,
   supabaseAdapter,
   surfaceAppearance,
   validateBuilding,

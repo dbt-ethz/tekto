@@ -5,7 +5,7 @@ import {
   Vec2,
   Vec3,
   closestPointOnSegment
-} from "./chunk-56LGGW6L.mjs";
+} from "./chunk-K6X6LVYU.mjs";
 
 // src/core/geometry/Plane.ts
 var Plane = class _Plane {

@@ -1,6 +1,93 @@
-import { c as StandardView, M as Mesh, u as VisualStyle, V as Vec3, F as FlatMeshData, s as Vec2, f as LightSpec, b as SectionRequest, R as RenderMode, L as LightingMode, S as Scene } from './Scene-BsOKEQXC.mjs';
-import { A as Algo, u as MeshFactory, M as MathUtils, G as SheetPrim, C as Sheet, y as Pt } from './download-BLqzq-jW.mjs';
-import { S as ShadingBarPlacement } from './ShadingBar-r-eRrCKI.mjs';
+import { c as StandardView, M as Mesh, u as VisualStyle, V as Vec3, F as FlatMeshData, d as Vec2, g as LightSpec, b as SectionRequest, R as RenderMode, L as LightingMode, S as Scene } from './Scene-D4ExzRe1.js';
+import { S as ShadingBarPlacement, V as ViewerTools, U as UiStyle } from './ShadingBar-hs0G1nnA.js';
+import { A as Algo, y as MeshFactory, M as MathUtils, N as SheetPrim, J as Sheet, E as Pt } from './download-qR7cCR-E.js';
+
+/**
+ * Commands — what a user (or an agent) can do in an app, with the keys that do it.
+ *
+ * Every app grew its own `keydown` handler: a chain of `if (mod && key === "z")` that no one
+ * else could see. A command names the action once — an id, a label, the keys, how to run it,
+ * and whether it can run now — and the registry does the rest: runs it from its keys (not
+ * while typing in a field), lists it for a palette or a tooltip, and lets an agent run it
+ * by id (`window.__tekto.run("edit.undo")`).
+ *
+ *   app.commands.add([
+ *     { id: "edit.undo", label: "Undo", keys: "Mod+Z", run: () => doc.undo(), enabled: () => doc.canUndo() },
+ *     { id: "edit.delete", label: "Delete", keys: ["Delete", "Backspace"], run: removeSelected },
+ *   ]);
+ *
+ * Keys: modifiers then the key, joined by "+": `Mod` is ⌘ on a Mac and Ctrl elsewhere (or
+ * name `Meta` / `Ctrl` outright), then `Shift`, `Alt`; the key is a `KeyboardEvent.key` —
+ * a letter, `Delete`, `Escape`, `ArrowUp`, `F`, `?`.
+ */
+
+/** Something the app can do. */
+interface Command {
+    /** Stable name, dotted by area: `"edit.undo"`, `"view.top"`. */
+    id: string;
+    /** What a person reads: `"Undo"`. */
+    label: string;
+    /** Key bindings: `"Mod+Z"`, or several (`["Delete", "Backspace"]`). */
+    keys?: string | readonly string[];
+    /** Where it belongs in a list: `"Edit"`, `"View"`. */
+    group?: string;
+    run(): void | Promise<void>;
+    /** Whether it can run now; keys and `run(id)` skip it when false. */
+    enabled?(): boolean;
+}
+/** A command as listed: everything but the functions. */
+interface CommandInfo {
+    id: string;
+    label: string;
+    group?: string;
+    keys: string[];
+    enabled: boolean;
+}
+/** Does this key event press this binding? Exactly its modifiers; letters ignore case. */
+declare function keyMatches(binding: string, e: Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey" | "altKey" | "shiftKey">, mac?: boolean): boolean;
+/** A binding the way the platform writes it: "⇧⌘Z" on a Mac, "Ctrl+Shift+Z" elsewhere. */
+declare function formatKeys(binding: string, mac?: boolean): string;
+/** What `viewCommands` drives: structurally a ThreeRenderer. */
+interface ViewControl {
+    fitAll(): void;
+    setView(view: StandardView): void;
+    setProjection(projection: "perspective" | "orthographic"): void;
+    readonly projection: "perspective" | "orthographic";
+    /** Hidden line drawn inverse (light lines on a dark page), where the view has it. */
+    readonly hiddenLineInverse?: boolean;
+    setHiddenLineInverse?(on: boolean): void;
+}
+/**
+ * The commands every 3D view has — frame everything, the plan, the elevations, iso, the
+ * projection — so a palette lists them and an agent can run them (`__tekto.run("view.top")`).
+ * No keys: which keys mean what is the app's to decide.
+ */
+declare function viewCommands(view: ViewControl): Command[];
+/** The commands of one app: run by key or by id, listed for people and agents. */
+declare class Commands {
+    private byId;
+    private listeners;
+    /** Add commands (an id already there is replaced). Returns a function that removes them. */
+    add(commands: Command | readonly Command[]): () => void;
+    remove(id: string): void;
+    get(id: string): Command | undefined;
+    has(id: string): boolean;
+    /** Every command, in the order added, with its keys and whether it can run now. */
+    list(): CommandInfo[];
+    /** Run a command by id. False if there is none or it can't run now. */
+    run(id: string): Promise<boolean>;
+    /** The command a key event presses, if any (and enabled). */
+    match(e: Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey" | "altKey" | "shiftKey">, mac?: boolean): Command | undefined;
+    /**
+     * Run commands from their keys on `target` (default: the window). Keys typed into a
+     * field stay with the field; a matched key's default is prevented. Returns the unbind.
+     */
+    bindKeys(target?: Pick<Window, "addEventListener" | "removeEventListener">): () => void;
+    /** Hear when commands are added or removed. Returns the unsubscribe. */
+    onChange(cb: () => void): () => void;
+    private canRun;
+    private emit;
+}
 
 /**
  * LayerPanel — reusable tree-based layer panel, laid out like Rhino's:
@@ -123,90 +210,6 @@ declare class LayerPanel {
 }
 
 /**
- * Commands — what a user (or an agent) can do in an app, with the keys that do it.
- *
- * Every app grew its own `keydown` handler: a chain of `if (mod && key === "z")` that no one
- * else could see. A command names the action once — an id, a label, the keys, how to run it,
- * and whether it can run now — and the registry does the rest: runs it from its keys (not
- * while typing in a field), lists it for a palette or a tooltip, and lets an agent run it
- * by id (`window.__tekto.run("edit.undo")`).
- *
- *   app.commands.add([
- *     { id: "edit.undo", label: "Undo", keys: "Mod+Z", run: () => doc.undo(), enabled: () => doc.canUndo() },
- *     { id: "edit.delete", label: "Delete", keys: ["Delete", "Backspace"], run: removeSelected },
- *   ]);
- *
- * Keys: modifiers then the key, joined by "+": `Mod` is ⌘ on a Mac and Ctrl elsewhere (or
- * name `Meta` / `Ctrl` outright), then `Shift`, `Alt`; the key is a `KeyboardEvent.key` —
- * a letter, `Delete`, `Escape`, `ArrowUp`, `F`, `?`.
- */
-
-/** Something the app can do. */
-interface Command {
-    /** Stable name, dotted by area: `"edit.undo"`, `"view.top"`. */
-    id: string;
-    /** What a person reads: `"Undo"`. */
-    label: string;
-    /** Key bindings: `"Mod+Z"`, or several (`["Delete", "Backspace"]`). */
-    keys?: string | readonly string[];
-    /** Where it belongs in a list: `"Edit"`, `"View"`. */
-    group?: string;
-    run(): void | Promise<void>;
-    /** Whether it can run now; keys and `run(id)` skip it when false. */
-    enabled?(): boolean;
-}
-/** A command as listed: everything but the functions. */
-interface CommandInfo {
-    id: string;
-    label: string;
-    group?: string;
-    keys: string[];
-    enabled: boolean;
-}
-/** Does this key event press this binding? Exactly its modifiers; letters ignore case. */
-declare function keyMatches(binding: string, e: Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey" | "altKey" | "shiftKey">, mac?: boolean): boolean;
-/** A binding the way the platform writes it: "⇧⌘Z" on a Mac, "Ctrl+Shift+Z" elsewhere. */
-declare function formatKeys(binding: string, mac?: boolean): string;
-/** What `viewCommands` drives: structurally a ThreeRenderer. */
-interface ViewControl {
-    fitAll(): void;
-    setView(view: StandardView): void;
-    setProjection(projection: "perspective" | "orthographic"): void;
-    readonly projection: "perspective" | "orthographic";
-}
-/**
- * The commands every 3D view has — frame everything, the plan, the elevations, iso, the
- * projection — so a palette lists them and an agent can run them (`__tekto.run("view.top")`).
- * No keys: which keys mean what is the app's to decide.
- */
-declare function viewCommands(view: ViewControl): Command[];
-/** The commands of one app: run by key or by id, listed for people and agents. */
-declare class Commands {
-    private byId;
-    private listeners;
-    /** Add commands (an id already there is replaced). Returns a function that removes them. */
-    add(commands: Command | readonly Command[]): () => void;
-    remove(id: string): void;
-    get(id: string): Command | undefined;
-    has(id: string): boolean;
-    /** Every command, in the order added, with its keys and whether it can run now. */
-    list(): CommandInfo[];
-    /** Run a command by id. False if there is none or it can't run now. */
-    run(id: string): Promise<boolean>;
-    /** The command a key event presses, if any (and enabled). */
-    match(e: Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey" | "altKey" | "shiftKey">, mac?: boolean): Command | undefined;
-    /**
-     * Run commands from their keys on `target` (default: the window). Keys typed into a
-     * field stay with the field; a matched key's default is prevented. Returns the unbind.
-     */
-    bindKeys(target?: Pick<Window, "addEventListener" | "removeEventListener">): () => void;
-    /** Hear when commands are added or removed. Returns the unsubscribe. */
-    onChange(cb: () => void): () => void;
-    private canRun;
-    private emit;
-}
-
-/**
  * Sketch public type definitions.
  *
  * Extracted from `Sketch.ts` to keep the implementation file focused on
@@ -235,8 +238,12 @@ interface SketchConfig {
     target?: [number, number, number];
     /** Show the 2D projection panel */
     show2D?: boolean;
-    /** Panel width in pixels */
-    panelWidth?: number;
+    /** Panel width in pixels (default 320), or "auto": as wide as its controls need. A width dragged by hand wins. */
+    panelWidth?: number | "auto";
+    /** The name in the panel's top row, beside the chevron that folds it. Default "Parameters"; "" leaves the row free. */
+    panelTitle?: string;
+    /** Tabs as a bar on top of the panel (default) or as a list down its left side. */
+    tabs?: "top" | "side";
     /** Dark or light theme */
     theme?: "dark" | "light";
     /** Up-axis: "y" (Three.js default) or "z" (CAD convention, XY = ground plane) */
@@ -249,17 +256,18 @@ interface SketchConfig {
     showHeader?: boolean;
     /** Show the ✎ Markup button (draw instructions on the view; see Markup.ts). Default `true`. */
     markup?: boolean;
-    /** The axis widget in the viewport corner: click an axis for a plan or an elevation,
-     *  toggle persp/ortho under it; hidden in a strict-2D view. Default `false`. */
+    /** The axis widget, top right under the viewer header: click an axis for a plan or an
+     *  elevation, toggle persp/ortho under it; hidden in a strict-2D view. Default `true`. */
     navGizmo?: boolean;
     /** The view's controls. `"header"` (the default): a strip across the top of the view, as
      *  Blender's viewport header — the app's own controls on its left (`lab.viewerHeader`), the
      *  render style, lighting, sun, section, overlays, snapshot and ✎ Markup on its right; the axis
      *  widget (`navGizmo`) top right under it and zoom in / out / to bounds below. In a strict-2D view
      *  (`lab.setOrbitRotateEnabled(false)`) the header keeps the snapshot and ✎ Markup, the column the
-     *  zoom. A corner (`true` = top left) is the compact bar instead; `false` hides it. Off by default
-     *  inside a shell with its own bar (the testbench). */
+     *  zoom. A corner (`true` = top left) is the compact bar instead; `false` hides it. */
     shadingBar?: boolean | ShadingBarPlacement;
+    /** Which of the viewer's tools to show (`{ sun: false, section: false }`): each is on unless false. */
+    viewerTools?: ViewerTools;
     /** The scene's unit (`"m"`, `"mm"`…): readouts show coordinates in it. Unset (default):
      *  relative to the content's extent. */
     units?: string;
@@ -499,9 +507,9 @@ interface Lab {
      */
     once(fn: () => void): void;
     /**
-     * Register an "Export ▾" item for the host shell (testbench / app)
-     * to surface in its top-bar Export menu. The handler returns a `Blob`
-     * (or a Promise of one); the shell handles the download.
+     * Register something the sketch can export: it is listed in the menu bar's
+     * File menu ("Export IFC") and as a command (`file.export.ifc`). The handler
+     * returns a `Blob` (or a Promise of one); the download is done for it.
      *
      * Idempotent across sketch re-runs (re-registering the same `name`
      * just refreshes the handler closure).
@@ -883,14 +891,15 @@ interface Lab {
  *
  *   Like Sketch, the function re-runs when any parameter changes.
  *   The draw callback receives a 2D context and canvas dimensions.
- *   Use lab.animate() for continuous rendering.
+ *   Use lab.animate() for continuous rendering; lab.redraw() to draw once more;
+ *   lab.dragHandle() for points the person drags.
  *
  *   Params live in a ParamStore and the panel is rendered by the shared
  *   ControlPanel (src/gui/) — the same system the 3D sketch API and
  *   appShell use.
  */
 
-/** Options for `sketch2d()`: where to mount it, title, canvas background, panel width and theme. */
+/** Options for `sketch2d()`: where to mount it, title, style, canvas background, panel width and tabs. */
 interface Sketch2DConfig {
     /** DOM element or CSS selector to mount into */
     container?: HTMLElement | string;
@@ -898,10 +907,21 @@ interface Sketch2DConfig {
     title?: string;
     /** Canvas background color (CSS) */
     background?: string;
-    /** Panel width in pixels (default 280) */
-    panelWidth?: number;
-    /** Dark or light theme */
+    /** Panel width in pixels (default 280), or "auto" (the default on paper): as wide as its controls need. A width dragged by hand wins. */
+    panelWidth?: number | "auto";
+    /** The name in the panel's top row, beside the chevron that folds it. Default "Parameters"; on paper the app's title, or nothing inside a shell. "" leaves the row free. */
+    panelTitle?: string;
+    /** Dark or light theme (the studio style) */
     theme?: "dark" | "light";
+    /**
+     * The look of the whole app. "studio" (default): tekto's tool chrome. "paper": a figure
+     * in a book, white and minimal: no title bar, one ink, the drawing first.
+     */
+    style?: UiStyle;
+    /** Tabs as a bar on top of the panel (default) or as a list down its left side. */
+    tabs?: "top" | "side";
+    /** Show the 44 px title bar. Default: yes, except on paper and inside a shell that has its own bar (`<div data-shell>`). */
+    showHeader?: boolean;
 }
 /** The `lab.draw` callback: paint the canvas, given its 2D context and size in CSS pixels; runs on every re-run and animation frame. */
 type DrawFn = (ctx: CanvasRenderingContext2D, width: number, height: number) => void;
@@ -918,21 +938,66 @@ interface Pointer2D {
 }
 /** A handler for `lab.onPointerDown` / `onPointerMove` / `onPointerUp`. */
 type PointerFn = (p: Pointer2D) => void;
+/**
+ * Model coordinates on the canvas, y up: a model point (mx, my) is drawn at
+ * (`x + mx * scale`, `y - my * scale`) CSS pixels. `fitSheet(bounds, w, h)` makes one.
+ */
+interface View2D {
+    scale: number;
+    x: number;
+    y: number;
+}
+/** Options for `lab.dragHandle`. */
+interface DragHandle2DOpts {
+    /** Keeps the handle across re-runs (default: its place among the sketch's handles). */
+    name?: string;
+    /**
+     * The handle's coordinates are the model's, drawn through this view (read at every frame
+     * and every pointer event, so a view the draw callback recomputes is followed). Default:
+     * canvas pixels, y down.
+     */
+    view?: View2D | (() => View2D);
+    /** Moves a dragged position, e.g. onto a line or a grid: gets and returns `[x, y]` in the handle's coordinates. */
+    constrain?: (x: number, y: number) => [number, number];
+    /** Radius in CSS pixels (default 6). */
+    size?: number;
+    /** Fill colour (default white, with a dark ring so it shows on any drawing). */
+    color?: string;
+}
 /** The lab context passed to the sketch function */
 interface Lab2D {
     slider(label: string, min: number, max: number, defaultValue: number, opts?: SliderOpts): Reactive<number>;
     toggle(label: string, defaultValue?: boolean, opts?: {
         group?: string;
+        tab?: string;
     }): Reactive<boolean>;
     select<T extends string>(label: string, options: readonly T[], defaultValue?: T, opts?: SelectOpts): Reactive<T>;
     colorPicker(label: string, defaultValue?: string, opts?: {
         group?: string;
+        tab?: string;
     }): Reactive<string>;
     button(label: string, action: () => void, opts?: {
         group?: string;
+        tab?: string;
     }): void;
     /** Register the draw callback. Called on every re-run and animation frame. */
     draw(fn: DrawFn): void;
+    /**
+     * Draw again, once, on the next frame: after state the sketch keeps itself changed (a
+     * timer, a fetch). Pointer handlers need no call: after one runs, the canvas is redrawn.
+     */
+    redraw(): void;
+    /**
+     * A point the person drags on the canvas, drawn over the drawing. Returns its position
+     * (`.value`); dragging it re-runs the sketch, as moving a slider does. It follows `x, y`
+     * until it is dragged, and again when `x, y` change (a slider moved it). A press on a
+     * handle does not reach the sketch's own `onPointerDown`.
+     *
+     *   const view = { scale: 40, x: 60, y: 400 };                 // model metres, y up
+     *   const a = lab.dragHandle(2, 3, { name: "attractor", view: () => view });
+     *   lab.draw((ctx) => { const p = a.value; … });
+     */
+    dragHandle(x: number, y: number, opts?: DragHandle2DOpts): Reactive<Vec2>;
     /** Enable continuous animation. Callback runs each frame. */
     animate(fn: AnimateFn): void;
     /**
@@ -1009,7 +1074,14 @@ declare class Sketch2DInstance {
     private ctx;
     private panelEl;
     private logEl;
+    private logColors;
+    private _logHtml;
     private store;
+    /** What the sketch can do, with its keys: Undo and Redo over its controls, to begin with. */
+    readonly commands: Commands;
+    private history;
+    private menus;
+    private unbindKeys;
     private panel;
     private items;
     private buttons;
@@ -1021,6 +1093,12 @@ declare class Sketch2DInstance {
     private pointerMoveFns;
     private pointerUpFns;
     private continuous;
+    private drawQueued;
+    /** Handle name → its position, and the `x, y` it was declared with (it follows those until dragged). */
+    private handleState;
+    /** The handles this run declared, in order. */
+    private handleList;
+    private dragging;
     private _prevFingerprint;
     private _baseLogCount;
     private _onceRan;
@@ -1040,6 +1118,14 @@ declare class Sketch2DInstance {
     private wireInput;
     private runSketch;
     private redraw;
+    /** Draw on the next frame, once however often it is asked for. */
+    private queueDraw;
+    private viewOf;
+    private toScreen;
+    private fromScreen;
+    /** The topmost handle within reach of a canvas point, or null. */
+    private handleAt;
+    private drawHandles;
     private scheduleRerun;
     private buildLab;
     private updateLog;
@@ -1167,4 +1253,4 @@ declare class SheetCanvas {
     private wire;
 }
 
-export { type AnimateFn as A, drawSheet as B, Commands as C, type DrawFn as D, type ExportRegistration as E, fitSheet as F, formatKeys as G, keyMatches as H, type ImportRegistration as I, layerDefaults as J, sketch2d as K, type Lab as L, type MeshHandle as M, viewCommands as N, type PointHandle as P, type Reactive as R, type SketchConfig as S, type ViewControl as V, type Command as a, type CommandInfo as b, type DrawSheetOptions as c, type Lab2D as d, type LayerColumns as e, type LayerMap as f, type LayerNode as g, LayerPanel as h, type LayerState as i, type LayerTree as j, type LineHandle as k, type Pointer2D as l, type PointerFn as m, type SelectOpts as n, type ShapeHandle as o, type ShapeMode as p, SheetCanvas as q, type SheetCanvasOptions as r, type SheetTransform as s, type Sketch2DConfig as t, type Sketch2DFn as u, Sketch2DInstance as v, type SliderOpts as w, activateLayer as x, computeEffectiveLock as y, computeEffectiveVisibility as z };
+export { type AnimateFn as A, computeEffectiveLock as B, Commands as C, type DragHandle2DOpts as D, type ExportRegistration as E, computeEffectiveVisibility as F, drawSheet as G, fitSheet as H, type ImportRegistration as I, formatKeys as J, keyMatches as K, type Lab as L, type MeshHandle as M, layerDefaults as N, sketch2d as O, type PointHandle as P, viewCommands as Q, type Reactive as R, type SketchConfig as S, type View2D as V, type Command as a, type CommandInfo as b, type DrawFn as c, type DrawSheetOptions as d, type Lab2D as e, type LayerColumns as f, type LayerMap as g, type LayerNode as h, LayerPanel as i, type LayerState as j, type LayerTree as k, type LineHandle as l, type Pointer2D as m, type PointerFn as n, type SelectOpts as o, type ShapeHandle as p, type ShapeMode as q, SheetCanvas as r, type SheetCanvasOptions as s, type SheetTransform as t, type Sketch2DConfig as u, type Sketch2DFn as v, Sketch2DInstance as w, type SliderOpts as x, type ViewControl as y, activateLayer as z };

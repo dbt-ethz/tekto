@@ -1,16 +1,17 @@
-import { V as Vec3, M as Mesh, R as RenderMode, S as Scene, b as SectionRequest, L as LightingMode } from './Scene-BsOKEQXC.js';
-export { A as AABB, F as ColoredMeshData, d as FlatMeshData, e as LegacyMeshJSON, f as LightSpec, g as Mat4, h as MeshEdge, i as MeshFace, j as MeshJSON, k as MeshNode, l as MeshValidation, O as ObjFile, m as ObjMaterial, n as ObjMeshData, P as Projection, o as SceneEvent, p as SceneEventListener, q as SceneJSON, a as SceneObject, r as SceneObjectType, c as StandardView, T as Triangle, s as Vec2, t as Vec4, u as VisualStyle } from './Scene-BsOKEQXC.js';
-import { D as DxfLayerDef } from './download-Dvyp5bt4.js';
-export { A as Algo, a as DASH_PATTERNS, b as Dash, c as DimOptions, d as DrawOptions, e as Dxf2DArc, f as Dxf2DCircle, g as Dxf2DContent, h as Dxf2DLine, i as Dxf2DLook, j as Dxf2DPoint, k as Dxf2DPolyline, l as Dxf2DSolid, m as Dxf2DText, n as Dxf3DArc, o as Dxf3DCircle, p as Dxf3DContent, q as Dxf3DLine, r as Dxf3DPoint, s as Dxf3DPolyline, F as FilletResult, H as HMath, L as LevelOptions, t as LineStyle, M as MathUtils, u as MeshFactory, v as MultiPoly2, O as OBB2D, P as Poly2, w as Polygon2D, x as PolygonBool, y as Pt, R as ResolvedStyle, z as Ring2, S as SeededRandom, B as Segment, C as Sheet, E as SheetOptions, G as SheetPrim, I as SheetView, T as TextOptions, V as ViewOptions, J as aciFromHex, K as closestPointOnSegment, N as createRandom, Q as download, U as noise, W as pickPrim, X as polygonIntersection, Y as segmentSegmentClosest, Z as setClipSnap, _ as stampName, $ as writeDxf2D, a0 as writeDxf3D } from './download-Dvyp5bt4.js';
-import { BspTree, StepRecord, StepTraceJSON } from './core.js';
-export { AddWallSystemOptions, Adjacency, AdjacencyOptions, ArcCurve, Axis, BUILDING_COLLECTIONS, BUILDING_SCHEMA, BalloonFrame, BalloonFrameOptions, BindBuildingOptions, BlobDetect, Box, BspNode, BspPolygon, Building, BuildingBinding, BuildingCollection, BuildingData, BuildingDetail, BuildingIssue, BuildingRecords, BuildingSlabType, BuildingSpaceType, BuildingTypes, BuildingWallType, Capsule2D, CltConstruction, CltOptions, ConnectionType, Contact, CubicBezierCurve, Curvature, CurveUtils, CutListItem, Delaunay2D, DistanceTransform, DoorOperation, ExtrudedRibbon, ExtrudedRibbonOptions, FloodFill, Graph, GridGraph, HelixCurve, HolzrahmenBau, HolzrahmenBauJointStyle, HolzrahmenBauOptions, ICurve, IMetricCurve, ISdf, IfcElementData, IfcFile, IfcModel, IfcModelData, IfcParseElementsOptions, IfcParseOptions, IfcRelations, IfcSpatialNode, IfcWriter, IfcWriterOptions, Intersect2DResult, Intersections, JointKind, JointParticipant, JointStyle, JointTrim, JoistOrientationOptions, JoistedSlab, JoistedSlabOptions, LatticeType, LayerPosition, LineCurve, MITER_LIMIT, MarchingCubes, MarchingSquares, MaterialLayer, MeshAnalysis, MeshBuffers, MeshCleanup, MeshSubdivide, MeshTransform, MicroPatternType, NoFitPolygon, NurbsCurve, NurbsSurface, OpeningFillPart, OpeningRecord, OpeningType, OpeningTypeOptions, PGFace, PGHalfEdge, PGVertex, PartProfile, Particles2D, Particles2DSpring, Pdf2DOptions, PerpSegment, PixelView, PlanarGraph, PlanarGraphCleanup, PlanarGraphRepair, Plane, PointClassification, PolylineCurve, PropertyMap, Ray, RealizedSlab, RealizedStorey, RealizedWall, RibbonEndTrim, RibbonFrame, RibbonJoint, RibbonOpening, RibbonSystem, RigidBody2D, RigidBodyConfig, Roof, RoofGable, RoofKind, RoofOptions, RoofPlane, RoofRecord, SdfBlend, SdfBoundedExtrude, SdfBox, SdfCapsule, SdfCone, SdfCylinder, SdfEllipsoid, SdfExtrude, SdfGradient, SdfIntersect, SdfLattice, SdfLineField, SdfMicrostructure, SdfMirror, SdfOffset, SdfOnion, SdfOps, SdfPlaneField, SdfRadialArray, SdfRevolution, SdfShell, SdfSmoothSubtract, SdfSmoothUnion, SdfSphere, SdfSubtract, SdfTorus, SdfTransform, SdfTwist, SdfUnion, SdfUtils, SdfVoronoi, Slab, SlabConstruction, SlabContext, SlabOpening, SlabOpeningRecord, SlabOptions, SlabPart, SlabPartRole, SlabRecord, SlabType, SlabTypeOptions, SolidConstruction, SolidSlabConstruction, Space, SpaceOptions, SpaceRecord, Sphere, Spring, Spring2D, SpringConfig, SpringSystem3D, Stair, StairFlight, StairOpeningOptions, StairOptions, StairRecord, StairShape, StairType, StairTypeOptions, StepAnalysis, StepEdge, StepInput, StepTrace, StoreyRecord, StreamlineOptions, StreamlineTracer, SunPosition, SunPositionInput, SunPositionResult, UpAxis, VecMath, VertexCurvature, Voronoi2D, VoronoiCell, VoronoiOptions, VoxelGrid, VoxelGrid2D, Wall, WallConstruction, WallJoint, WallJointOptions, WallOpening, WallOptions, WallPart, WallPartRole, WallRecord, WallSystem, WallType, WindowPartitioning, XY, bindBuilding, boundingWalls, boxOf, buildCutList, buildingSchema, chooseJoistDirection, clampedUniformKnots, cltLayers, contactBetween, defaultBuildingTypes, describeValue, edgeOutwardVisibility, findAdjacent, holzrahmenbauLayers, joistDirectionFromBounds, joistDirectionFromPCA, joistDirectionFromSupports, lineClipPolygon, neighboursOf, openingFill, perpVisibility, perpVisibilityOfPolys, polygonFromVertices, realize, realizeBuilding, realizeSlab, repelBodies, reverseContact, validateBuilding, writePdf2D } from './core.js';
-import { P as ParamStore, b as ParamSchema, D as Doc, S as SharedStore, d as Presence, R as RecordSchema, e as DocPatch, f as PatchResult } from './Doc-hpBJxom8.js';
-export { B as BoolParam, g as ButtonParam, C as CollabAdapter, h as CollabEvents, i as CollabStatus, j as CollabUser, k as ColorParam, l as DocChange, m as DocChangeSource, n as DocEditOptions, o as DocJSON, p as DocOptions, q as DocSchema, F as FloatParam, I as IntParam, r as ParamDef, s as ParamFolder, a as ParamLayout, t as PickingView, u as PresenceView, v as SceneBinding, w as SchemaIssue, x as SelectParam, y as Selection, z as SharedRecord, A as SharedStoreOptions, E as StringParam, G as SupabaseLike, V as Vec3Param, H as applyPatch, J as bindScene, K as checkRecord, L as collabColor, M as createLayout, N as createParams, O as devServerAdapter, Q as localAdapter, T as memoryAdapter, U as selectOnClick, W as shareSelection, X as supabaseAdapter } from './Doc-hpBJxom8.js';
-import { b as Theme, c as ThreeRendererConfig, a as TopBarOptions, T as ThreeRenderer, N as NotesLayer, d as NoteInfo } from './Markup-CTPP6Duq.js';
-export { A as AmbientOcclusionOptions, e as Appearance, C as CalloutItem, f as CalloutOptions, g as Callouts, D as DEFAULT_BACKGROUND, F as FlatLighting, L as LayoutOptions, h as MarkKind, i as MarkupBundle, j as MarkupCaptureOptions, k as MarkupObjectRef, M as MarkupRenderer, l as Note, m as NoteReply, n as NotesRenderer, P as PickInfo, o as Placement, S as StudioLighting, p as SunPreset, V as ViewMode, q as easeInOut, r as edgeStyle, s as fitRadius, t as flatLights, u as getTheme, v as groundAppearance, w as labelWidthFor, x as layoutLabels, y as lightBalance, z as markup, B as modeBackground, E as nearestAxis, G as notesLayer, H as orbitFor, I as orthoFrustum, J as sectionAppearance, K as sectionPlane, O as shortestTurn, Q as standardOrbit, R as studioLights, U as surfaceAppearance, W as viewerToolbar } from './Markup-CTPP6Duq.js';
-import { C as Commands, E as ExportRegistration, I as ImportRegistration, L as Lab, S as SketchConfig, R as Reactive } from './2d-D6zrD6XD.js';
-export { A as AnimateFn, a as Command, b as CommandInfo, D as DrawFn, c as DrawSheetOptions, d as Lab2D, e as LayerColumns, f as LayerMap, g as LayerNode, h as LayerPanel, i as LayerState, j as LayerTree, k as LineHandle, M as MeshHandle, P as PointHandle, l as Pointer2D, m as PointerFn, n as SelectOpts, o as ShapeHandle, p as ShapeMode, q as SheetCanvas, r as SheetCanvasOptions, s as SheetTransform, t as Sketch2DConfig, u as Sketch2DFn, v as Sketch2DInstance, w as SliderOpts, V as ViewControl, x as activateLayer, y as computeEffectiveLock, z as computeEffectiveVisibility, B as drawSheet, F as fitSheet, G as formatKeys, H as keyMatches, J as layerDefaults, K as sketch2d, N as viewCommands } from './2d-D6zrD6XD.js';
-export { a as ShadingBarCorner, S as ShadingBarPlacement } from './ShadingBar-r-eRrCKI.js';
+import { V as Vec3, M as Mesh, R as RenderMode, S as Scene, b as SectionRequest, L as LightingMode } from './Scene-D4ExzRe1.js';
+export { A as AABB, F as ColoredMeshData, e as FlatMeshData, f as LegacyMeshJSON, g as LightSpec, h as Mat4, i as MeshEdge, j as MeshFace, k as MeshJSON, l as MeshNode, m as MeshValidation, O as ObjFile, n as ObjMaterial, o as ObjMeshData, P as Projection, p as SceneEvent, q as SceneEventListener, r as SceneJSON, a as SceneObject, s as SceneObjectType, c as StandardView, T as Triangle, d as Vec2, t as Vec4, u as VisualStyle } from './Scene-D4ExzRe1.js';
+import { D as DxfLayerDef } from './download-qR7cCR-E.js';
+export { A as Algo, a as AxoPolygon, b as Axonometric, c as AxonometricOptions, d as DASH_PATTERNS, e as DRAWING_PALETTE, f as Dash, g as DimOptions, h as DrawOptions, i as Dxf2DArc, j as Dxf2DCircle, k as Dxf2DContent, l as Dxf2DLine, m as Dxf2DLook, n as Dxf2DPoint, o as Dxf2DPolyline, p as Dxf2DSolid, q as Dxf2DText, r as Dxf3DArc, s as Dxf3DCircle, t as Dxf3DContent, u as Dxf3DLine, v as Dxf3DPoint, w as Dxf3DPolyline, F as FilletResult, H as HMath, L as LevelOptions, x as LineStyle, M as MathUtils, y as MeshFactory, z as MultiPoly2, O as OBB2D, P as Poly2, B as Polygon2D, C as PolygonBool, E as Pt, R as ResolvedStyle, G as Ring2, S as SeededRandom, I as Segment, J as Sheet, K as SheetOptions, N as SheetPrim, Q as SheetRaster, T as SheetRasterOptions, U as SheetView, V as TextOptions, W as TitleBlockOptions, X as ViewOptions, Y as aciFromHex, Z as closestPointOnSegment, _ as createRandom, $ as download, a0 as encodePNG, a1 as noise, a2 as pickPrim, a3 as polygonIntersection, a4 as rasterizeSheet, a5 as segmentSegmentClosest, a6 as setClipSnap, a7 as sheetToPNG, a8 as stampName, a9 as writeDxf2D, aa as writeDxf3D } from './download-qR7cCR-E.js';
+import { BspTree, ProposalInfo, StepRecord, StepTraceJSON } from './core.js';
+export { AddWallSystemOptions, Adjacency, AdjacencyOptions, ArcCurve, Axis, BUILDING_COLLECTIONS, BUILDING_SCHEMA, BalloonFrame, BalloonFrameOptions, BindBuildingOptions, BlobDetect, Box, BspNode, BspPolygon, Building, BuildingBinding, BuildingCollection, BuildingData, BuildingDetail, BuildingIssue, BuildingPlanOptions, BuildingRecords, BuildingSession, BuildingSessionOptions, BuildingSlabType, BuildingSpaceType, BuildingSummary, BuildingTypes, BuildingWallType, Capsule2D, CltConstruction, CltOptions, ConnectionType, Contact, CubicBezierCurve, Curvature, CurveUtils, CutListItem, Delaunay2D, DistanceTransform, DoorOperation, ExtrudedRibbon, ExtrudedRibbonOptions, FloodFill, Graph, GridGraph, HelixCurve, HolzrahmenBau, HolzrahmenBauJointStyle, HolzrahmenBauOptions, ICurve, IMetricCurve, ISdf, IfcElementData, IfcFile, IfcModel, IfcModelData, IfcParseElementsOptions, IfcParseOptions, IfcRelations, IfcSpatialNode, IfcWriter, IfcWriterOptions, Intersect2DResult, Intersections, JointKind, JointParticipant, JointStyle, JointTrim, JoistOrientationOptions, JoistedSlab, JoistedSlabOptions, LatticeType, LayerPosition, LineCurve, MITER_LIMIT, MarchingCubes, MarchingSquares, MaterialLayer, MeshAnalysis, MeshBuffers, MeshCleanup, MeshSubdivide, MeshTransform, MicroPatternType, NoFitPolygon, NurbsCurve, NurbsSurface, OpeningFillPart, OpeningRecord, OpeningType, OpeningTypeOptions, PGFace, PGHalfEdge, PGVertex, PROPOSALS, PartProfile, Particles2D, Particles2DSpring, Pdf2DOptions, PerpSegment, PixelView, PlanarGraph, PlanarGraphCleanup, PlanarGraphRepair, Plane, PointClassification, PolylineCurve, PropertyMap, Proposal, ProposalChange, Ray, RealizedSlab, RealizedStorey, RealizedWall, RibbonEndTrim, RibbonFrame, RibbonJoint, RibbonOpening, RibbonSystem, RigidBody2D, RigidBodyConfig, Roof, RoofGable, RoofKind, RoofOptions, RoofPlane, RoofRecord, SdfBlend, SdfBoundedExtrude, SdfBox, SdfCapsule, SdfCone, SdfCylinder, SdfEllipsoid, SdfExtrude, SdfGradient, SdfIntersect, SdfLattice, SdfLineField, SdfMicrostructure, SdfMirror, SdfOffset, SdfOnion, SdfOps, SdfPlaneField, SdfRadialArray, SdfRevolution, SdfShell, SdfSmoothSubtract, SdfSmoothUnion, SdfSphere, SdfSubtract, SdfTorus, SdfTransform, SdfTwist, SdfUnion, SdfUtils, SdfVoronoi, Slab, SlabConstruction, SlabContext, SlabOpening, SlabOpeningRecord, SlabOptions, SlabPart, SlabPartRole, SlabRecord, SlabType, SlabTypeOptions, SolidConstruction, SolidSlabConstruction, Space, SpaceOptions, SpaceRecord, Sphere, Spring, Spring2D, SpringConfig, SpringSystem3D, Stair, StairFlight, StairOpeningOptions, StairOptions, StairPart, StairRecord, StairShape, StairStructure, StairType, StairTypeOptions, StepAnalysis, StepEdge, StepInput, StepTrace, StoreyRecord, StreamlineOptions, StreamlineTracer, UpAxis, VecMath, VertexCurvature, Voronoi2D, VoronoiCell, VoronoiOptions, VoxelGrid, VoxelGrid2D, Wall, WallConstruction, WallJoint, WallJointOptions, WallOpening, WallOptions, WallPart, WallPartRole, WallRecord, WallSystem, WallType, WindowPartitioning, XY, acceptProposal, bindBuilding, boundingWalls, boxOf, buildCutList, buildingPlan, buildingSchema, chooseJoistDirection, clampedUniformKnots, cltLayers, contactBetween, defaultBuildingTypes, describeValue, edgeOutwardVisibility, findAdjacent, holzrahmenbauLayers, joistDirectionFromBounds, joistDirectionFromPCA, joistDirectionFromSupports, lineClipPolygon, listProposals, neighboursOf, openingFill, patchChanges, patchedCollections, perpVisibility, perpVisibilityOfPolys, polygonFromVertices, propose, realize, realizeBuilding, realizeSlab, rejectProposal, repelBodies, reverseContact, validateBuilding, writePdf2D } from './core.js';
+import { P as ParamStore, b as ParamSchema, D as Doc, d as SharedStore, e as Presence, R as RecordSchema, f as DocPatch, g as PatchResult } from './Doc-Da9Dok4-.js';
+export { B as BoolParam, h as ButtonParam, C as CollabAdapter, i as CollabEvents, j as CollabStatus, k as CollabUser, l as ColorParam, m as DocChange, n as DocChangeSource, o as DocEditOptions, p as DocJSON, q as DocOptions, r as DocSchema, F as FloatParam, I as IntParam, s as ParamDef, t as ParamFolder, a as ParamLayout, u as PickingView, v as PresenceView, w as SceneBinding, x as SchemaIssue, y as SelectParam, z as Selection, A as SharedRecord, E as SharedStoreOptions, G as StringParam, H as SunPosition, J as SunPositionInput, S as SunPositionResult, K as SupabaseLike, V as Vec3Param, L as applyPatch, M as bindScene, N as checkRecord, O as collabColor, Q as createLayout, T as createParams, U as devServerAdapter, W as localAdapter, X as memoryAdapter, Y as selectOnClick, Z as shareSelection, _ as supabaseAdapter } from './Doc-Da9Dok4-.js';
+import { T as Theme, V as ViewerTools } from './ShadingBar-hs0G1nnA.js';
+export { a as ShadingBarCorner, S as ShadingBarPlacement, U as UiStyle, g as getTheme } from './ShadingBar-hs0G1nnA.js';
+import { C as Commands, a as Command, E as ExportRegistration, I as ImportRegistration, L as Lab, S as SketchConfig, R as Reactive } from './2d-7L6A9xem.js';
+export { A as AnimateFn, b as CommandInfo, D as DragHandle2DOpts, c as DrawFn, d as DrawSheetOptions, e as Lab2D, f as LayerColumns, g as LayerMap, h as LayerNode, i as LayerPanel, j as LayerState, k as LayerTree, l as LineHandle, M as MeshHandle, P as PointHandle, m as Pointer2D, n as PointerFn, o as SelectOpts, p as ShapeHandle, q as ShapeMode, r as SheetCanvas, s as SheetCanvasOptions, t as SheetTransform, u as Sketch2DConfig, v as Sketch2DFn, w as Sketch2DInstance, x as SliderOpts, V as View2D, y as ViewControl, z as activateLayer, B as computeEffectiveLock, F as computeEffectiveVisibility, G as drawSheet, H as fitSheet, J as formatKeys, K as keyMatches, N as layerDefaults, O as sketch2d, Q as viewCommands } from './2d-7L6A9xem.js';
+import { b as ThreeRendererConfig, a as TopBarOptions, T as ThreeRenderer, N as NotesLayer, c as NoteInfo } from './Markup-C5Q3Dmkj.js';
+export { A as AmbientOcclusionOptions, d as Appearance, C as CalloutItem, e as CalloutOptions, f as Callouts, D as DEFAULT_BACKGROUND, F as FlatLighting, L as LayoutOptions, g as MarkKind, h as MarkupBundle, i as MarkupCaptureOptions, j as MarkupObjectRef, M as MarkupRenderer, k as Note, l as NoteReply, m as NotesRenderer, P as PickInfo, n as Placement, S as SUN_PLACES, o as StudioLighting, p as SunPlace, q as SunPreset, r as SunSite, V as ViewMode, s as easeInOut, t as edgeStyle, u as fitRadius, v as flatLights, w as groundAppearance, x as hiddenLinePage, y as inkOn, z as labelWidthFor, B as layoutLabels, E as lightBalance, G as markup, H as modeBackground, I as nearestAxis, J as notesLayer, K as orbitFor, O as orthoFrustum, Q as sectionAppearance, R as sectionPlane, U as shortestTurn, W as standardOrbit, X as studioLights, Y as sunFor, Z as surfaceAppearance, _ as viewerToolbar } from './Markup-C5Q3Dmkj.js';
 import * as THREE from 'three';
 import 'three/examples/jsm/controls/OrbitControls.js';
 
@@ -318,6 +319,74 @@ declare function polylinesToSVG(segments: ProjectedSegment[], bounds: {
 }, options?: SVGOptions): string;
 
 /**
+ * MenuBar — the app's menus (File, Edit, View, and the app's own), drawn from its commands.
+ *
+ * An app does not build menus: it declares commands (`Commands`), each naming its menu in
+ * `group`, and the bar lists them: label on the left, keys on the right, greyed while it
+ * cannot run. File, Edit and View come first, the app's own groups after, in the order they
+ * were first declared. A menu's items are in declaration order, with a rule wherever the
+ * family of the id changes (`file.export.obj` after `file.save`).
+ *
+ *   app.commands.add({ id: "file.save", label: "Save JSON", keys: "Mod+S", group: "File", run: save });
+ *   app.commands.add({ id: "site.addBlock", label: "Add block", group: "Site", run: addBlock });
+ */
+
+/** Options for `menuBar(commands, …)`: the theme its colours come from (default: dark). */
+interface MenuBarOptions {
+    theme?: Theme;
+}
+/**
+ * The menu bar of an app, from its commands. Mount `el` in a title bar; it follows commands
+ * added and removed later. `dispose()` unhooks it.
+ */
+declare function menuBar(commands: Commands, opts?: MenuBarOptions): {
+    el: HTMLElement;
+    dispose(): void;
+};
+/**
+ * Where a harness mounts its menu bar: its own title bar, or, inside a shell with a bar of
+ * its own (the playground), the shell's slot — any element marked `data-tekto-menu-slot`.
+ * Null: the app shows no menu bar (its commands still run from their keys).
+ */
+declare function menuSlot(own: HTMLElement | null): HTMLElement | null;
+
+/**
+ * ParamHistory — undo and redo for the values of a `ParamStore`.
+ *
+ * Every app with a panel gets Undo for free: a step is one committed change (a slider let
+ * go, a switch flipped, a value set by an agent), and undoing writes the earlier values back
+ * into the store, which re-runs the app as any change does. An app with a document (`Doc`)
+ * has a richer undo of its own and declares its own `edit.undo` instead.
+ */
+
+/** Undo / redo over a `ParamStore`'s values. Call `commit()` when a change is complete. */
+declare class ParamHistory {
+    private store;
+    private limit;
+    private past;
+    private future;
+    private last;
+    private applying;
+    constructor(store: ParamStore<any>, limit?: number);
+    private snapshot;
+    /** Controls that appeared since (a sketch declared them) start from their current value: no step. */
+    adopt(): void;
+    /** Whether the values differ from the last step (a change made in code, not yet committed). */
+    private dirty;
+    /** A change is complete: one undo step, if anything differs from the last one. */
+    commit(): void;
+    canUndo(): boolean;
+    canRedo(): boolean;
+    undo(): void;
+    redo(): void;
+    private restore;
+    /** Write a snapshot's values back; controls that no longer exist are left out. */
+    private apply;
+    /** The Edit menu's Undo and Redo, with their keys. */
+    commands(): Command[];
+}
+
+/**
  * Icons for the render modes: one cube drawn the way each mode draws, as Rhino and Blender
  * show viewport shading. The icon is a small picture of what the mode does, not a metaphor
  * for it.
@@ -447,6 +516,10 @@ interface ControlPanelConfig {
     onAction?: () => void;
     /** The user switched to another tab (panel re-renders itself first). */
     onTabChange?: (tab: string) => void;
+    /** The panel rebuilt its controls (a frame with an automatic width re-fits). */
+    onRender?: () => void;
+    /** Where the tabs are: a bar on top (default), or a list down the panel's left side, which holds more and longer names. */
+    tabs?: "top" | "side";
 }
 /**
  * The panel every tekto GUI uses (`sketch`, `sketch2d`, `appShell`): sliders, toggles, selects, colours, text, buttons, menus, tabs and accordion groups for the values in a `ParamStore`.
@@ -476,6 +549,19 @@ declare class ControlPanel {
     dispose(): void;
     /** Rebuild the panel DOM for a new control structure. */
     render(items: ControlItem[], customRows?: CustomRow[], extraTabs?: ExtraTab[]): void;
+    private measureCtx;
+    /** The width of `text` in the panel's font at `px`, in CSS pixels. */
+    private textWidth;
+    private labelWidth;
+    private railWidth;
+    /** Size the label column to the longest label of any tab (between LABEL_MIN and LABEL_MAX; longer ones wrap). */
+    private fitLabels;
+    /**
+     * The panel width its controls ask for, in px: the label column, a control beside it
+     * (wider for a select with long options), a button's text, and the tab list when the tabs
+     * are on the side. A frame with `panelWidth: "auto"` asks after every render.
+     */
+    preferredWidth(): number;
     /** Push a value into a live control without going through the store. */
     applyValue(key: string, value: any): void;
     private closeMenus;
@@ -483,6 +569,8 @@ declare class ControlPanel {
     /** The currently active tab name ("" when the panel has no tabs). */
     getActiveTab(): string;
     private buildTabBar;
+    /** The tabs as a list down the panel's left side: a name, and how many controls it holds. */
+    private buildTabList;
     private buildSection;
     private buildButtonRow;
     private buildControl;
@@ -667,6 +755,7 @@ declare class SketchInstance {
     private renderer;
     private store;
     private panel;
+    private panelFrame;
     private items;
     private layerTrees;
     private theme;
@@ -723,8 +812,9 @@ declare class SketchInstance {
     private _stepsPanel;
     /** Notes on steps on their way into a snapshot (`saveStepMarks`). */
     private _stepMarks;
-    private _fileMenusEl;
-    private _fileMenusSig;
+    private _menuHost;
+    private _menuBar;
+    private history;
     private _trackSource;
     private _srcById;
     private separatorCount;
@@ -879,8 +969,9 @@ declare class SketchInstance {
     private describeObject;
     /** Camera, params, logs, errors and a scene summary grouped by (layer, label, type, source line). */
     private markupContext;
-    /** Rebuild the header's Export / Import menus when the registered names change. */
-    private renderFileMenus;
+    /** File ▸ Import … / Export …: a command per registered entry, replaced when the entries change. */
+    private _fileCommandsOff;
+    private syncFileCommands;
     /** The current value of every control, keyed for `setParams` — save it to reopen a design. */
     getParams(): Record<string, unknown>;
     /**
@@ -951,14 +1042,22 @@ interface AppShellConfig<S extends ParamSchema = ParamSchema> {
     /** Camera up-axis. Default "z" (tekto Z-up convention). Use "y" for the Y-up built-in primitives. */
     up?: "y" | "z";
     theme?: "dark" | "light";
-    /** Panel width in pixels (default: 260) */
-    panelWidth?: number;
+    /** Panel width in pixels (default 260), or "auto": as wide as its controls need. A width dragged by hand wins. */
+    panelWidth?: number | "auto";
+    /** The name in the panel's top row, beside the chevron that folds it. Default "Parameters"; "" leaves the row free. */
+    panelTitle?: string;
+    /** Tabs as a bar on top of the panel (default) or as a list down its left side. */
+    tabs?: "top" | "side";
     /** Renderer config overrides */
     renderer?: Partial<ThreeRendererConfig>;
-    /** Top bar with Lighting / Render-mode / Camera / Cut / Sun controls. Default: true.
-     *  An object turns single controls off where they don't make sense for the app
-     *  (`{ cut: false, sun: false }`). */
+    /** The older text toolbar in the title bar (Light / Mode / Cam / Cut / Sun, the sun for a
+     *  place and a date). Default: false: the view's own header has these as icons (`shadingBar`,
+     *  `viewerTools`). `true` or an object of its controls shows it as well. */
     topBar?: boolean | TopBarOptions;
+    /** Show the title bar. Default: yes, except inside a shell that has its own bar (`<div data-shell>`). */
+    showHeader?: boolean;
+    /** Which of the viewer's tools to show (`{ sun: false, section: false }`): each is on unless false. */
+    viewerTools?: ViewerTools;
     /** Show the ✎ Markup button (draw instructions on the view; marks name document records). Default `true`. */
     markup?: boolean;
     /**
@@ -967,20 +1066,22 @@ interface AppShellConfig<S extends ParamSchema = ParamSchema> {
      */
     statusCollapsed?: boolean;
     /** Notes that live with the model: the doc whose `notes` collection keeps them (or
-     *  `{ doc, collection, author }`). Markup then offers "Keep as notes" (and Save keeps the
-     *  marks as notes too), the notes are drawn over the view with a pin each (`app.notes`), and
+     *  `{ doc, collection, author }`). Markup then offers "Pin notes to the model" (and "Save for Claude"
+     *  pins the marks as notes too), the notes are drawn over the view with a pin each (`app.notes`), and
      *  an agent lists, answers and resolves them (`__tekto.notes`). */
     notes?: Doc<any> | {
         doc: Doc<any>;
         collection?: string;
         author?: string;
     };
-    /** The axis widget in a viewport corner (`true` = bottom right): click an axis for a plan
-     *  or an elevation, toggle persp/ortho under it. Default `false` — an app may have its own
-     *  panels in that corner. */
+    /** The axis widget (default on, top right under the viewer header): click an axis for a plan
+     *  or an elevation, toggle persp/ortho under it. A corner places it; `false` hides it, for an
+     *  app with its own panels there. */
     navGizmo?: boolean | "top-left" | "top-right" | "bottom-left" | "bottom-right";
-    /** The shading bar in a viewport corner (`true` = top left): icons for the render style, the
-     *  lighting and the sun (morning, noon, sunset). Default `false`. */
+    /** The view's tools, the same in every tekto 3D view. `"header"` (the default): a strip across
+     *  the top of the view with icons for the render style, lighting, sun, section, overlays and
+     *  snapshot, and ✎ Markup at its end. A corner (`true` = top left) is the compact bar instead;
+     *  `false` hides it. `viewerTools` drops single tools. */
     shadingBar?: boolean | "top-left" | "top-right" | "bottom-left" | "bottom-right" | "header";
     /** The scene's unit (`"m"`, `"mm"`…): readouts show coordinates in it. Unset: relative to
      *  the content's extent. */
@@ -1051,14 +1152,16 @@ declare function appShell<S extends ParamSchema>(config: AppShellConfig<S>): App
 /**
  * PresenceBar — who is online in a SharedStore document: a dot for the connection, one round
  * badge per person (their colour, initials or GitHub avatar; tooltip = name and what they are
- * on), and a Sign in / Sign out button. Sits in the viewport's top bar row, left of ✎ Markup.
+ * on), and a Sign in / Sign out button. In a view with the viewer header it sits in the header's
+ * row, left of ✎ Markup, where nothing can lie over it; without a header it floats top right.
  * An agent working through someone's window (their presence `state.agent`, set by `agentDoc`)
  * gets a square badge beside that person: "Claude, through Ana's window: Agent: east window".
  */
 
 /** Options for `PresenceBar`: where it sits and what each person's tooltip says. */
 interface PresenceBarOptions {
-    /** CSS for the bar's position inside the host; default: top right, left of ✎ Markup. */
+    /** CSS for the bar's position inside the host, which then floats there (`"top:10px;right:100px;"`).
+     *  Default: in the viewer header's row when the view has one, else floating top right. */
     position?: string;
     /** Tooltip line per person, from their presence state (e.g. "editing ch218.0"). */
     describe?: (p: Presence) => string | undefined;
@@ -1075,8 +1178,51 @@ declare class PresenceBar {
     private people;
     private btn;
     private unsubs;
+    /** In the viewer header's (dark) row, not floating on its own white card. */
+    private inHeader;
     constructor(store: SharedStore<unknown>, host: HTMLElement, opts?: PresenceBarOptions);
     destroy(): void;
+    render(): void;
+}
+
+/**
+ * ProposalBar — where a person reviews what an agent proposes.
+ *
+ * Shown over the view while the document has open proposals (`proposals.ts`), one at a time:
+ * who proposes it, what it does and why, the records it adds, changes (field by field, before
+ * → after) and removes, and Accept / Reject. Accept applies the patch as one undo step, so
+ * "try it and undo" is the preview: after an undo the proposal is open again. Reject keeps
+ * the proposal with the reason typed beside it, for the agent to read.
+ *
+ *   const bar = new ProposalBar(doc, viewEl, { schema: buildingSchema(), onFocus: (keys) => selection.select(keys) });
+ */
+
+/** Options for `new ProposalBar(doc, host, …)`: the schema a patch is checked against, who decides, and what a click on a record does. */
+interface ProposalBarOptions {
+    /** Each collection's schema: an accepted patch is checked against it, as an agent's edit is. */
+    schema?: Partial<Record<string, RecordSchema>>;
+    /** Who accepts or rejects (default: the signed-in user of the shared document, if any). */
+    by?: () => string | undefined;
+    /** Called with a proposal's records when its card is shown and when one is clicked: select them in the view. */
+    onFocus?: (keys: string[]) => void;
+    /** CSS position inside the host (default: bottom centre, above a status line). */
+    position?: string;
+    theme?: Theme;
+}
+/** The review bar of a document's proposals. `destroy()` removes it. */
+declare class ProposalBar {
+    private doc;
+    private opts;
+    readonly el: HTMLDivElement;
+    private index;
+    private error;
+    private pending;
+    private shown;
+    private off;
+    private t;
+    constructor(doc: Doc<any>, host: HTMLElement, opts?: ProposalBarOptions);
+    destroy(): void;
+    private decider;
     render(): void;
 }
 
@@ -1127,6 +1273,12 @@ interface AgentDocOptions {
     check?: () => readonly AgentIssue[];
     /** The app's notes layer, when it is not an `appShell`'s (which shares its own). */
     notes?: AgentNotes;
+    /**
+     * What the check would say of the records as a proposal would leave them (collection → id →
+     * record), e.g. `(c) => realizeBuilding(c).check()`. Without it a proposal is stored
+     * unchecked beyond the schema.
+     */
+    preview?: (collections: Record<string, Record<string, unknown>>) => readonly AgentIssue[];
 }
 /** `__tekto.doc`: the document an app shares, as an agent reads and edits it. */
 interface AgentDocApi {
@@ -1143,6 +1295,15 @@ interface AgentDocApi {
     }>;
     /** The app's check, once the document's changes have been drawn. */
     check(): Promise<AgentIssue[]>;
+    /** Store a patch as an open proposal for a person to accept or reject; `issues` is the check with it applied (when the app gave `preview`). */
+    propose(patch: DocPatch, label: string, by: string, note?: string): {
+        ok: boolean;
+        id?: string;
+        rejected: PatchResult["rejected"];
+        issues?: AgentIssue[];
+    };
+    /** The open proposals, or all with what became of them. */
+    proposals(status?: "open" | "all"): Omit<ProposalInfo, "patch" | "base">[];
     undo(): boolean;
     redo(): boolean;
 }
@@ -1223,4 +1384,4 @@ declare class StepsPanel {
     private notifySelect;
 }
 
-export { type AgentDocApi, type AgentDocOptions, type AgentIssue, type AgentNotes, type AppShellConfig, type AppShellInstance, BspTree, Commands, type ControlItem, ControlPanel, type ControlPanelConfig, type CustomRow, Doc, DocPatch, type DxfEdgeOptions, DxfExporter, DxfLayerDef, type DxfMeshOptions, type DxfSegment, type DxfView, type DxfWorkerRequest, type DxfWriteOptions, ExportRegistration, type ExtraTab, type IconShape, type IdBufferOptions, ImportRegistration, Lab, LightingMode, Mesh, NavGizmo, type NavGizmoOptions, NoteInfo, NotesLayer, type PanelButton, ParamSchema, ParamStore, PatchResult, Presence, PresenceBar, type PresenceBarOptions, type ProjectedSegment, Reactive, RecordSchema, RenderMode, type SVGOptions, SVGRenderer, type SVGRendererConfig, Scene, SectionRequest, SharedStore, SketchConfig, SketchInstance, type StepMark, StepRecord, StepTraceJSON, StepsPanel, type StepsPanelOptions, Theme, ThreeRenderer, ThreeRendererConfig, TopBarOptions, VIEW_MODE_ICON_CORNERS, VIEW_MODE_ICON_SVG, Vec3, type VisibilityOptions, type VisibilityResult, type VisibilityView, agentDoc, appShell, extractVisiblePolylines, hiddenLineIdBuffer, polylinesToSVG, processWorkerRequest, sketch, viewModeIconShapes, viewModeIconSvg };
+export { type AgentDocApi, type AgentDocOptions, type AgentIssue, type AgentNotes, type AppShellConfig, type AppShellInstance, BspTree, Command, Commands, type ControlItem, ControlPanel, type ControlPanelConfig, type CustomRow, Doc, DocPatch, type DxfEdgeOptions, DxfExporter, DxfLayerDef, type DxfMeshOptions, type DxfSegment, type DxfView, type DxfWorkerRequest, type DxfWriteOptions, ExportRegistration, type ExtraTab, type IconShape, type IdBufferOptions, ImportRegistration, Lab, LightingMode, type MenuBarOptions, Mesh, NavGizmo, type NavGizmoOptions, NoteInfo, NotesLayer, type PanelButton, ParamHistory, ParamSchema, ParamStore, PatchResult, Presence, PresenceBar, type PresenceBarOptions, type ProjectedSegment, ProposalBar, type ProposalBarOptions, ProposalInfo, Reactive, RecordSchema, RenderMode, type SVGOptions, SVGRenderer, type SVGRendererConfig, Scene, SectionRequest, SharedStore, SketchConfig, SketchInstance, type StepMark, StepRecord, StepTraceJSON, StepsPanel, type StepsPanelOptions, Theme, ThreeRenderer, ThreeRendererConfig, TopBarOptions, VIEW_MODE_ICON_CORNERS, VIEW_MODE_ICON_SVG, Vec3, ViewerTools, type VisibilityOptions, type VisibilityResult, type VisibilityView, agentDoc, appShell, extractVisiblePolylines, hiddenLineIdBuffer, menuBar, menuSlot, polylinesToSVG, processWorkerRequest, sketch, viewModeIconShapes, viewModeIconSvg };

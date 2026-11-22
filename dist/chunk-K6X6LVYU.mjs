@@ -689,6 +689,7 @@ function devServerAdapter(opts = {}) {
     }
   };
   const currentUser = () => {
+    if (opts.user) return opts.user;
     const name = store(DEV_NAME_KEY);
     if (!name) return null;
     const id = store(DEV_ID_KEY) ?? store(DEV_ID_KEY, `dev-${randomId()}`);
@@ -711,6 +712,55 @@ function devServerAdapter(opts = {}) {
     subscribe(doc, session, on) {
       let es = null;
       let closed = false;
+      const handle = (event, data) => {
+        if (event === "record") on.record(JSON.parse(data));
+        else if (event === "presence") on.presence(JSON.parse(data));
+        else if (event === "broadcast") {
+          const m = JSON.parse(data);
+          on.broadcast(m.event, m.payload, m.from);
+        }
+      };
+      if (typeof EventSource === "undefined") {
+        const abort = new AbortController();
+        void (async () => {
+          while (!closed) {
+            on.status("connecting");
+            try {
+              const r = await fetch(`${base}/events?doc=${encodeURIComponent(doc)}&session=${session}`, { signal: abort.signal, headers: { accept: "text/event-stream" } });
+              if (!r.ok || !r.body) throw new Error(`${r.status}`);
+              on.status("online");
+              const reader = r.body.getReader();
+              const decoder = new TextDecoder();
+              let buf = "";
+              for (; ; ) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buf += decoder.decode(value, { stream: true });
+                let i;
+                while ((i = buf.indexOf("\n\n")) >= 0) {
+                  let event = "message", data = "";
+                  for (const line of buf.slice(0, i).split("\n")) {
+                    if (line.startsWith("event:")) event = line.slice(6).trim();
+                    else if (line.startsWith("data:")) data += line.slice(5).trim();
+                  }
+                  buf = buf.slice(i + 2);
+                  if (data) handle(event, data);
+                }
+              }
+            } catch {
+            }
+            if (!closed) {
+              on.status("connecting", "reconnecting");
+              await new Promise((r) => setTimeout(r, 1e3));
+            }
+          }
+        })();
+        return () => {
+          closed = true;
+          abort.abort();
+          on.status("offline");
+        };
+      }
       const open = () => {
         on.status("connecting");
         es = new EventSource(`${base}/events?doc=${encodeURIComponent(doc)}&session=${session}`);
@@ -1201,7 +1251,7 @@ function localAdapter(opts = {}) {
 function applyPatch(doc, patch, opts = {}) {
   const rejected = [];
   const changed = { set: [], updated: [], removed: [] };
-  const split = (key) => {
+  const split2 = (key) => {
     const at = key.indexOf(SEP);
     if (at <= 0 || at === key.length - 1) {
       rejected.push({ key, message: `a record is named "collection${SEP}id", got "${key}"` });
@@ -1225,7 +1275,7 @@ function applyPatch(doc, patch, opts = {}) {
   const plan = [];
   const get = (c, id) => doc.get(c, id);
   for (const [key, value] of Object.entries(patch.set ?? {})) {
-    const k = split(key);
+    const k = split2(key);
     if (!k) continue;
     checkValue(key, k[0], value);
     plan.push(() => {
@@ -1236,7 +1286,7 @@ function applyPatch(doc, patch, opts = {}) {
     });
   }
   for (const [key, change] of Object.entries(patch.update ?? {})) {
-    const k = split(key);
+    const k = split2(key);
     if (!k) continue;
     const cur = get(k[0], k[1]);
     if (cur === void 0) {
@@ -1254,7 +1304,7 @@ function applyPatch(doc, patch, opts = {}) {
     });
   }
   for (const key of patch.remove ?? []) {
-    const k = split(key);
+    const k = split2(key);
     if (!k) continue;
     if (get(k[0], k[1]) === void 0) {
       rejected.push({ key, message: "does not exist" });
@@ -1266,6 +1316,9 @@ function applyPatch(doc, patch, opts = {}) {
     });
   }
   if (rejected.length) return { ok: false, rejected, changed };
+  if (opts.dryRun) {
+    return { ok: true, rejected, changed: { set: Object.keys(patch.set ?? {}), updated: Object.keys(patch.update ?? {}), removed: [...patch.remove ?? []] } };
+  }
   if (!plan.length) return { ok: true, rejected, changed };
   const n = plan.length;
   doc.transact(opts.label ?? `Apply ${n} change${n === 1 ? "" : "s"}`, () => {
@@ -1454,6 +1507,93 @@ function shareSelection(selection, store, view, scene) {
     view.setPresenceHighlight([]);
     store.setPresence({ selection: [] });
   };
+}
+
+// src/collab/proposals.ts
+var PROPOSALS = "proposals";
+var same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+var split = (key) => {
+  const i = key.indexOf("/");
+  return [key.slice(0, i), key.slice(i + 1)];
+};
+var touched = (patch) => [.../* @__PURE__ */ new Set([...Object.keys(patch.set ?? {}), ...Object.keys(patch.update ?? {}), ...patch.remove ?? []])];
+var recordOf = (doc, key) => {
+  const [c, id] = split(key);
+  return doc.get(c, id) ?? null;
+};
+function patchedCollections(collections, patch) {
+  const out = {};
+  for (const [c, rows] of Object.entries(collections)) out[c] = { ...rows };
+  for (const [key, value] of Object.entries(patch.set ?? {})) {
+    const [c, id] = split(key);
+    (out[c] ?? (out[c] = {}))[id] = value;
+  }
+  for (const [key, change] of Object.entries(patch.update ?? {})) {
+    const [c, id] = split(key);
+    if (out[c]?.[id]) out[c][id] = { ...out[c][id], ...change };
+  }
+  for (const key of patch.remove ?? []) {
+    const [c, id] = split(key);
+    if (out[c]) delete out[c][id];
+  }
+  return out;
+}
+function patchChanges(patch, base) {
+  const out = [];
+  const diff = (key, before, after) => {
+    const fields = [.../* @__PURE__ */ new Set([...Object.keys(before), ...Object.keys(after)])].filter((name) => !same(before[name], after[name])).map((name) => ({ name, from: before[name], to: after[name] }));
+    return { key, kind: "change", fields };
+  };
+  for (const [key, value] of Object.entries(patch.set ?? {})) {
+    const before = base[key];
+    out.push(before ? diff(key, before, value) : { key, kind: "add" });
+  }
+  for (const [key, change] of Object.entries(patch.update ?? {})) {
+    const before = base[key] ?? {};
+    out.push(diff(key, before, { ...before, ...change }));
+  }
+  for (const key of patch.remove ?? []) out.push({ key, kind: "remove" });
+  return out;
+}
+function propose(doc, patch, opts) {
+  const check = applyPatch(doc, patch, { schema: opts.schema, dryRun: true });
+  const keys = touched(patch);
+  if (check.ok && !keys.length) check.rejected.push({ key: "", message: "the patch changes nothing" });
+  if (!check.ok || check.rejected.length) return { ok: false, rejected: check.rejected };
+  const base = {};
+  for (const key of keys) base[key] = recordOf(doc, key);
+  const record = { label: opts.label, by: opts.by, at: Date.now(), ...opts.note ? { note: opts.note } : {}, patch, status: "open", base };
+  const id = doc.add(PROPOSALS, record, { label: `Propose: ${opts.label}`, undoable: false });
+  return { ok: true, id, rejected: [] };
+}
+function listProposals(doc, status = "open") {
+  const rows = doc.toJSON().collections[PROPOSALS] ?? {};
+  return Object.entries(rows).filter(([, p]) => p && (status === "all" || p.status === "open")).sort((a, b) => a[1].at - b[1].at).map(([id, p]) => ({
+    ...p,
+    id,
+    changes: patchChanges(p.patch, p.base ?? {}),
+    stale: p.status === "open" ? touched(p.patch).filter((key) => !same(recordOf(doc, key), p.base?.[key] ?? null)) : []
+  }));
+}
+function acceptProposal(doc, id, opts = {}) {
+  const p = doc.get(PROPOSALS, id);
+  const none = { set: [], updated: [], removed: [] };
+  if (!p) return { ok: false, rejected: [{ key: `${PROPOSALS}/${id}`, message: "no such proposal" }], changed: none };
+  if (p.status !== "open") return { ok: false, rejected: [{ key: `${PROPOSALS}/${id}`, message: `already ${p.status}` }], changed: none };
+  const check = applyPatch(doc, p.patch, { schema: opts.schema, dryRun: true });
+  if (!check.ok) return check;
+  let result = check;
+  doc.transact(`Accept: ${p.label}`, () => {
+    result = applyPatch(doc, p.patch, { schema: opts.schema });
+    doc.update(PROPOSALS, id, { status: "accepted", decidedAt: Date.now(), ...opts.by ? { decidedBy: opts.by } : {} });
+  });
+  return { ...result, undo: doc.undoLabel() };
+}
+function rejectProposal(doc, id, opts = {}) {
+  const p = doc.get(PROPOSALS, id);
+  if (!p || p.status !== "open") return false;
+  doc.update(PROPOSALS, id, { status: "rejected", decidedAt: Date.now(), ...opts.by ? { decidedBy: opts.by } : {}, ...opts.reason ? { reason: opts.reason } : {} }, { label: `Reject: ${p.label}` });
+  return true;
 }
 
 // src/io/download.ts
@@ -2475,6 +2615,13 @@ export {
   Selection,
   selectOnClick,
   shareSelection,
+  PROPOSALS,
+  patchedCollections,
+  patchChanges,
+  propose,
+  listProposals,
+  acceptProposal,
+  rejectProposal,
   stampName,
   download,
   VecMath,

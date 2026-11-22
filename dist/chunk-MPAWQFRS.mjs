@@ -5,7 +5,7 @@ import {
   VecMath,
   aciFromHex,
   writeDxf2D
-} from "./chunk-56LGGW6L.mjs";
+} from "./chunk-K6X6LVYU.mjs";
 
 // src/core/math/noise.ts
 var P = [
@@ -1507,6 +1507,29 @@ var DASH_PATTERNS = {
   center: [6, 1.2, 1, 1.2]
 };
 var DEFAULT_STYLE = { color: "#000000", weight: 0.25, dash: "solid" };
+var TEXT_MM = 2;
+var NOTE_MM = 1.8;
+var TITLE_MM = 3.5;
+var DRAWING_PALETTE = {
+  /** Lines and text. */
+  ink: "#1a1a1a",
+  /** Dimensions, levels, leaders, secondary text. */
+  annotation: "#6b6b6b",
+  /** Hidden and overhead lines, axes. */
+  faint: "#a6a6a6",
+  /** What is cut, in general (pale blue). */
+  cut: "#cfe2f2",
+  /** Cut steel or metal. */
+  steel: "#9fb4c7",
+  /** Cut concrete or masonry (pale green). */
+  concrete: "#dbe9d2",
+  /** Cut timber. */
+  timber: "#ead9bd",
+  /** Poché in greyscale. */
+  poche: "#d4d4d4",
+  /** The one strong colour: loads, forces, what changed. */
+  accent: "#d0453b"
+};
 var SheetView = class {
   /** @internal — views come from `sheet.view(name)`. */
   constructor(sheet, name, opts) {
@@ -1564,14 +1587,15 @@ var SheetView = class {
     return this;
   }
   /** A leader: an arrow at `points[0]` (what it points at), lines through the rest, and the
-   *  text beside the last point. */
+   *  text beside the last point, level with it. A leader that does not end level gets a short
+   *  level shoulder (3 mm), so its text always continues a level line. */
   leader(points, text, opts = {}) {
     const pts = points.map((p) => this.local(p));
     if (pts.length >= 2) this.entities.push({ t: "leader", points: pts, text, o: opts });
     return this;
   }
-  /** A level mark: a triangle standing on the level at `at`, and the level in metres with
-   *  its sign ("+2.450", "±0.000"). */
+  /** A level mark: a triangle with its tip on the level at `at`, a level line under it, and on
+   *  that line the level in metres with its sign ("+2.450", "±0.000"). */
   level(at, opts = {}) {
     this.entities.push({ t: "level", at: this.local(at), o: opts });
     return this;
@@ -1604,6 +1628,7 @@ var Sheet = class {
   constructor(opts = {}) {
     this.layerStyles = /* @__PURE__ */ new Map();
     this.views = /* @__PURE__ */ new Map();
+    this.block = null;
     this.scale = opts.scale ?? 1;
     if (!(this.scale > 0)) throw new Error(`Sheet: scale must be positive (50 = 1:50), got ${opts.scale}`);
     for (const [name, style] of Object.entries(opts.layers ?? {})) this.layerStyles.set(name, style);
@@ -1624,6 +1649,11 @@ var Sheet = class {
       this.views.set(name, v);
     }
     return v;
+  }
+  /** The sheet's title block (Plankopf): drawn left of the views, level with their top, unless `at` places it. */
+  titleBlock(opts) {
+    this.block = opts;
+    return this;
   }
   /** The default view at the origin (`sheet.main.polyline(…)`). */
   get main() {
@@ -1650,14 +1680,86 @@ var Sheet = class {
       for (const e of view.entities) this.explodeEntity(e, P2, local);
       if (vo.title) {
         const b = boundsOf(local);
-        if (b) local.push(textPrim(vo.title, { x: (b.min.x + b.max.x) / 2, y: b.min.y - P2(8) }, P2(3.5), 0, "center", "top", this.style({})));
+        const scaleText = vo.titleScale === false || /\b1\s*:\s*\d/.test(vo.title) ? "" : ` ${this.ratio(k)}`;
+        if (b) local.push(textPrim(vo.title + scaleText, { x: b.min.x, y: b.max.y + P2(5) }, P2(TITLE_MM), 0, "left", "bottom", this.style({})));
       }
       for (const p of local) {
         const q = transformPrim(p, T, k, vo.rotation ?? 0);
         (q.kind === "fill" ? fills : rest).push(q);
       }
     }
+    if (this.block) rest.push(...this.explodeTitleBlock(this.block, boundsOf([...fills, ...rest])));
     return [...fills, ...rest];
+  }
+  /** "1:20" for a view enlarged `k` times on this sheet. */
+  ratio(k) {
+    const r = this.scale / k;
+    return `1:${Number.isInteger(r) ? r : r.toFixed(1)}`;
+  }
+  /** The title block's lines and text, in sheet units, top-left at `at` (or left of `drawing`). */
+  explodeTitleBlock(o, drawing) {
+    const P2 = (mm) => this.paper(mm);
+    const W = o.width ?? 150;
+    const top = o.at ? toPt(o.at) : { x: (drawing?.min.x ?? 0) - P2(W + 20), y: drawing?.max.y ?? 0 };
+    const at = (x, y2) => ({ x: top.x + P2(x), y: top.y - P2(y2) });
+    const ink = this.style({ color: DRAWING_PALETTE.ink, weight: 0.18 });
+    const grey = this.style({ color: DRAWING_PALETTE.annotation, weight: 0.18 });
+    const out = [];
+    const text = (t, x, y2, mm, st = ink) => {
+      out.push(textPrim(t, at(x, y2), P2(mm), 0, "left", "top", st));
+    };
+    const line = (x0, y0, x1, y1) => {
+      out.push({ kind: "polyline", points: [at(x0, y0), at(x1, y1)], closed: false, style: ink });
+    };
+    const ks = [...new Set([...this.views.values()].filter((v) => v.entities.length).map((v) => v.options.scale ?? 1))].sort((a, b) => a - b);
+    const scale = o.scale ?? (ks.length ? ks.map((k) => this.ratio(k)).join(" / ") : this.ratio(1));
+    let y = 0;
+    if (o.office) {
+      text(o.office, 0, y, 1.6, grey);
+      y += 4;
+    }
+    if (o.project) {
+      text(o.project, 0, y, 2);
+      y += 7;
+    }
+    text(`${o.title} ${scale}`, 0, y, 3.5);
+    y += 6;
+    if (o.phase) {
+      text(o.phase, 0, y, 2.2);
+      y += 4;
+    }
+    const facts = [["DATE", o.date], ["DRAWN", o.drawn], ["CHECKED", o.checked], ["SCALE", scale], ["FORMAT", o.format]];
+    const rows = facts.filter((r) => !!r[1]);
+    const box0 = y + 4, rowH = 3.2, boxH = Math.max(16, rows.length * rowH + 3), split = W * 0.45;
+    line(0, box0, W, box0);
+    line(0, box0 + boxH, W, box0 + boxH);
+    line(0, box0, 0, box0 + boxH);
+    line(W, box0, W, box0 + boxH);
+    line(split, box0, split, box0 + boxH);
+    text("PLAN NO.", 2, box0 + 2, 1.4, grey);
+    if (o.number) text(o.number, 2, box0 + 7, 4.5);
+    rows.forEach(([k, v], i) => {
+      text(k, split + 2, box0 + 2 + i * rowH, 1.4, grey);
+      text(v, split + 22, box0 + 1.9 + i * rowH, 1.6);
+    });
+    y = box0 + boxH;
+    if (o.revisions?.length) {
+      const cols = [0, 14, 36, 54, W];
+      const h = 3.6, n = o.revisions.length + 1;
+      for (let r = 0; r <= n; r++) line(0, y + r * h, W, y + r * h);
+      for (const c of cols) line(c, y, c, y + n * h);
+      ["INDEX", "DATE", "BY", "CHANGE"].forEach((t, i) => text(t, cols[i] + 1.2, y + 1, 1.4, grey));
+      o.revisions.forEach((rv, r) => [rv.index, rv.date ?? "", rv.by ?? "", rv.note ?? ""].forEach((t, i) => {
+        if (t) text(t, cols[i] + 1.2, y + (r + 1) * h + 1, 1.6);
+      }));
+      y += n * h;
+    }
+    y += 8;
+    for (const n of o.notes ?? []) {
+      if (n) text(n, 0, y, 2);
+      y += 3.4;
+    }
+    return out;
   }
   /** Bounds of the exploded drawing (text estimated), or null when empty. */
   bounds() {
@@ -1677,6 +1779,13 @@ var Sheet = class {
   /** The sheet as an SVG document, sized in millimetres on paper (`margin` in mm). */
   toSVG(opts = {}) {
     return sheetToSVG(this, opts);
+  }
+  /**
+   * The sheet as a PNG file, drawn without a browser (so an agent in Node can look at it):
+   * `width` pixels wide (default 1600), text in a built-in stroke font. See `rasterizeSheet`.
+   */
+  toPNG(opts = {}) {
+    return sheetToPNG(this, opts);
   }
   /**
    * The sheet as DXF R12: lines, polylines, arcs, circles, text with its alignment, dashed
@@ -1709,7 +1818,7 @@ var Sheet = class {
       }
       case "text": {
         const o = e.o;
-        out.push({ ...textPrim(e.text, e.at, P2(o.size ?? 2.5), o.rotation ?? 0, o.align ?? "left", o.baseline ?? "bottom", st), ...key ? { key } : {} });
+        out.push({ ...textPrim(e.text, e.at, P2(o.size ?? TEXT_MM), o.rotation ?? 0, o.align ?? "left", o.baseline ?? "bottom", st), ...key ? { key } : {} });
         break;
       }
       case "dim":
@@ -1767,7 +1876,7 @@ function explodeDim(a, b, o, st, P2, out) {
   const text = o.text ?? formatLength(measured, o);
   const ang = upright(ux, uy), r = ang * Math.PI / 180;
   const mid = { x: (da.x + db.x) / 2 - Math.sin(r) * P2(1), y: (da.y + db.y) / 2 + Math.cos(r) * P2(1) };
-  out.push(textPrim(text, mid, P2(o.size ?? 2.5), ang, "center", "bottom", st));
+  out.push(textPrim(text, mid, P2(o.size ?? NOTE_MM), ang, "center", "bottom", st));
 }
 function explodeRadius(c, radius, angle, o, st, P2, out) {
   const ux = Math.cos(angle * Math.PI / 180), uy = Math.sin(angle * Math.PI / 180);
@@ -1779,24 +1888,31 @@ function explodeRadius(c, radius, angle, o, st, P2, out) {
   out.push(arrow(end, ux, uy, P2, st));
   const ang = upright(ux, uy), r = ang * Math.PI / 180;
   const mid = { x: c.x + ux * radius / 2 - Math.sin(r) * P2(1), y: c.y + uy * radius / 2 + Math.cos(r) * P2(1) };
-  out.push(textPrim(o.text ?? `R ${formatLength(radius, o)}`, mid, P2(o.size ?? 2.5), ang, "center", "bottom", st));
+  out.push(textPrim(o.text ?? `R ${formatLength(radius, o)}`, mid, P2(o.size ?? NOTE_MM), ang, "center", "bottom", st));
 }
 function explodeLeader(points, text, o, st, P2, out) {
+  const SHOULDER_MM = 3;
+  const a = points[points.length - 2], end = points[points.length - 1];
+  const right = end.x >= a.x;
+  const level = Math.abs(end.y - a.y) <= 0.02 * Math.abs(end.x - a.x);
+  if (!level) points = [...points, { x: end.x + (right ? 1 : -1) * P2(SHOULDER_MM), y: end.y }];
   out.push({ kind: "polyline", points, closed: false, style: st });
   const [p0, p1] = points, L = Math.hypot(p1.x - p0.x, p1.y - p0.y);
   if (L > 0) out.push(arrow(p0, (p0.x - p1.x) / L, (p0.y - p1.y) / L, P2, st));
-  const a = points[points.length - 2], b = points[points.length - 1];
-  const right = b.x >= a.x;
+  const b = points[points.length - 1];
   const at = { x: b.x + (right ? P2(1) : -P2(1)), y: b.y };
-  out.push(textPrim(text, at, P2(o.size ?? 2.5), 0, o.align ?? (right ? "left" : "right"), o.baseline ?? "middle", st));
+  out.push(textPrim(text, at, P2(o.size ?? NOTE_MM), 0, o.align ?? (right ? "left" : "right"), o.baseline ?? "middle", st));
 }
 function explodeLevel(at, o, st, P2, out) {
-  const h = P2(2.2), w = P2(1.3);
+  const h = P2(2.2), w = P2(1.3), gap = P2(0.8);
   out.push({ kind: "polyline", points: [at, { x: at.x - w, y: at.y + h }, { x: at.x + w, y: at.y + h }], closed: true, style: st });
   const v = o.value ?? at.y;
   const s = v.toFixed(o.decimals ?? 3);
   const text = o.text ?? (Number(s) === 0 ? `\xB1${s.replace("-", "")}` : v > 0 ? `+${s}` : s);
-  out.push(textPrim(text, { x: at.x + w + P2(1), y: at.y + h / 2 }, P2(o.size ?? 2.5), 0, "left", "middle", st));
+  const t = textPrim(text, { x: at.x + w + gap, y: at.y + P2(0.6) }, P2(o.size ?? NOTE_MM), 0, "left", "bottom", st);
+  const right = Math.max(...textCorners(t).map((c) => c.x));
+  out.push({ kind: "polyline", points: [{ x: at.x - w, y: at.y }, { x: right, y: at.y }], closed: false, style: st });
+  out.push(t);
 }
 function arrow(p, ux, uy, P2, st) {
   const L = P2(2.5), c = Math.cos(0.3), s = Math.sin(0.3);
@@ -1992,6 +2108,457 @@ function triangulateRings(rings) {
   return Polygon2D.triangulateWithHoles(rings[0], rings.slice(1)).map((t) => t.map((i) => all[i]));
 }
 
+// src/core/drawing/sheetRaster.ts
+var NAMED = { black: "#000000", white: "#ffffff", red: "#ff0000", green: "#008000", blue: "#0000ff", grey: "#808080", gray: "#808080" };
+function parseColor(c) {
+  let s = (NAMED[c.toLowerCase()] ?? c).trim();
+  if (/^#[0-9a-f]{3}$/i.test(s)) s = `#${s[1]}${s[1]}${s[2]}${s[2]}${s[3]}${s[3]}`;
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i.exec(s);
+  return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [0, 0, 0];
+}
+var GLYPHS = {
+  A: "0,0 2,6 4,0;0.67,2 3.33,2",
+  B: "0,0 0,6 3,6 4,5 4,4 3,3 0,3;3,3 4,2 4,1 3,0 0,0",
+  C: "4,5 3,6 1,6 0,5 0,1 1,0 3,0 4,1",
+  D: "0,0 0,6 2.5,6 4,4.5 4,1.5 2.5,0 0,0",
+  E: "4,6 0,6 0,0 4,0;0,3 3,3",
+  F: "4,6 0,6 0,0;0,3 3,3",
+  G: "4,5 3,6 1,6 0,5 0,1 1,0 3,0 4,1 4,3 2,3",
+  H: "0,0 0,6;4,0 4,6;0,3 4,3",
+  I: "2,0 2,6;1,0 3,0;1,6 3,6",
+  J: "0,1 1,0 2.5,0 3.5,1 3.5,6",
+  K: "0,0 0,6;4,6 0,2.5;1.3,3.6 4,0",
+  L: "0,6 0,0 4,0",
+  M: "0,0 0,6 2,2.5 4,6 4,0",
+  N: "0,0 0,6 4,0 4,6",
+  O: "1,0 0,1 0,5 1,6 3,6 4,5 4,1 3,0 1,0",
+  P: "0,0 0,6 3,6 4,5 4,4 3,3 0,3",
+  Q: "1,0 0,1 0,5 1,6 3,6 4,5 4,1 3,0 1,0;2.5,1.5 4,0",
+  R: "0,0 0,6 3,6 4,5 4,4 3,3 0,3;2,3 4,0",
+  S: "4,5 3,6 1,6 0,5 0,4 1,3 3,3 4,2 4,1 3,0 1,0 0,1",
+  T: "0,6 4,6;2,6 2,0",
+  U: "0,6 0,1 1,0 3,0 4,1 4,6",
+  V: "0,6 2,0 4,6",
+  W: "0,6 1,0 2,4 3,0 4,6",
+  X: "0,0 4,6;0,6 4,0",
+  Y: "0,6 2,3 4,6;2,3 2,0",
+  Z: "0,6 4,6 0,0 4,0",
+  "0": "1.5,0 0.5,1.5 0.5,4.5 1.5,6 2.5,6 3.5,4.5 3.5,1.5 2.5,0 1.5,0",
+  "1": "1,4.5 2.5,6 2.5,0",
+  "2": "0,5 1,6 3,6 4,5 4,3.8 0,0 4,0",
+  "3": "0,5 1,6 3,6 4,5 4,4 3,3 1.5,3;3,3 4,2 4,1 3,0 1,0 0,1",
+  "4": "3,0 3,6 0,2 4,2",
+  "5": "4,6 0,6 0,3.5 3,3.5 4,2.5 4,1 3,0 1,0 0,1",
+  "6": "3.5,6 1.5,6 0,4 0,1 1,0 3,0 4,1 4,2.5 3,3.5 1,3.5 0,2.5",
+  "7": "0,6 4,6 1.5,0",
+  "8": "1,3 0,4 0,5 1,6 3,6 4,5 4,4 3,3 1,3 0,2 0,1 1,0 3,0 4,1 4,2 3,3",
+  "9": "0.5,0 2.5,0 4,2 4,5 3,6 1,6 0,5 0,3.5 1,2.5 3,2.5 4,3.5",
+  a: "4,4 4,0;4,3 3,4 1,4 0,3 0,1 1,0 3,0 4,1",
+  b: "0,6 0,0;0,3 1,4 3,4 4,3 4,1 3,0 1,0 0,1",
+  c: "4,3 3,4 1,4 0,3 0,1 1,0 3,0 4,1",
+  d: "4,6 4,0;4,3 3,4 1,4 0,3 0,1 1,0 3,0 4,1",
+  e: "0,2 4,2 4,3 3,4 1,4 0,3 0,1 1,0 3,0 4,0.8",
+  f: "3.5,6 2.5,6 1.5,5 1.5,0;0.5,4 3,4",
+  g: "4,4 4,-1 3,-2 1,-2 0,-1.2;4,3 3,4 1,4 0,3 0,1 1,0 3,0 4,1",
+  h: "0,6 0,0;0,3 1,4 3,4 4,3 4,0",
+  i: "2,4 2,0;2,5.5",
+  j: "2.5,4 2.5,-1 1.5,-2 0.5,-2;2.5,5.5",
+  k: "0,6 0,0;3.5,4 0,1.5;1.2,2.4 3.8,0",
+  l: "2,6 2,0",
+  m: "0,4 0,0;0,3 1,4 1.5,4 2,3 2,0;2,3 3,4 3.5,4 4,3 4,0",
+  n: "0,4 0,0;0,3 1,4 3,4 4,3 4,0",
+  o: "1,0 0,1 0,3 1,4 3,4 4,3 4,1 3,0 1,0",
+  p: "0,4 0,-2;0,3 1,4 3,4 4,3 4,1 3,0 1,0 0,1",
+  q: "4,4 4,-2;4,3 3,4 1,4 0,3 0,1 1,0 3,0 4,1",
+  r: "0.5,4 0.5,0;0.5,3 1.5,4 3,4 3.5,3.5",
+  s: "4,3.2 3,4 1,4 0,3.2 0,2.6 1,2 3,2 4,1.4 4,0.8 3,0 1,0 0,0.8",
+  t: "1.5,6 1.5,1 2.5,0 3.5,0;0.5,4 3,4",
+  u: "0,4 0,1 1,0 3,0 4,1;4,4 4,0",
+  v: "0,4 2,0 4,4",
+  w: "0,4 1,0 2,3 3,0 4,4",
+  x: "0,0 4,4;0,4 4,0",
+  y: "0,4 2,0;4,4 1,-2 0,-2",
+  z: "0,4 4,4 0,0 4,0",
+  ".": "2,0.1",
+  ",": "2,0.3 2,0 1.4,-0.9",
+  ":": "2,0.1;2,3.2",
+  ";": "2,0.3 2,0 1.4,-0.9;2,3.2",
+  "-": "0.8,2.5 3.2,2.5",
+  "\u2013": "0,2.5 4,2.5",
+  "\u2014": "0,2.5 4,2.5",
+  "+": "0.5,2.5 3.5,2.5;2,1 2,4",
+  "/": "0.5,0 3.5,6",
+  "\\": "0.5,6 3.5,0",
+  "(": "2.8,6.5 1.5,5 1.5,1 2.8,-0.5",
+  ")": "1.2,6.5 2.5,5 2.5,1 1.2,-0.5",
+  "[": "3,6.5 1.5,6.5 1.5,-0.5 3,-0.5",
+  "]": "1,6.5 2.5,6.5 2.5,-0.5 1,-0.5",
+  "'": "2,6 2,4.8",
+  '"': "1.3,6 1.3,4.8;2.7,6 2.7,4.8",
+  "=": "0.5,3.3 3.5,3.3;0.5,1.7 3.5,1.7",
+  "_": "0,-0.6 4,-0.6",
+  "*": "2,2 2,5;0.7,2.75 3.3,4.25;0.7,4.25 3.3,2.75",
+  "#": "1.2,0.5 1.8,5.5;2.6,0.5 3.2,5.5;0.3,2 3.8,2;0.4,4 3.9,4",
+  "%": "0.5,0 3.5,6;0.3,5.9 1.3,5.9 1.3,4.6 0.3,4.6 0.3,5.9;2.7,1.4 3.7,1.4 3.7,0.1 2.7,0.1 2.7,1.4",
+  "\xB0": "1.3,6 2.7,6 2.7,4.6 1.3,4.6 1.3,6",
+  "\xB2": "0.8,5.6 1.3,6 2.4,6 2.9,5.6 2.9,5 0.8,3.4 3,3.4",
+  "<": "3.5,4.5 0.5,2.5 3.5,0.5",
+  ">": "0.5,4.5 3.5,2.5 0.5,0.5",
+  "!": "2,6 2,1.6;2,0.1",
+  "?": "0.3,5 1.2,6 2.8,6 3.7,5 3.7,4 2,2.6 2,1.6;2,0.1",
+  "&": "4,0 1,4.5 1,5.4 1.8,6 2.6,5.4 2.6,4.6 0,2 0,1 1,0 2.2,0 4,2.2",
+  "\xD7": "0.7,1 3.3,4;0.7,4 3.3,1",
+  "\u2192": "0,2.5 4,2.5;2.8,3.7 4,2.5 2.8,1.3",
+  "\xB7": "2,2.6",
+  "\xDF": "0,0 0,5 1,6 2.5,6 3.3,5 3.3,4 2,3 3.5,2.4 3.8,1.2 3,0 1.6,0",
+  " ": ""
+};
+var UNKNOWN = "0.5,0 3.5,0 3.5,5 0.5,5 0.5,0";
+var DOTS_LOW = "1,5.5;3,5.5";
+var DOTS_HIGH = "1,7.1;3,7.1";
+var NARROW = "iIljt.,:;'!|()[]";
+var parsed = /* @__PURE__ */ new Map();
+function strokesOf(def) {
+  let s = parsed.get(def);
+  if (!s) {
+    s = def ? def.split(";").map((line) => line.trim().split(/[ ,]+/).map(Number)) : [];
+    parsed.set(def, s);
+  }
+  return s;
+}
+function textStrokes(text) {
+  const u = 0.72 / 6, glyphW = 0.8, adv = 0.6, inset = (adv - 4 * glyphW * u) / 2;
+  const strokes = [];
+  let x = 0, last = "", lastW = adv;
+  for (const ch of text.normalize("NFD")) {
+    const code = ch.codePointAt(0);
+    if (code >= 768 && code <= 879) {
+      if (code === 776) for (const s of strokesOf(last === last.toUpperCase() && last !== last.toLowerCase() ? DOTS_HIGH : DOTS_LOW)) {
+        strokes.push(s.map((v, i) => i % 2 === 0 ? x - (adv + lastW) / 2 + inset + v * glyphW * u : v * u));
+      }
+      continue;
+    }
+    const w = NARROW.includes(ch) ? 0.36 : ch === " " ? 0.45 : adv;
+    for (const s of strokesOf(GLYPHS[ch] ?? UNKNOWN)) strokes.push(s.map((v, i) => i % 2 === 0 ? x + inset - (adv - w) / 2 + v * glyphW * u : v * u));
+    x += w;
+    lastW = w;
+    last = ch;
+  }
+  return { strokes, advance: x };
+}
+function rasterizeSheet(sheet, opts = {}) {
+  const prims = sheet.explode();
+  const b = boundsOf(prims) ?? { min: { x: 0, y: 0 }, max: { x: 1, y: 1 } };
+  const mmPerUnit = 1e3 / sheet.scale;
+  const margin = opts.margin ?? 8;
+  const wMm = Math.max(1e-6, (b.max.x - b.min.x) * mmPerUnit) + 2 * margin;
+  const hMm = Math.max(1e-6, (b.max.y - b.min.y) * mmPerUnit) + 2 * margin;
+  const wantW = Math.max(16, Math.round(opts.width ?? 1600));
+  const pxPerMm = Math.min(wantW / wMm, (opts.maxHeight ?? 2400) / hMm);
+  const width = Math.max(1, Math.round(wMm * pxPerMm)), height = Math.max(1, Math.round(hMm * pxPerMm));
+  const ss = width * height * 9 <= 24e6 ? 3 : 2;
+  const W = width * ss, H = height * ss;
+  const k = mmPerUnit * pxPerMm * ss;
+  const X = (p) => (p.x - b.min.x) * k + margin * pxPerMm * ss;
+  const Y = (p) => (b.max.y - p.y) * k + margin * pxPerMm * ss;
+  const mm = (v) => v * pxPerMm * ss;
+  const buf = new Uint8Array(W * H * 3);
+  const bg = parseColor(opts.background ?? "#ffffff");
+  for (let i = 0; i < buf.length; i += 3) {
+    buf[i] = bg[0];
+    buf[i + 1] = bg[1];
+    buf[i + 2] = bg[2];
+  }
+  const fill = (rings, c) => {
+    let y0 = Infinity, y1 = -Infinity;
+    for (const r of rings) for (let i = 1; i < r.length; i += 2) {
+      y0 = Math.min(y0, r[i]);
+      y1 = Math.max(y1, r[i]);
+    }
+    const ya = Math.max(0, Math.floor(y0)), yb = Math.min(H - 1, Math.ceil(y1));
+    const xs = [];
+    for (let y = ya; y <= yb; y++) {
+      const sy = y + 0.5;
+      xs.length = 0;
+      for (const r of rings) {
+        const n2 = r.length / 2;
+        for (let i = 0, j = n2 - 1; i < n2; j = i++) {
+          const ay = r[j * 2 + 1], by = r[i * 2 + 1];
+          if (ay <= sy === by <= sy) continue;
+          xs.push(r[j * 2] + (sy - ay) / (by - ay) * (r[i * 2] - r[j * 2]));
+        }
+      }
+      xs.sort((p, q) => p - q);
+      for (let e = 0; e + 1 < xs.length; e += 2) {
+        const xa = Math.max(0, Math.ceil(xs[e] - 0.5)), xb = Math.min(W - 1, Math.floor(xs[e + 1] - 0.5));
+        for (let x = xa, o = (y * W + xa) * 3; x <= xb; x++, o += 3) {
+          buf[o] = c[0];
+          buf[o + 1] = c[1];
+          buf[o + 2] = c[2];
+        }
+      }
+    }
+  };
+  const segment = (ax, ay, bx, by, w, c, flat = false) => {
+    let dx = bx - ax, dy = by - ay;
+    const len = Math.hypot(dx, dy);
+    const h = w / 2;
+    if (len < 1e-9) {
+      fill([[ax - h, ay - h, ax + h, ay - h, ax + h, ay + h, ax - h, ay + h]], c);
+      return;
+    }
+    dx = dx / len * h;
+    dy = dy / len * h;
+    const ex = flat ? 0 : dx, ey = flat ? 0 : dy;
+    fill([[ax - ex + dy, ay - ey - dx, bx + ex + dy, by + ey - dx, bx + ex - dy, by + ey + dx, ax - ex - dy, ay - ey + dx]], c);
+  };
+  const stroke = (pts, w, c, pattern) => {
+    if (pts.length === 2) {
+      segment(pts[0], pts[1], pts[0], pts[1], w, c);
+      return;
+    }
+    let phase = 0, idx = 0;
+    for (let i = 0; i + 3 < pts.length; i += 2) {
+      const ax = pts[i], ay = pts[i + 1], bx = pts[i + 2], by = pts[i + 3];
+      if (!pattern) {
+        segment(ax, ay, bx, by, w, c);
+        continue;
+      }
+      const len = Math.hypot(bx - ax, by - ay);
+      let t = 0;
+      while (t < len - 1e-9) {
+        const step = Math.min(pattern[idx] - phase, len - t);
+        if (idx % 2 === 0) segment(ax + (bx - ax) * t / len, ay + (by - ay) * t / len, ax + (bx - ax) * (t + step) / len, ay + (by - ay) * (t + step) / len, w, c, true);
+        t += step;
+        phase += step;
+        if (phase >= pattern[idx] - 1e-9) {
+          phase = 0;
+          idx = (idx + 1) % pattern.length;
+        }
+      }
+    }
+  };
+  const penOf = (weightMm) => Math.max(ss * 0.8, mm(weightMm));
+  const dashOf = (dash) => dash === "solid" ? void 0 : DASH_PATTERNS[dash].map((d) => Math.max(1, mm(d)));
+  const arcPoints = (center, radius, startDeg, sweepDeg) => {
+    const steps = Math.max(8, Math.ceil(Math.abs(sweepDeg) / 360 * Math.max(24, radius * k * 0.5)));
+    const out = [];
+    for (let i = 0; i <= steps; i++) {
+      const a = (startDeg + sweepDeg * i / steps) * Math.PI / 180;
+      const p = { x: center.x + radius * Math.cos(a), y: center.y + radius * Math.sin(a) };
+      out.push(X(p), Y(p));
+    }
+    return out;
+  };
+  for (const p of prims) {
+    if (p.kind === "fill") {
+      fill(p.rings.map((r) => r.flatMap((q) => [X(q), Y(q)])), parseColor(p.color));
+    } else if (p.kind === "polyline") {
+      const pts = p.points.flatMap((q) => [X(q), Y(q)]);
+      if (p.closed && p.points.length > 2) pts.push(pts[0], pts[1]);
+      stroke(pts, penOf(p.style.weight), parseColor(p.style.color), dashOf(p.style.dash));
+    } else if (p.kind === "circle") {
+      stroke(arcPoints(p.center, p.radius, 0, 360), penOf(p.style.weight), parseColor(p.style.color), dashOf(p.style.dash));
+    } else if (p.kind === "arc") {
+      let sweep = (p.endDeg - p.startDeg) % 360;
+      if (sweep <= 0) sweep += 360;
+      stroke(arcPoints(p.center, p.radius, p.startDeg, sweep), penOf(p.style.weight), parseColor(p.style.color), dashOf(p.style.dash));
+    } else {
+      const { strokes, advance } = textStrokes(p.text);
+      const size = p.height * k;
+      const ox = p.align === "left" ? 0 : p.align === "center" ? -advance / 2 : -advance;
+      const oy = p.baseline === "bottom" ? 0 : p.baseline === "middle" ? -0.36 : -0.72;
+      const r = p.rotation * Math.PI / 180, cos = Math.cos(r), sin = Math.sin(r);
+      const ax = X(p.at), ay = Y(p.at);
+      const pen = Math.max(ss * 0.9, size * 0.085);
+      const c = parseColor(p.style.color);
+      for (const s of strokes) {
+        const pts = [];
+        for (let i = 0; i < s.length; i += 2) {
+          const x = (s[i] + ox) * size, y = (s[i + 1] + oy) * size;
+          pts.push(ax + x * cos - y * sin, ay - (x * sin + y * cos));
+        }
+        stroke(pts, pen, c);
+      }
+    }
+  }
+  const data = new Uint8ClampedArray(width * height * 4);
+  const n = ss * ss;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let r = 0, g = 0, bl = 0;
+      for (let j = 0; j < ss; j++) {
+        let o2 = ((y * ss + j) * W + x * ss) * 3;
+        for (let i = 0; i < ss; i++, o2 += 3) {
+          r += buf[o2];
+          g += buf[o2 + 1];
+          bl += buf[o2 + 2];
+        }
+      }
+      const o = (y * width + x) * 4;
+      data[o] = r / n;
+      data[o + 1] = g / n;
+      data[o + 2] = bl / n;
+      data[o + 3] = 255;
+    }
+  }
+  return { width, height, data, toPixel: (p) => ({ x: X(p) / ss, y: Y(p) / ss }) };
+}
+var crcTable = null;
+function crc32(bytes) {
+  if (!crcTable) {
+    crcTable = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c2 = n;
+      for (let i = 0; i < 8; i++) c2 = c2 & 1 ? 3988292384 ^ c2 >>> 1 : c2 >>> 1;
+      crcTable[n] = c2 >>> 0;
+    }
+  }
+  let c = 4294967295;
+  for (let i = 0; i < bytes.length; i++) c = crcTable[(c ^ bytes[i]) & 255] ^ c >>> 8;
+  return (c ^ 4294967295) >>> 0;
+}
+async function encodePNG(image) {
+  const { width, height, data } = image;
+  const raw = new Uint8Array(height * (1 + width * 3));
+  for (let y = 0, o2 = 0; y < height; y++) {
+    raw[o2++] = 0;
+    for (let x = 0, i = y * width * 4; x < width; x++, i += 4) {
+      raw[o2++] = data[i];
+      raw[o2++] = data[i + 1];
+      raw[o2++] = data[i + 2];
+    }
+  }
+  if (typeof CompressionStream === "undefined") throw new Error("encodePNG needs CompressionStream (a browser, or Node 18 or later)");
+  const packed = new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new CompressionStream("deflate"))).arrayBuffer());
+  const chunk = (type, body) => {
+    const out2 = new Uint8Array(12 + body.length);
+    const view = new DataView(out2.buffer);
+    view.setUint32(0, body.length);
+    for (let i = 0; i < 4; i++) out2[4 + i] = type.charCodeAt(i);
+    out2.set(body, 8);
+    view.setUint32(8 + body.length, crc32(out2.subarray(4, 8 + body.length)));
+    return out2;
+  };
+  const head = new Uint8Array(13);
+  const hv = new DataView(head.buffer);
+  hv.setUint32(0, width);
+  hv.setUint32(4, height);
+  head[8] = 8;
+  head[9] = 2;
+  const parts = [new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]), chunk("IHDR", head), chunk("IDAT", packed), chunk("IEND", new Uint8Array(0))];
+  const out = new Uint8Array(parts.reduce((sum, p) => sum + p.length, 0));
+  let o = 0;
+  for (const p of parts) {
+    out.set(p, o);
+    o += p.length;
+  }
+  return out;
+}
+async function sheetToPNG(sheet, opts = {}) {
+  return encodePNG(rasterizeSheet(sheet, opts));
+}
+
+// src/core/drawing/Axonometric.ts
+var ISO_ELEVATION = Math.asin(1 / Math.sqrt(3)) * 180 / Math.PI;
+var Axonometric = class _Axonometric {
+  constructor(opts = {}) {
+    this.azimuth = opts.azimuth ?? 225;
+    this.elevation = opts.elevation ?? 30;
+    this.up = opts.up ?? "z";
+    if (!Number.isFinite(this.azimuth) || !Number.isFinite(this.elevation) || this.elevation < -90 || this.elevation > 90) {
+      throw new Error(`Axonometric: azimuth must be a number and elevation between -90 and 90 degrees, got ${opts.azimuth} and ${opts.elevation}`);
+    }
+    const az = this.azimuth * Math.PI / 180;
+    const el = Math.max(-89.999, Math.min(89.999, this.elevation)) * Math.PI / 180;
+    const h = Math.cos(el), v = Math.sin(el);
+    const yUp = this.up === "y";
+    const eye = yUp ? new Vec3(h * Math.cos(az), v, -h * Math.sin(az)) : new Vec3(h * Math.cos(az), h * Math.sin(az), v);
+    const worldUp = yUp ? new Vec3(0, 1, 0) : new Vec3(0, 0, 1);
+    this.forward = eye.neg();
+    this.right = this.forward.cross(worldUp).normalize();
+    this.upward = this.right.cross(this.forward).normalize();
+    this.light = worldUp.mul(1.4).sub(this.right.mul(0.7)).sub(this.forward.mul(0.5)).normalize();
+  }
+  /** An isometric view: the three axes equally foreshortened (elevation 35.26°), from the front left unless `azimuth` says otherwise. */
+  static isometric(opts = {}) {
+    return new _Axonometric({ azimuth: 225, ...opts, elevation: ISO_ELEVATION });
+  }
+  /** A model point in the view (y up). */
+  project(p) {
+    return new Vec2(p.dot(this.right), p.dot(this.upward));
+  }
+  /** How far a point is from the viewer, along the view: larger is farther. */
+  depth(p) {
+    return p.dot(this.forward);
+  }
+  /** Whether a face with this outward normal is turned towards the viewer. */
+  facing(normal) {
+    return normal.dot(this.forward) < 0;
+  }
+  /** 0 to 1: how much a face with this normal turns to the light (0 when it turns away). */
+  shade(normal) {
+    return Math.max(0, normal.normalize().dot(this.light));
+  }
+  /**
+   * Polygons in painter's order (far first), each projected, with its depth, normal and light.
+   * `cull` (default true) leaves out the faces turned away; a polygon's normal comes from its
+   * corners (counter-clockwise seen from outside), or from `normal` when given.
+   */
+  polygons(list, opts = {}) {
+    const cull = opts.cull ?? true;
+    const out = [];
+    for (const item of list) {
+      const pts = item.points;
+      if (pts.length < 2) continue;
+      const normal = (item.normal ?? newellNormal(pts)).normalize();
+      if (cull && pts.length >= 3 && normal.len() > 0 && !this.facing(normal)) continue;
+      let depth = 0;
+      for (const p of pts) depth += this.depth(p);
+      out.push({ points: pts.map((p) => this.project(p)), depth: depth / pts.length, normal, light: this.shade(normal), data: item.data });
+    }
+    return out.sort((a, b) => b.depth - a.depth);
+  }
+  /** A mesh's faces as `polygons`: projected, culled, far first; `data` is the face's id. */
+  meshFaces(mesh, opts = {}) {
+    const list = [];
+    for (const f of mesh.faces()) list.push({ points: f.nodes.map((id) => mesh.getPosition(id)), normal: f.normal, data: f.id });
+    return this.polygons(list, opts);
+  }
+  /**
+   * The view that fits points (already projected) into a `width × height` area with `margin`
+   * around them: `{ scale, x, y }`, a point (u, v) drawn at (`x + u * scale`, `y - v * scale`).
+   * `maxScale` caps the scale (a small model is not blown up).
+   */
+  fit(points, width, height, margin = 16, maxScale = Infinity) {
+    if (!points.length) return { scale: 1, x: width / 2, y: height / 2 };
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const p of points) {
+      x0 = Math.min(x0, p.x);
+      x1 = Math.max(x1, p.x);
+      y0 = Math.min(y0, p.y);
+      y1 = Math.max(y1, p.y);
+    }
+    const bw = Math.max(x1 - x0, 1e-9), bh = Math.max(y1 - y0, 1e-9);
+    const scale = Math.min(maxScale, Math.max(1e-9, Math.min((width - 2 * margin) / bw, (height - 2 * margin) / bh)));
+    return { scale, x: width / 2 - (x0 + x1) / 2 * scale, y: height / 2 + (y0 + y1) / 2 * scale };
+  }
+  /** The projection for a Sheet's view (`sheet.view(name, { project: axo.sheetProjection() })`). */
+  sheetProjection() {
+    return { right: this.right, up: this.upward };
+  }
+};
+function newellNormal(pts) {
+  let x = 0, y = 0, z = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[i], b = pts[(i + 1) % pts.length];
+    x += (a.y - b.y) * (a.z + b.z);
+    y += (a.z - b.z) * (a.x + b.x);
+    z += (a.x - b.x) * (a.y + b.y);
+  }
+  return new Vec3(x, y, z);
+}
+
 export {
   noise,
   createRandom,
@@ -2003,9 +2570,14 @@ export {
   polygonIntersection,
   setClipSnap,
   PolygonBool,
+  rasterizeSheet,
+  encodePNG,
+  sheetToPNG,
   DASH_PATTERNS,
+  DRAWING_PALETTE,
   SheetView,
   Sheet,
   boundsOf,
-  pickPrim
+  pickPrim,
+  Axonometric
 };

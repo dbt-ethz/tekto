@@ -30,6 +30,7 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/2d.ts
 var d_exports = {};
 __export(d_exports, {
+  Axonometric: () => Axonometric,
   Polygon2D: () => Polygon2D,
   PolygonBool: () => PolygonBool,
   Segment: () => Segment,
@@ -934,17 +935,17 @@ var ParamStore = class {
 // src/gui/theme.ts
 var DARK = {
   isDark: true,
-  bg: "#07080e",
-  panelBg: "#0c0d16",
-  popupBg: "#0d0f1e",
-  border: "#16182a",
-  controlBorder: "#1e2140",
-  text: "#b8bdd4",
-  textDim: "#7a80a0",
-  textFaint: "#5a6080",
+  bg: "#0b0b0b",
+  panelBg: "#1e1e1e",
+  popupBg: "#252526",
+  border: "#303030",
+  controlBorder: "#444444",
+  text: "#cccccc",
+  textDim: "#a8a8a8",
+  textFaint: "#808080",
   accent: "#ffffff",
-  hoverBg: "rgba(255,255,255,.06)",
-  fieldBg: "#07080e",
+  hoverBg: "rgba(255,255,255,.08)",
+  fieldBg: "#141414",
   font: "'IBM Plex Mono',ui-monospace,monospace"
 };
 var LIGHT = {
@@ -962,12 +963,33 @@ var LIGHT = {
   fieldBg: "#f4f5f8",
   font: "'IBM Plex Mono',ui-monospace,monospace"
 };
+var PAPER = {
+  isDark: false,
+  bg: "#ffffff",
+  panelBg: "#ffffff",
+  popupBg: "#ffffff",
+  border: "#d9d9d9",
+  controlBorder: "#c4c4c4",
+  text: "#111111",
+  textDim: "#111111",
+  textFaint: "#111111",
+  accent: "#111111",
+  hoverBg: "rgba(0,0,0,.05)",
+  fieldBg: "#ffffff",
+  font: "'IBM Plex Mono',ui-monospace,monospace",
+  plain: true
+};
 function getTheme(mode = "dark") {
-  return mode === "light" ? LIGHT : DARK;
+  return mode === "paper" ? PAPER : mode === "light" ? LIGHT : DARK;
 }
 
 // src/gui/ControlPanel.ts
 var DEFAULT_GROUP = "Parameters";
+var LABEL_MIN = 56;
+var LABEL_MAX = 170;
+var CONTROL_MIN = 150;
+var CONTROL_MAX = 220;
+var SECTION_PAD = 14;
 var SLIDER_STYLE_ID = "tekto-slider-style";
 function ensureSliderStyle(doc) {
   if (doc.getElementById(SLIDER_STYLE_ID)) return;
@@ -975,12 +997,16 @@ function ensureSliderStyle(doc) {
   el.id = SLIDER_STYLE_ID;
   el.textContent = `
     .tekto-slider{-webkit-appearance:none;appearance:none;background:transparent;cursor:pointer;height:16px;outline:none;padding:0;}
-    .tekto-slider::-webkit-slider-runnable-track{height:4px;background:var(--tekto-track,#2a2d44);}
+    .tekto-slider::-webkit-slider-runnable-track{height:4px;background:var(--tekto-track,#444444);}
     .tekto-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:7px;height:14px;margin-top:-5px;border-radius:0;background:var(--tekto-thumb,#ffffff);}
-    .tekto-slider::-moz-range-track{height:4px;background:var(--tekto-track,#2a2d44);}
+    .tekto-slider::-moz-range-track{height:4px;background:var(--tekto-track,#444444);}
     .tekto-slider::-moz-range-thumb{width:7px;height:14px;border-radius:0;border:none;background:var(--tekto-thumb,#ffffff);}
   `;
   doc.head.appendChild(el);
+}
+function labelFromKey(key) {
+  const words = key.replace(/[_-]+/g, " ").replace(/([a-z0-9])([A-Z])/g, "$1 $2").trim().toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 var ControlPanel = class {
   constructor(cfg) {
@@ -992,6 +1018,10 @@ var ControlPanel = class {
     this.customRows = [];
     this.extraTabs = [];
     this.updaters = /* @__PURE__ */ new Map();
+    // ── Width ──
+    this.measureCtx = null;
+    this.labelWidth = LABEL_MIN;
+    this.railWidth = 0;
     this.cfg = cfg;
     this.store = cfg.store;
     this.theme = cfg.theme ?? getTheme();
@@ -1003,6 +1033,12 @@ var ControlPanel = class {
     });
     this.docClick = () => this.closeMenus();
     document.addEventListener("click", this.docClick);
+    document.fonts?.ready.then(() => {
+      if (this.items.length) {
+        this.fitLabels();
+        this.cfg.onRender?.();
+      }
+    });
   }
   dispose() {
     this.unsubStore();
@@ -1016,6 +1052,7 @@ var ControlPanel = class {
     this.extraTabs = extraTabs;
     this.updaters.clear();
     this.el.innerHTML = "";
+    this.railWidth = 0;
     const t = this.theme;
     const buttons = this.cfg.getButtons?.() ?? [];
     const menuNames = [];
@@ -1035,7 +1072,7 @@ var ControlPanel = class {
     const pinnedButtons = hasTabs ? buttons.filter((b) => !b.tab && !b.menu) : [];
     if (pinnedItems.length || pinnedButtons.length) {
       const strip = document.createElement("div");
-      strip.style.cssText = `padding:4px 8px 2px;border-bottom:1px solid ${t.border};`;
+      strip.style.cssText = `padding:4px 8px 2px 8px;border-bottom:1px solid ${t.border};`;
       for (const it of pinnedItems) {
         const row = this.buildControl(it);
         if (row) strip.appendChild(row);
@@ -1043,7 +1080,19 @@ var ControlPanel = class {
       for (const b of pinnedButtons) strip.appendChild(this.buildButtonRow(b));
       this.el.appendChild(strip);
     }
-    if (hasTabs) this.el.appendChild(this.buildTabBar(tabOrder));
+    const side = hasTabs && this.cfg.tabs === "side";
+    let body = this.el;
+    this.el.style.display = side ? "flex" : "";
+    this.el.style.flexDirection = side ? "column" : "";
+    this.el.style.minHeight = side ? "100%" : "";
+    if (side) {
+      const row = document.createElement("div");
+      row.style.cssText = "display:flex;align-items:stretch;flex:1;";
+      body = document.createElement("div");
+      body.style.cssText = "flex:1;min-width:0;";
+      row.append(this.buildTabList(tabOrder, items, buttons), body);
+      this.el.appendChild(row);
+    } else if (hasTabs) this.el.appendChild(this.buildTabBar(tabOrder));
     const activeExtra = hasTabs ? this.extraTabs.find((et) => et.name === this.activeTab) : void 0;
     const inTab = (tab, menu) => !menu && (hasTabs ? !!tab && tab === this.activeTab : true);
     const groups = /* @__PURE__ */ new Map();
@@ -1055,15 +1104,56 @@ var ControlPanel = class {
     for (const it of items) if (inTab(it.tab, it.menu)) groupOf(it.group).items.push(it);
     for (const b of buttons) if (inTab(b.tab, b.menu)) groupOf(b.group).buttons.push(b);
     for (const r of customRows) if (inTab(r.tab)) groupOf(r.group).rows.push(r);
+    const bare = groups.size === 1 && groups.has(DEFAULT_GROUP);
     for (const [name, content] of groups) {
-      this.el.appendChild(this.buildSection(name, content));
+      body.appendChild(this.buildSection(name, content, bare));
     }
     if (activeExtra) {
       const host = document.createElement("div");
       activeExtra.render(host);
-      this.el.appendChild(host);
+      body.appendChild(host);
     }
-    this.el.appendChild(this.footer);
+    body.appendChild(this.footer);
+    this.fitLabels();
+    this.cfg.onRender?.();
+  }
+  /** The width of `text` in the panel's font at `px`, in CSS pixels. */
+  textWidth(text, px) {
+    this.measureCtx ?? (this.measureCtx = document.createElement("canvas").getContext("2d"));
+    if (!this.measureCtx) return text.length * px * 0.6;
+    this.measureCtx.font = `${px}px ${this.theme.font}`;
+    return this.measureCtx.measureText(text).width;
+  }
+  /** Size the label column to the longest label of any tab (between LABEL_MIN and LABEL_MAX; longer ones wrap). */
+  fitLabels() {
+    let w = LABEL_MIN;
+    for (const it of this.items) {
+      const def = this.store.getDef(it.key);
+      if (!def || it.menu || def.type === "button") continue;
+      w = Math.max(w, Math.ceil(this.textWidth(def.label ?? labelFromKey(it.key), 11)) + 2);
+    }
+    this.labelWidth = Math.min(w, LABEL_MAX);
+    this.el.style.setProperty("--tekto-label-w", `${this.labelWidth}px`);
+  }
+  /**
+   * The panel width its controls ask for, in px: the label column, a control beside it
+   * (wider for a select with long options), a button's text, and the tab list when the tabs
+   * are on the side. A frame with `panelWidth: "auto"` asks after every render.
+   */
+  preferredWidth() {
+    let control = CONTROL_MIN;
+    let lone = 0;
+    for (const it of this.items) {
+      const def = this.store.getDef(it.key);
+      if (def?.type === "select") {
+        for (const opt of def.options ?? []) control = Math.max(control, this.textWidth(String(opt), 11) + 36);
+      } else if (def?.type === "button") {
+        lone = Math.max(lone, this.textWidth(def.label ?? it.key, 10) + 24);
+      }
+    }
+    for (const b of this.cfg.getButtons?.() ?? []) if (!b.menu) lone = Math.max(lone, this.textWidth(b.label, 10) + 24);
+    const row = this.labelWidth + 8 + Math.min(control, CONTROL_MAX);
+    return Math.ceil(this.railWidth + 2 * SECTION_PAD + Math.max(row, lone)) + 1;
   }
   /** Push a value into a live control without going through the store. */
   applyValue(key, value) {
@@ -1248,12 +1338,60 @@ var ControlPanel = class {
     }
     return bar;
   }
+  /** The tabs as a list down the panel's left side: a name, and how many controls it holds. */
+  buildTabList(tabOrder, items, buttons) {
+    const t = this.theme;
+    const list = document.createElement("nav");
+    list.dataset.tektoTabs = "side";
+    let w = 0;
+    for (const tab of tabOrder) w = Math.max(w, this.textWidth(tab, 11));
+    this.railWidth = Math.min(Math.max(Math.ceil(w) + 26, 72), 160);
+    list.style.cssText = `flex:0 0 ${this.railWidth}px;box-sizing:border-box;padding:6px 0;border-right:1px solid ${t.border};`;
+    for (const tab of tabOrder) {
+      const on = tab === this.activeTab;
+      const n = items.filter((it) => it.tab === tab).length + buttons.filter((b) => b.tab === tab).length;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.setAttribute("aria-pressed", String(on));
+      btn.style.cssText = `
+        display:block;width:100%;box-sizing:border-box;padding:7px 10px 7px 12px;border:none;
+        border-left:2px solid ${on ? t.accent : "transparent"};text-align:left;cursor:pointer;
+        background:${on ? t.hoverBg : "transparent"};color:${on ? t.accent : t.textDim};
+        font-family:inherit;font-size:11px;line-height:1.3;transition:background .12s;
+      `;
+      const name = document.createElement("span");
+      name.style.cssText = `display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:${on ? 600 : 400};`;
+      name.textContent = tab;
+      btn.appendChild(name);
+      if (n > 0) {
+        const count = document.createElement("span");
+        count.style.cssText = `display:block;font-size:9px;color:${t.textFaint};`;
+        count.textContent = `${n} control${n === 1 ? "" : "s"}`;
+        btn.appendChild(count);
+      }
+      if (!on) {
+        btn.addEventListener("mouseenter", () => {
+          btn.style.background = t.hoverBg;
+        });
+        btn.addEventListener("mouseleave", () => {
+          btn.style.background = "transparent";
+        });
+      }
+      btn.addEventListener("click", () => {
+        this.activeTab = tab;
+        this.render(this.items, this.customRows, this.extraTabs);
+        this.cfg.onTabChange?.(tab);
+      });
+      list.appendChild(btn);
+    }
+    return list;
+  }
   // ── Sections ──
-  buildSection(name, content) {
+  buildSection(name, content, bare = false) {
     const t = this.theme;
     const section = document.createElement("div");
     section.style.cssText = `border-bottom:1px solid ${t.border};`;
-    const collapsed = this.collapsedGroups.has(name);
+    const collapsed = !bare && this.collapsedGroups.has(name);
     const header = document.createElement("div");
     header.style.cssText = `
       padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:6px;
@@ -1267,15 +1405,19 @@ var ControlPanel = class {
     });
     const arrow2 = document.createElement("span");
     arrow2.style.cssText = `font-size:8px;color:${t.textFaint};transition:transform .15s;width:10px;`;
-    arrow2.textContent = collapsed ? "\u25B6" : "\u25BC";
+    const paintArrow = (c) => {
+      arrow2.textContent = c ? "\u25B6" : "\u25BC";
+      if (t.plain) arrow2.style.display = c ? "" : "none";
+    };
+    paintArrow(collapsed);
     header.appendChild(arrow2);
     const title = document.createElement("span");
     title.style.cssText = `font-size:9px;font-weight:500;text-transform:uppercase;letter-spacing:1.8px;color:${t.textFaint};`;
     title.textContent = name;
     header.appendChild(title);
-    section.appendChild(header);
+    if (!bare) section.appendChild(header);
     const body = document.createElement("div");
-    body.style.cssText = `padding:0 14px 10px;${collapsed ? "display:none;" : ""}`;
+    body.style.cssText = `padding:${bare ? 10 : 0}px ${SECTION_PAD}px 10px;${collapsed ? "display:none;" : ""}`;
     for (const it of content.items) {
       const row = this.buildControl(it);
       if (row) body.appendChild(row);
@@ -1283,7 +1425,7 @@ var ControlPanel = class {
     for (const r of content.rows) {
       if (r.fullBleed) {
         const wrap = document.createElement("div");
-        wrap.style.cssText = "margin:0 -14px;";
+        wrap.style.cssText = `margin:0 -${SECTION_PAD}px;`;
         wrap.appendChild(r.el);
         body.appendChild(wrap);
       } else {
@@ -1299,7 +1441,7 @@ var ControlPanel = class {
       if (isCollapsed) this.collapsedGroups.delete(name);
       else this.collapsedGroups.add(name);
       body.style.display = isCollapsed ? "" : "none";
-      arrow2.textContent = isCollapsed ? "\u25BC" : "\u25B6";
+      paintArrow(!isCollapsed);
     });
     return section;
   }
@@ -1344,8 +1486,8 @@ var ControlPanel = class {
     const row = document.createElement("div");
     row.style.cssText = "display:flex;align-items:center;gap:8px;margin-bottom:5px;min-height:26px;";
     const label = document.createElement("span");
-    label.style.cssText = `width:80px;flex-shrink:0;font-size:11px;color:${t.textDim};text-transform:capitalize;`;
-    label.textContent = def.label ?? it.key;
+    label.style.cssText = `width:var(--tekto-label-w,80px);flex-shrink:0;font-size:11px;color:${t.textDim};`;
+    label.textContent = def.label ?? labelFromKey(it.key);
     row.appendChild(label);
     switch (def.type) {
       case "float":
@@ -1358,7 +1500,7 @@ var ControlPanel = class {
         input.step = String(step);
         input.value = String(this.store.get(it.key));
         input.className = "tekto-slider";
-        input.style.cssText = `flex:1;--tekto-track:${t.controlBorder};--tekto-thumb:${it.accent || t.accent};`;
+        input.style.cssText = `flex:1;width:0;min-width:40px;--tekto-track:${t.controlBorder};--tekto-thumb:${it.accent || t.accent};`;
         const valueSpan = document.createElement("span");
         valueSpan.style.cssText = `width:42px;text-align:right;font-size:10px;color:${t.accent};`;
         const isInt = def.type === "int" || step >= 1;
@@ -1498,6 +1640,518 @@ var ControlPanel = class {
   }
 };
 
+// src/sketch/panelFrame.ts
+var MIN_WIDTH = 180;
+var MAX_WIDTH = 800;
+var FOLDED_INSET = 32;
+function ensureFoldedStyle() {
+  if (document.getElementById("tekto-panel-folded")) return;
+  const style = document.createElement("style");
+  style.id = "tekto-panel-folded";
+  style.textContent = `[data-tekto-panel=folded] [data-tekto-viewer-header]{padding-left:${FOLDED_INSET}px !important}[data-tekto-panel=folded] [data-tekto-shading-bar]:not([data-tekto-viewer-header]){margin-left:${FOLDED_INSET - 6}px}`;
+  document.head.appendChild(style);
+}
+var PANEL_TOP_H = 34;
+function read(key) {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+function write(key, value) {
+  try {
+    if (value === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, value);
+  } catch {
+  }
+}
+function panelFrame(o) {
+  const { root, panelEl, theme: t } = o;
+  const widthKey = `tekto.panelWidth.${o.storageKey}`;
+  const foldKey = `tekto.panelCollapsed.${o.storageKey}`;
+  const clamp = (w) => Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, Math.round(w)));
+  const dragged = parseInt(read(widthKey) ?? "", 10);
+  let chosen = Number.isFinite(dragged) ? clamp(dragged) : null;
+  let folded = read(foldKey) === "1";
+  const defaultWidth = () => clamp(o.width === "auto" ? o.preferred?.() ?? 260 : o.width);
+  let width = chosen ?? defaultWidth();
+  const handle = document.createElement("div");
+  handle.title = "Drag to resize the panel \xB7 double-click to reset";
+  const idle = "transparent", hover = t.isDark ? "rgba(255,255,255,.3)" : "rgba(0,0,0,.25)";
+  handle.style.cssText = `position:absolute;top:${o.top}px;bottom:0;width:6px;cursor:col-resize;z-index:10;background:${idle};transition:background .15s;`;
+  handle.addEventListener("mouseenter", () => {
+    handle.style.background = hover;
+  });
+  handle.addEventListener("mouseleave", () => {
+    handle.style.background = idle;
+  });
+  handle.addEventListener("dblclick", () => {
+    chosen = null;
+    write(widthKey, null);
+    width = defaultWidth();
+    apply();
+  });
+  handle.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    const x0 = e.clientX, w0 = width;
+    const move = (ev) => {
+      chosen = width = clamp(w0 + ev.clientX - x0);
+      write(widthKey, String(width));
+      apply();
+    };
+    const up = () => {
+      document.removeEventListener("mousemove", move);
+      document.removeEventListener("mouseup", up);
+      document.body.style.cursor = "";
+    };
+    document.body.style.cursor = "col-resize";
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", up);
+  });
+  const top = document.createElement("div");
+  top.dataset.tektoPanelTop = "";
+  const named = !!o.title;
+  top.style.cssText = `
+    position:absolute; left:0; top:${o.top}px; height:${PANEL_TOP_H}px; box-sizing:border-box; z-index:9;
+    display:flex; align-items:center; padding:0 32px 0 14px; overflow:hidden; user-select:none;
+    background:${t.panelBg}; border-right:1px solid ${t.border};
+    border-bottom:1px solid ${t.plain && !named ? "transparent" : t.border};
+  `;
+  const name = document.createElement("span");
+  name.textContent = o.title ?? "";
+  name.title = o.title ?? "";
+  name.style.cssText = t.plain ? `font:600 13px/1 ${t.font};color:${t.text};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;` : `font:500 10px/1 ${t.font};letter-spacing:1.6px;text-transform:uppercase;color:${t.textDim};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;`;
+  top.appendChild(name);
+  panelEl.style.marginTop = `${PANEL_TOP_H}px`;
+  const chevron = document.createElement("button");
+  chevron.type = "button";
+  chevron.dataset.tektoPanelFold = "";
+  chevron.style.cssText = `
+    position:absolute; top:${o.top + (PANEL_TOP_H - 24) / 2}px; width:20px; height:24px; z-index:11; padding:0;
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+    font:13px/1 ui-monospace,monospace; border-radius:4px;
+    border:1px solid ${t.controlBorder}; background:${t.panelBg}; color:${t.accent};
+  `;
+  chevron.addEventListener("click", () => {
+    folded = !folded;
+    write(foldKey, folded ? "1" : "0");
+    apply();
+  });
+  const isEmpty = () => !panelEl.textContent?.trim() && !panelEl.querySelector("input,button,select,textarea,canvas,svg,img");
+  let empty = isEmpty();
+  ensureFoldedStyle();
+  const apply = () => {
+    root.style.gridTemplateColumns = `${empty || folded ? 0 : width}px 1fr`;
+    root.dataset.tektoPanel = empty ? "none" : folded ? "folded" : "open";
+    panelEl.style.display = folded || empty ? "none" : "";
+    chevron.style.display = empty ? "none" : "flex";
+    top.style.display = empty || folded ? "none" : "flex";
+    top.style.width = `${width}px`;
+    chevron.style.zIndex = folded ? "30" : "11";
+    handle.style.display = folded || empty ? "none" : "";
+    handle.style.left = `${width - 3}px`;
+    chevron.style.left = `${folded ? 6 : width - 26}px`;
+    chevron.textContent = folded ? "\u203A" : "\u2039";
+    chevron.title = folded ? "Show the panel" : "Hide the panel";
+    chevron.setAttribute("aria-label", chevron.title);
+    chevron.setAttribute("aria-expanded", String(!folded));
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new Event("resize"));
+      o.onResize?.();
+    });
+  };
+  root.append(top, handle, chevron);
+  apply();
+  const sync = () => {
+    const now = isEmpty();
+    if (now !== empty) {
+      empty = now;
+      apply();
+    }
+  };
+  let queued = 0;
+  const watch = new MutationObserver(() => {
+    if (!queued) queued = requestAnimationFrame(() => {
+      queued = 0;
+      sync();
+    });
+  });
+  watch.observe(panelEl, { childList: true, subtree: true, characterData: true });
+  return {
+    fit() {
+      sync();
+      if (chosen !== null || o.width !== "auto") return;
+      const w = defaultWidth();
+      if (w !== width) {
+        width = w;
+        apply();
+      }
+    },
+    dispose() {
+      watch.disconnect();
+      if (queued) cancelAnimationFrame(queued);
+      top.remove();
+      handle.remove();
+      chevron.remove();
+      panelEl.style.marginTop = "";
+    }
+  };
+}
+
+// src/gui/Commands.ts
+var isMacPlatform = () => typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || "");
+function keyMatches(binding, e, mac = isMacPlatform()) {
+  const parts = binding.split("+").map((s) => s.trim()).filter(Boolean);
+  const key = binding.endsWith("++") ? "+" : parts.pop();
+  if (!key) return false;
+  const want = { meta: false, ctrl: false, alt: false, shift: false };
+  for (const m of parts) {
+    const k = m.toLowerCase();
+    if (k === "mod") mac ? want.meta = true : want.ctrl = true;
+    else if (k === "meta" || k === "cmd") want.meta = true;
+    else if (k === "ctrl" || k === "control") want.ctrl = true;
+    else if (k === "alt" || k === "option") want.alt = true;
+    else if (k === "shift") want.shift = true;
+  }
+  if (e.metaKey !== want.meta || e.ctrlKey !== want.ctrl || e.altKey !== want.alt) return false;
+  const letterOrNamed = key.length > 1 || /^[a-z0-9]$/i.test(key);
+  if (letterOrNamed && e.shiftKey !== want.shift) return false;
+  return e.key.length === 1 ? e.key.toLowerCase() === key.toLowerCase() : e.key === key;
+}
+function formatKeys(binding, mac = isMacPlatform()) {
+  const parts = binding.split("+").map((s) => s.trim()).filter(Boolean);
+  const key = binding.endsWith("++") ? "+" : parts.pop() ?? "";
+  const has = (...names) => parts.some((p) => names.includes(p.toLowerCase()));
+  const named = mac ? { ArrowUp: "\u2191", ArrowDown: "\u2193", ArrowLeft: "\u2190", ArrowRight: "\u2192", Delete: "\u2326", Backspace: "\u232B", Escape: "\u238B", Enter: "\u21A9" } : { ArrowUp: "\u2191", ArrowDown: "\u2193", ArrowLeft: "\u2190", ArrowRight: "\u2192", Escape: "Esc" };
+  const k = named[key] ?? (key.length === 1 ? key.toUpperCase() : key);
+  if (mac) {
+    return (has("ctrl", "control") ? "\u2303" : "") + (has("alt", "option") ? "\u2325" : "") + (has("shift") ? "\u21E7" : "") + (has("mod", "meta", "cmd") ? "\u2318" : "") + k;
+  }
+  const mods = [has("mod", "ctrl", "control") && "Ctrl", has("meta", "cmd") && "Win", has("alt", "option") && "Alt", has("shift") && "Shift"].filter(Boolean);
+  return [...mods, k].join("+");
+}
+function typing(target) {
+  const el = target;
+  if (!el || typeof el.tagName !== "string") return false;
+  return el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable;
+}
+var Commands = class {
+  constructor() {
+    this.byId = /* @__PURE__ */ new Map();
+    this.listeners = /* @__PURE__ */ new Set();
+  }
+  /** Add commands (an id already there is replaced). Returns a function that removes them. */
+  add(commands) {
+    const list = Array.isArray(commands) ? commands : [commands];
+    for (const c of list) {
+      if (!c.id || typeof c.run !== "function") throw new Error(`Commands.add: a command needs an id and run(), got ${JSON.stringify(c)}`);
+      this.byId.set(c.id, c);
+    }
+    this.emit();
+    return () => {
+      for (const c of list) if (this.byId.get(c.id) === c) this.byId.delete(c.id);
+      this.emit();
+    };
+  }
+  remove(id) {
+    if (this.byId.delete(id)) this.emit();
+  }
+  get(id) {
+    return this.byId.get(id);
+  }
+  has(id) {
+    return this.byId.has(id);
+  }
+  /** Every command, in the order added, with its keys and whether it can run now. */
+  list() {
+    return [...this.byId.values()].map((c) => ({
+      id: c.id,
+      label: c.label,
+      group: c.group,
+      keys: c.keys === void 0 ? [] : typeof c.keys === "string" ? [c.keys] : [...c.keys],
+      enabled: this.canRun(c)
+    }));
+  }
+  /** Run a command by id. False if there is none or it can't run now. */
+  async run(id) {
+    const c = this.byId.get(id);
+    if (!c || !this.canRun(c)) return false;
+    await c.run();
+    return true;
+  }
+  /** The command a key event presses, if any (and enabled). */
+  match(e, mac) {
+    for (const c of this.byId.values()) {
+      const keys = c.keys === void 0 ? [] : typeof c.keys === "string" ? [c.keys] : c.keys;
+      if (keys.some((k) => keyMatches(k, e, mac)) && this.canRun(c)) return c;
+    }
+    return void 0;
+  }
+  /**
+   * Run commands from their keys on `target` (default: the window). Keys typed into a
+   * field stay with the field; a matched key's default is prevented. Returns the unbind.
+   */
+  bindKeys(target = window) {
+    const onKey = (ev) => {
+      const e = ev;
+      if (e.defaultPrevented || typing(e.target)) return;
+      const c = this.match(e);
+      if (!c) return;
+      e.preventDefault();
+      void Promise.resolve(c.run()).catch((err) => console.error(`command ${c.id}:`, err));
+    };
+    target.addEventListener("keydown", onKey);
+    return () => target.removeEventListener("keydown", onKey);
+  }
+  /** Hear when commands are added or removed. Returns the unsubscribe. */
+  onChange(cb) {
+    this.listeners.add(cb);
+    return () => this.listeners.delete(cb);
+  }
+  canRun(c) {
+    try {
+      return c.enabled ? c.enabled() !== false : true;
+    } catch {
+      return false;
+    }
+  }
+  emit() {
+    for (const l of this.listeners) l();
+  }
+};
+
+// src/gui/MenuBar.ts
+var STANDARD = ["File", "Edit", "View"];
+function menuOf(c) {
+  if (c.group) return c.group;
+  const head = c.id.includes(".") ? c.id.slice(0, c.id.indexOf(".")) : "tools";
+  return head.charAt(0).toUpperCase() + head.slice(1);
+}
+var familyOf = (id) => id.split(".").length > 2 ? id.slice(0, id.lastIndexOf(".")) : "";
+function menuBar(commands, opts = {}) {
+  const t = opts.theme ?? getTheme();
+  const el = document.createElement("nav");
+  el.dataset.tektoMenubar = "";
+  el.setAttribute("aria-label", "Menus");
+  el.style.cssText = `display:flex;align-items:center;gap:2px;font:12px ${t.font};user-select:none;`;
+  let open = null;
+  let signature = "";
+  const close = () => {
+    if (!open) return;
+    open.list.remove();
+    open.btn.style.background = "transparent";
+    open.btn.style.color = t.textDim;
+    open.btn.setAttribute("aria-expanded", "false");
+    open = null;
+  };
+  const show = (name, btn) => {
+    close();
+    const list = document.createElement("div");
+    list.setAttribute("role", "menu");
+    list.dataset.tektoMenu = name;
+    list.style.cssText = `position:fixed;z-index:100000;min-width:200px;max-height:70vh;overflow-y:auto;padding:4px;
+      background:${t.popupBg};border:1px solid ${t.controlBorder};border-radius:6px;
+      box-shadow:0 6px 22px rgba(0,0,0,${t.isDark ? ".45" : ".16"});font:12px ${t.font};color:${t.text};`;
+    let family = null;
+    for (const c of commands.list()) {
+      if (menuOf(c) !== name) continue;
+      const fam = familyOf(c.id);
+      if (family !== null && fam !== family) {
+        const rule = document.createElement("div");
+        rule.style.cssText = `height:1px;margin:4px 2px;background:${t.border};`;
+        list.appendChild(rule);
+      }
+      family = fam;
+      const item = document.createElement("button");
+      item.type = "button";
+      item.setAttribute("role", "menuitem");
+      item.dataset.command = c.id;
+      item.setAttribute("aria-label", c.label);
+      item.disabled = !c.enabled;
+      item.style.cssText = `display:flex;width:100%;align-items:center;gap:24px;padding:6px 10px;border:0;border-radius:4px;
+        background:transparent;color:${c.enabled ? t.text : t.textFaint};opacity:${c.enabled ? 1 : 0.55};
+        font:inherit;text-align:left;cursor:${c.enabled ? "pointer" : "default"};`;
+      const label = document.createElement("span");
+      label.style.cssText = "flex:1;white-space:nowrap;";
+      label.textContent = c.label;
+      item.appendChild(label);
+      if (c.keys.length) {
+        const keys = document.createElement("span");
+        keys.style.cssText = `color:${t.textFaint};font-size:11px;white-space:nowrap;`;
+        keys.textContent = formatKeys(c.keys[0]);
+        item.setAttribute("aria-keyshortcuts", c.keys[0]);
+        item.appendChild(keys);
+      }
+      if (c.enabled) {
+        item.addEventListener("mouseenter", () => {
+          item.style.background = t.hoverBg;
+        });
+        item.addEventListener("mouseleave", () => {
+          item.style.background = "transparent";
+        });
+        item.addEventListener("click", () => {
+          close();
+          void commands.run(c.id).catch((err) => console.error(`command ${c.id}:`, err));
+        });
+      }
+      list.appendChild(item);
+    }
+    document.body.appendChild(list);
+    const r = btn.getBoundingClientRect();
+    list.style.top = `${r.bottom + 2}px`;
+    list.style.left = `${Math.max(4, Math.min(r.left, window.innerWidth - list.offsetWidth - 4))}px`;
+    btn.style.background = t.hoverBg;
+    btn.style.color = t.accent;
+    btn.setAttribute("aria-expanded", "true");
+    open = { name, list, btn };
+  };
+  const render = () => {
+    const list = commands.list();
+    const names = [];
+    for (const c of list) {
+      const m = menuOf(c);
+      if (!names.includes(m)) names.push(m);
+    }
+    names.sort((a, b) => {
+      const ia = STANDARD.indexOf(a), ib = STANDARD.indexOf(b);
+      return (ia < 0 ? STANDARD.length : ia) - (ib < 0 ? STANDARD.length : ib);
+    });
+    const sig = names.join("|");
+    if (sig === signature) return;
+    signature = sig;
+    close();
+    el.replaceChildren();
+    for (const name of names) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = name;
+      btn.dataset.menu = name;
+      btn.setAttribute("aria-haspopup", "menu");
+      btn.setAttribute("aria-expanded", "false");
+      btn.style.cssText = `padding:4px 9px;border:0;border-radius:4px;background:transparent;color:${t.textDim};font:inherit;cursor:pointer;`;
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (open?.name === name) close();
+        else show(name, btn);
+      });
+      btn.addEventListener("mouseenter", () => {
+        if (open && open.name !== name) show(name, btn);
+      });
+      el.appendChild(btn);
+    }
+  };
+  let pending = 0;
+  const off = commands.onChange(() => {
+    if (!pending) pending = requestAnimationFrame(() => {
+      pending = 0;
+      render();
+    });
+  });
+  const onDoc = (e) => {
+    if (open && !open.list.contains(e.target)) close();
+  };
+  const onKey = (e) => {
+    if (e.key === "Escape") close();
+  };
+  document.addEventListener("click", onDoc);
+  document.addEventListener("keydown", onKey);
+  render();
+  return {
+    el,
+    dispose() {
+      off();
+      if (pending) cancelAnimationFrame(pending);
+      document.removeEventListener("click", onDoc);
+      document.removeEventListener("keydown", onKey);
+      close();
+      el.remove();
+    }
+  };
+}
+function menuSlot(own) {
+  return own ?? document.querySelector("[data-tekto-menu-slot]");
+}
+
+// src/gui/ParamHistory.ts
+var same = (a, b) => a === b || JSON.stringify(a) === JSON.stringify(b);
+var ParamHistory = class {
+  constructor(store, limit = 200) {
+    this.store = store;
+    this.limit = limit;
+    this.past = [];
+    this.future = [];
+    this.applying = false;
+    this.last = this.snapshot();
+  }
+  snapshot() {
+    return JSON.parse(JSON.stringify(this.store.getAll() ?? {}));
+  }
+  /** Controls that appeared since (a sketch declared them) start from their current value: no step. */
+  adopt() {
+    const now = this.snapshot();
+    for (const k of Object.keys(now)) if (!(k in this.last)) this.last[k] = now[k];
+  }
+  /** Whether the values differ from the last step (a change made in code, not yet committed). */
+  dirty(now = this.snapshot()) {
+    return Object.keys(now).some((k) => k in this.last && !same(now[k], this.last[k]));
+  }
+  /** A change is complete: one undo step, if anything differs from the last one. */
+  commit() {
+    if (this.applying) return;
+    const now = this.snapshot();
+    const changed = this.dirty(now);
+    this.adopt();
+    if (!changed) return;
+    this.past.push(this.last);
+    if (this.past.length > this.limit) this.past.shift();
+    this.future = [];
+    this.last = { ...this.last, ...now };
+  }
+  canUndo() {
+    return this.past.length > 0 || this.dirty();
+  }
+  canRedo() {
+    return this.future.length > 0;
+  }
+  undo() {
+    this.commit();
+    const target = this.past.pop();
+    if (!target) return;
+    this.future.push(this.last);
+    this.restore(target);
+  }
+  redo() {
+    this.commit();
+    const target = this.future.pop();
+    if (!target) return;
+    this.past.push(this.last);
+    this.restore(target);
+  }
+  restore(target) {
+    this.apply(target);
+    this.last = { ...this.last, ...target };
+  }
+  /** Write a snapshot's values back; controls that no longer exist are left out. */
+  apply(target) {
+    this.applying = true;
+    try {
+      for (const [k, v] of Object.entries(target)) {
+        if (this.store.has(k) && !same(this.store.get(k), v)) this.store.set(k, v);
+      }
+    } finally {
+      this.applying = false;
+    }
+  }
+  /** The Edit menu's Undo and Redo, with their keys. */
+  commands() {
+    return [
+      { id: "edit.undo", label: "Undo", keys: "Mod+Z", group: "Edit", run: () => this.undo(), enabled: () => this.canUndo() },
+      { id: "edit.redo", label: "Redo", keys: ["Shift+Mod+Z", "Mod+Y"], group: "Edit", run: () => this.redo(), enabled: () => this.canRedo() }
+    ];
+  }
+};
+
 // src/io/download.ts
 function stampName(fileName, date = /* @__PURE__ */ new Date()) {
   const p = (n) => String(n).padStart(2, "0");
@@ -1628,6 +2282,10 @@ function doingOf(op, args) {
   switch (op) {
     case "apply":
       return typeof args.label === "string" && args.label ? args.label : "editing";
+    case "propose":
+      return `proposing: ${typeof args.label === "string" && args.label ? args.label : "a change"}`;
+    case "proposals":
+      return "reading the proposals";
     case "undo":
       return "undo";
     case "redo":
@@ -1711,6 +2369,13 @@ async function runRelayed(op, args, agent) {
       return needDoc().apply(args.patch, args.label);
     case "check":
       return needDoc().check();
+    case "propose": {
+      const label = String(args.label ?? "").trim();
+      if (!label) throw new Error("label is required: a few words saying what the proposal does");
+      return needDoc().propose(args.patch, label, agent, String(args.note ?? "").trim() || void 0);
+    }
+    case "proposals":
+      return needDoc().proposals(args.status === "all" ? "all" : "open");
     case "undo":
       return { undone: needDoc().undo() };
     case "redo":
@@ -1735,7 +2400,7 @@ async function runRelayed(op, args, agent) {
       return { viewPng: b.viewPng, camera: m.camera ?? null, scene: m.scene ?? null, logs: m.logs ?? [], errors: m.errors ?? [] };
     }
     default:
-      throw new Error(`unknown call "${op}" (info, records, apply, check, notes, noteReply, noteResolve, undo, redo, setParams, run, camera, section, steps, snapshot)`);
+      throw new Error(`unknown call "${op}" (info, records, apply, check, propose, proposals, notes, noteReply, noteResolve, undo, redo, setParams, run, camera, section, steps, snapshot)`);
   }
 }
 function paramSchema(store) {
@@ -1813,9 +2478,16 @@ function sketch2d(fn, config) {
 }
 var Sketch2DInstance = class {
   constructor(fn, config) {
+    this.logColors = ["", ""];
+    this._logHtml = "";
     // Param model: values in the ParamStore, placement in `items` — rendered
     // by the shared ControlPanel.
     this.store = new ParamStore({});
+    /** What the sketch can do, with its keys: Undo and Redo over its controls, to begin with. */
+    this.commands = new Commands();
+    this.history = new ParamHistory(this.store);
+    this.menus = null;
+    this.unbindKeys = null;
     this.items = /* @__PURE__ */ new Map();
     this.buttons = [];
     this.logs = [];
@@ -1826,6 +2498,12 @@ var Sketch2DInstance = class {
     this.pointerMoveFns = [];
     this.pointerUpFns = [];
     this.continuous = false;
+    this.drawQueued = 0;
+    /** Handle name → its position, and the `x, y` it was declared with (it follows those until dragged). */
+    this.handleState = /* @__PURE__ */ new Map();
+    /** The handles this run declared, in order. */
+    this.handleList = [];
+    this.dragging = null;
     this._prevFingerprint = "";
     this._baseLogCount = 0;
     this._onceRan = [];
@@ -1859,6 +2537,7 @@ var Sketch2DInstance = class {
       owner: this,
       harness: "sketch2d",
       store: this.store,
+      commands: this.commands,
       snapshot: (opts) => plainBundle({
         ...opts,
         title: this.config.title ?? "sketch2d",
@@ -1876,95 +2555,97 @@ var Sketch2DInstance = class {
   }
   // ── DOM ──
   buildDOM() {
-    const pw = this.config.panelWidth ?? 280;
-    const t = getTheme(this.config.theme);
+    const paper = this.config.style === "paper";
+    const t = getTheme(paper ? "paper" : this.config.theme);
+    const inShell = this.container.dataset.shell != null;
+    const showHeader = this.config.showHeader ?? (!paper && !inShell);
+    const headerH = showHeader ? 44 : 0;
     const root = document.createElement("div");
     root.style.cssText = `
-      display:grid; grid-template-columns:${pw}px 1fr; grid-template-rows:44px 1fr;
+      display:grid; grid-template-columns:280px 1fr; grid-template-rows:${showHeader ? "44px " : ""}1fr;
       height:100%; width:100%; overflow:hidden; position:relative;
       background:${t.bg}; color:${t.text};
       font-family:${t.font};
     `;
-    const header = document.createElement("div");
-    header.style.cssText = `
-      grid-column:1/-1; display:flex; align-items:center; padding:0 16px; gap:12px;
-      background:${t.panelBg}; border-bottom:1px solid ${t.border};
-    `;
-    header.innerHTML = `
-      <span style="font-weight:600;font-size:14px;color:${t.accent}">
-        &#x2B21; ${this.config.title ?? "Tekto Sketch2D"}
-      </span>
-      <span style="font-size:9px;padding:2px 6px;border-radius:3px;
-        background:${t.hoverBg};color:${t.accent}">2D</span>
-    `;
-    root.appendChild(header);
+    let menuHost = null;
+    if (showHeader) {
+      const header = document.createElement("div");
+      header.style.cssText = `
+        grid-column:1/-1; display:flex; align-items:center; padding:0 16px; gap:12px;
+        background:${t.panelBg}; border-bottom:1px solid ${t.border};
+      `;
+      header.innerHTML = `
+        <span style="font-weight:600;font-size:14px;color:${t.accent}">
+          &#x2B21; ${this.config.title ?? "Tekto Sketch2D"}
+        </span>
+        <span style="font-size:9px;padding:2px 6px;border-radius:3px;
+          background:${t.hoverBg};color:${t.accent}">2D</span>
+      `;
+      root.appendChild(header);
+      menuHost = header;
+    }
+    this.commands.add(this.history.commands());
+    this.unbindKeys = this.commands.bindKeys();
+    const slot = paper ? null : menuSlot(menuHost);
+    if (slot) {
+      this.menus = menuBar(this.commands, { theme: t });
+      slot.appendChild(this.menus.el);
+    }
     this.panelEl = document.createElement("div");
     this.panelEl.style.cssText = `
-      grid-column:1; grid-row:2; overflow-y:auto; overflow-x:hidden; padding:0;
+      grid-column:1; grid-row:${showHeader ? 2 : 1}; overflow-y:auto; overflow-x:hidden; padding:0;
       background:${t.panelBg}; border-right:1px solid ${t.border};
     `;
     root.appendChild(this.panelEl);
+    let frame = null;
     this.panel = new ControlPanel({
       store: this.store,
       theme: t,
       getButtons: () => this.buttons,
-      onAction: () => this.scheduleRerun()
+      onAction: () => this.scheduleRerun(),
+      onCommit: () => this.history.commit(),
+      // a finished change: one undo step
+      tabs: this.config.tabs,
+      onRender: () => frame?.fit()
     });
     this.panelEl.appendChild(this.panel.el);
     this.store.onChange(() => this.scheduleRerun());
-    const collapseKey = "tekto.sketch2d.collapsed";
-    let collapsed = false;
-    try {
-      collapsed = localStorage.getItem(collapseKey) === "1";
-    } catch {
-    }
-    const toggleBtn = document.createElement("button");
-    toggleBtn.style.cssText = `
-      margin-left:auto; cursor:pointer; width:28px; height:26px; border-radius:6px;
-      border:1px solid ${t.border}; background:transparent; color:${t.text};
-      font-size:15px; line-height:1; padding:0; flex:none;
-    `;
-    const applyCollapse = () => {
-      root.style.gridTemplateColumns = collapsed ? "0 1fr" : `${pw}px 1fr`;
-      this.panelEl.style.display = collapsed ? "none" : "";
-      toggleBtn.textContent = collapsed ? "\u203A" : "\u2039";
-      toggleBtn.title = collapsed ? "Show controls" : "Hide controls";
-    };
-    toggleBtn.addEventListener("click", () => {
-      collapsed = !collapsed;
-      try {
-        localStorage.setItem(collapseKey, collapsed ? "1" : "0");
-      } catch {
-      }
-      applyCollapse();
-      this.resizeCanvas();
-    });
-    header.appendChild(toggleBtn);
+    const view = document.createElement("div");
+    view.style.cssText = `grid-column:2;grid-row:${showHeader ? 2 : 1};display:flex;flex-direction:column;min-width:0;min-height:0;`;
     const vpWrap = document.createElement("div");
-    vpWrap.style.cssText = "grid-column:2;grid-row:2;position:relative;overflow:hidden;";
+    vpWrap.style.cssText = "flex:1;min-height:0;position:relative;overflow:hidden;";
     this.canvas.style.cssText = `
       width:100%; height:100%; display:block;
-      background:${this.config.background ?? (t.isDark ? "#0a0a10" : "#ffffff")};
+      background:${this.config.background ?? (t.isDark ? "#0b0b0b" : "#ffffff")};
     `;
     vpWrap.appendChild(this.canvas);
     this.logEl = document.createElement("div");
+    this.logEl.dataset.tektoStatus = "";
     this.logEl.style.cssText = `
-      position:absolute; bottom:12px; left:12px;
-      padding:8px 12px; border-radius:6px;
-      background:rgba(7,8,14,.85); backdrop-filter:blur(8px);
-      font-size:11px; line-height:1.7; color:${t.textDim};
-      pointer-events:none; max-width:300px;
-      border:1px solid rgba(22,24,42,.8); display:none;
+      flex:none; display:none; flex-wrap:wrap; column-gap:20px; padding:5px 12px;
+      background:${t.panelBg}; border-top:1px solid ${t.border};
+      font-size:11px; line-height:1.55; color:${t.text};
     `;
-    vpWrap.appendChild(this.logEl);
-    root.appendChild(vpWrap);
+    this.logColors = [t.textFaint, t.text];
+    view.append(vpWrap, this.logEl);
+    root.appendChild(view);
     if (this.container === document.body) {
       this.container.style.margin = "0";
       this.container.style.height = "100vh";
       this.container.style.overflow = "hidden";
     }
     this.container.appendChild(root);
-    applyCollapse();
+    frame = panelFrame({
+      root,
+      panelEl: this.panelEl,
+      theme: t,
+      top: headerH,
+      width: this.config.panelWidth ?? (paper ? "auto" : 280),
+      // A paper figure has no bar: its title is the panel's name (a shell names it already).
+      title: this.config.panelTitle ?? (paper ? inShell ? "" : this.config.title ?? "" : "Parameters"),
+      storageKey: this.config.title ?? "sketch2d",
+      preferred: () => this.panel.preferredWidth()
+    });
     const ro = new ResizeObserver(() => this.resizeCanvas());
     ro.observe(vpWrap);
     this.resizeCanvas();
@@ -1987,25 +2668,57 @@ var Sketch2DInstance = class {
       const rect = this.canvas.getBoundingClientRect();
       return { x: e.clientX - rect.left, y: e.clientY - rect.top, id: e.pointerId };
     };
+    const run = (fns, p) => {
+      if (!fns.length) return;
+      for (const fn of fns) fn(p);
+      this.queueDraw();
+    };
     this.canvas.addEventListener("pointerdown", (e) => {
       const p = sample(e);
       this._mouseX = p.x;
       this._mouseY = p.y;
       this._mousePressed = true;
-      for (const fn of this.pointerDownFns) fn(p);
+      const hit = this.handleAt(p.x, p.y);
+      if (hit) {
+        this.dragging = { name: hit.name, id: p.id };
+        try {
+          this.canvas.setPointerCapture(p.id);
+        } catch {
+        }
+        this.canvas.style.cursor = "grabbing";
+        this.queueDraw();
+        return;
+      }
+      run(this.pointerDownFns, p);
     });
     this.canvas.addEventListener("pointermove", (e) => {
       const p = sample(e);
       this._mouseX = p.x;
       this._mouseY = p.y;
-      for (const fn of this.pointerMoveFns) fn(p);
+      if (this.dragging && this.dragging.id === p.id) {
+        const h = this.handleList.find((x) => x.name === this.dragging.name);
+        const st = this.handleState.get(this.dragging.name);
+        if (h && st) {
+          st.value = this.fromScreen(p.x, p.y, h.opts);
+          this.scheduleRerun();
+        }
+        return;
+      }
+      if (this.handleList.length) this.canvas.style.cursor = this.handleAt(p.x, p.y) ? "grab" : "";
+      run(this.pointerMoveFns, p);
     });
     const onUp = (e) => {
       const p = sample(e);
       this._mouseX = p.x;
       this._mouseY = p.y;
       this._mousePressed = false;
-      for (const fn of this.pointerUpFns) fn(p);
+      if (this.dragging && this.dragging.id === p.id) {
+        this.dragging = null;
+        this.canvas.style.cursor = this.handleAt(p.x, p.y) ? "grab" : "";
+        this.queueDraw();
+        return;
+      }
+      run(this.pointerUpFns, p);
     };
     this.canvas.addEventListener("pointerup", onUp);
     this.canvas.addEventListener("pointercancel", onUp);
@@ -2020,6 +2733,7 @@ var Sketch2DInstance = class {
     this.pointerDownFns = [];
     this.pointerMoveFns = [];
     this.pointerUpFns = [];
+    this.handleList = [];
     this._onceSeq = 0;
     const usedParams = /* @__PURE__ */ new Set();
     const lab = this.buildLab(usedParams);
@@ -2042,6 +2756,7 @@ var Sketch2DInstance = class {
       this._prevFingerprint = fingerprint;
       this.panel.render([...this.items.values()]);
     }
+    this.history.adopt();
     this._baseLogCount = this.logs.length;
     this.updateLog();
     this.redraw();
@@ -2055,6 +2770,69 @@ var Sketch2DInstance = class {
       this.drawFn(this.ctx, w, h);
       this.ctx.restore();
     }
+    if (w > 0 && h > 0) this.drawHandles();
+  }
+  /** Draw on the next frame, once however often it is asked for. */
+  queueDraw() {
+    if (this.drawQueued || this.disposed) return;
+    this.drawQueued = requestAnimationFrame(() => {
+      this.drawQueued = 0;
+      if (!this.continuous) {
+        this.redraw();
+        this.updateLog();
+      }
+    });
+  }
+  // ── Drag handles ──
+  viewOf(opts) {
+    return typeof opts.view === "function" ? opts.view() : opts.view ?? null;
+  }
+  toScreen(p, opts) {
+    const v = this.viewOf(opts);
+    return v ? new Vec2(v.x + p.x * v.scale, v.y - p.y * v.scale) : p;
+  }
+  fromScreen(x, y, opts) {
+    const v = this.viewOf(opts);
+    const p = v ? new Vec2((x - v.x) / v.scale, (v.y - y) / v.scale) : new Vec2(x, y);
+    if (!opts.constrain) return p;
+    const [cx, cy] = opts.constrain(p.x, p.y);
+    return new Vec2(cx, cy);
+  }
+  /** The topmost handle within reach of a canvas point, or null. */
+  handleAt(x, y) {
+    for (let i = this.handleList.length - 1; i >= 0; i--) {
+      const h = this.handleList[i];
+      const st = this.handleState.get(h.name);
+      if (!st) continue;
+      const q = this.toScreen(st.value, h.opts);
+      if (Math.hypot(q.x - x, q.y - y) <= (h.opts.size ?? 6) + 5) return h;
+    }
+    return null;
+  }
+  drawHandles() {
+    if (!this.handleList.length) return;
+    const ctx = this.ctx;
+    ctx.save();
+    for (const h of this.handleList) {
+      const st = this.handleState.get(h.name);
+      if (!st) continue;
+      const q = this.toScreen(st.value, h.opts);
+      const r = h.opts.size ?? 6;
+      const active = this.dragging?.name === h.name;
+      ctx.beginPath();
+      ctx.arc(q.x, q.y, active ? r + 1.5 : r, 0, Math.PI * 2);
+      ctx.fillStyle = h.opts.color ?? "#ffffff";
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = "#1a1a1a";
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(q.x, q.y, (active ? r + 1.5 : r) + 1.5, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(255,255,255,.85)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+    ctx.restore();
   }
   scheduleRerun() {
     if (this._running || this.rerunTimer) return;
@@ -2084,13 +2862,13 @@ var Sketch2DInstance = class {
         return makeParam(
           key,
           { type: "float", min, max, default: def, step: opts?.step ?? (max - min) / 100, label },
-          { key, group }
+          { key, group, tab: opts?.tab }
         );
       },
       toggle(label, def = false, opts) {
         const group = opts?.group ?? "Parameters";
         const key = `toggle:${opts?.group ?? ""}:${label}`;
-        return makeParam(key, { type: "bool", default: def, label }, { key, group });
+        return makeParam(key, { type: "bool", default: def, label }, { key, group, tab: opts?.tab });
       },
       select(label, options, def, opts) {
         const group = opts?.group ?? "Parameters";
@@ -2098,19 +2876,45 @@ var Sketch2DInstance = class {
         return makeParam(
           key,
           { type: "select", options, default: def ?? options[0], label },
-          { key, group }
+          { key, group, tab: opts?.tab }
         );
       },
       colorPicker(label, def = "#38d9a9", opts) {
         const group = opts?.group ?? "Display";
         const key = `color:${opts?.group ?? ""}:${label}`;
-        return makeParam(key, { type: "color", default: def, label }, { key, group });
+        return makeParam(key, { type: "color", default: def, label }, { key, group, tab: opts?.tab });
       },
       button(label, action, opts) {
-        self.buttons.push({ label, action, group: opts?.group ?? "Actions" });
+        self.buttons.push({ label, action, group: opts?.group ?? "Actions", tab: opts?.tab });
       },
       draw(fn) {
         self.drawFn = fn;
+      },
+      redraw() {
+        self.queueDraw();
+      },
+      dragHandle(x, y, opts = {}) {
+        const name = opts.name ?? `handle:${self.handleList.length}`;
+        if (self.handleList.some((h) => h.name === name)) throw new Error(`lab.dragHandle: two handles named "${name}"; give each its own name`);
+        const declared = new Vec2(x, y);
+        let st = self.handleState.get(name);
+        if (!st || self.dragging?.name !== name && st.declared.distTo(declared) > 1e-12) {
+          st = { value: declared, declared };
+          self.handleState.set(name, st);
+        }
+        self.handleList.push({ name, opts });
+        return {
+          get value() {
+            return self.handleState.get(name)?.value ?? declared;
+          },
+          set(v) {
+            const cur = self.handleState.get(name);
+            if (cur) {
+              cur.value = new Vec2(v.x, v.y);
+              self.scheduleRerun();
+            }
+          }
+        };
       },
       animate(fn) {
         self.animateFn = fn;
@@ -2190,14 +2994,14 @@ var Sketch2DInstance = class {
     };
   }
   updateLog() {
-    if (this.logs.length === 0) {
-      this.logEl.style.display = "none";
-      return;
-    }
-    this.logEl.style.display = "block";
-    this.logEl.innerHTML = this.logs.map(
-      (l) => `<div style="display:flex;gap:8px;"><span style="color:#4a5070">${l.label}</span><span style="color:#b8bdd4">${l.value}</span></div>`
+    const [dim, ink] = this.logColors;
+    const html = this.logs.map(
+      (l) => `<div style="display:flex;gap:8px;white-space:nowrap;"><span style="color:${dim}">${l.label}</span><span style="color:${ink}">${l.value}</span></div>`
     ).join("");
+    if (html === this._logHtml) return;
+    this._logHtml = html;
+    this.logEl.style.display = this.logs.length ? "flex" : "none";
+    this.logEl.innerHTML = html;
   }
   // ── Animation Loop ──
   startLoop() {
@@ -2227,7 +3031,10 @@ var Sketch2DInstance = class {
   /** Tear down the sketch */
   dispose() {
     this.disposed = true;
+    if (this.drawQueued) cancelAnimationFrame(this.drawQueued);
     this.bridge?.dispose();
+    this.unbindKeys?.();
+    this.menus?.dispose();
     this.panel.dispose();
     this.container.innerHTML = "";
   }
@@ -3958,6 +4765,357 @@ function aciFromHex(hex) {
   return best;
 }
 
+// src/core/drawing/sheetRaster.ts
+var NAMED = { black: "#000000", white: "#ffffff", red: "#ff0000", green: "#008000", blue: "#0000ff", grey: "#808080", gray: "#808080" };
+function parseColor(c) {
+  let s = (NAMED[c.toLowerCase()] ?? c).trim();
+  if (/^#[0-9a-f]{3}$/i.test(s)) s = `#${s[1]}${s[1]}${s[2]}${s[2]}${s[3]}${s[3]}`;
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i.exec(s);
+  return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [0, 0, 0];
+}
+var GLYPHS = {
+  A: "0,0 2,6 4,0;0.67,2 3.33,2",
+  B: "0,0 0,6 3,6 4,5 4,4 3,3 0,3;3,3 4,2 4,1 3,0 0,0",
+  C: "4,5 3,6 1,6 0,5 0,1 1,0 3,0 4,1",
+  D: "0,0 0,6 2.5,6 4,4.5 4,1.5 2.5,0 0,0",
+  E: "4,6 0,6 0,0 4,0;0,3 3,3",
+  F: "4,6 0,6 0,0;0,3 3,3",
+  G: "4,5 3,6 1,6 0,5 0,1 1,0 3,0 4,1 4,3 2,3",
+  H: "0,0 0,6;4,0 4,6;0,3 4,3",
+  I: "2,0 2,6;1,0 3,0;1,6 3,6",
+  J: "0,1 1,0 2.5,0 3.5,1 3.5,6",
+  K: "0,0 0,6;4,6 0,2.5;1.3,3.6 4,0",
+  L: "0,6 0,0 4,0",
+  M: "0,0 0,6 2,2.5 4,6 4,0",
+  N: "0,0 0,6 4,0 4,6",
+  O: "1,0 0,1 0,5 1,6 3,6 4,5 4,1 3,0 1,0",
+  P: "0,0 0,6 3,6 4,5 4,4 3,3 0,3",
+  Q: "1,0 0,1 0,5 1,6 3,6 4,5 4,1 3,0 1,0;2.5,1.5 4,0",
+  R: "0,0 0,6 3,6 4,5 4,4 3,3 0,3;2,3 4,0",
+  S: "4,5 3,6 1,6 0,5 0,4 1,3 3,3 4,2 4,1 3,0 1,0 0,1",
+  T: "0,6 4,6;2,6 2,0",
+  U: "0,6 0,1 1,0 3,0 4,1 4,6",
+  V: "0,6 2,0 4,6",
+  W: "0,6 1,0 2,4 3,0 4,6",
+  X: "0,0 4,6;0,6 4,0",
+  Y: "0,6 2,3 4,6;2,3 2,0",
+  Z: "0,6 4,6 0,0 4,0",
+  "0": "1.5,0 0.5,1.5 0.5,4.5 1.5,6 2.5,6 3.5,4.5 3.5,1.5 2.5,0 1.5,0",
+  "1": "1,4.5 2.5,6 2.5,0",
+  "2": "0,5 1,6 3,6 4,5 4,3.8 0,0 4,0",
+  "3": "0,5 1,6 3,6 4,5 4,4 3,3 1.5,3;3,3 4,2 4,1 3,0 1,0 0,1",
+  "4": "3,0 3,6 0,2 4,2",
+  "5": "4,6 0,6 0,3.5 3,3.5 4,2.5 4,1 3,0 1,0 0,1",
+  "6": "3.5,6 1.5,6 0,4 0,1 1,0 3,0 4,1 4,2.5 3,3.5 1,3.5 0,2.5",
+  "7": "0,6 4,6 1.5,0",
+  "8": "1,3 0,4 0,5 1,6 3,6 4,5 4,4 3,3 1,3 0,2 0,1 1,0 3,0 4,1 4,2 3,3",
+  "9": "0.5,0 2.5,0 4,2 4,5 3,6 1,6 0,5 0,3.5 1,2.5 3,2.5 4,3.5",
+  a: "4,4 4,0;4,3 3,4 1,4 0,3 0,1 1,0 3,0 4,1",
+  b: "0,6 0,0;0,3 1,4 3,4 4,3 4,1 3,0 1,0 0,1",
+  c: "4,3 3,4 1,4 0,3 0,1 1,0 3,0 4,1",
+  d: "4,6 4,0;4,3 3,4 1,4 0,3 0,1 1,0 3,0 4,1",
+  e: "0,2 4,2 4,3 3,4 1,4 0,3 0,1 1,0 3,0 4,0.8",
+  f: "3.5,6 2.5,6 1.5,5 1.5,0;0.5,4 3,4",
+  g: "4,4 4,-1 3,-2 1,-2 0,-1.2;4,3 3,4 1,4 0,3 0,1 1,0 3,0 4,1",
+  h: "0,6 0,0;0,3 1,4 3,4 4,3 4,0",
+  i: "2,4 2,0;2,5.5",
+  j: "2.5,4 2.5,-1 1.5,-2 0.5,-2;2.5,5.5",
+  k: "0,6 0,0;3.5,4 0,1.5;1.2,2.4 3.8,0",
+  l: "2,6 2,0",
+  m: "0,4 0,0;0,3 1,4 1.5,4 2,3 2,0;2,3 3,4 3.5,4 4,3 4,0",
+  n: "0,4 0,0;0,3 1,4 3,4 4,3 4,0",
+  o: "1,0 0,1 0,3 1,4 3,4 4,3 4,1 3,0 1,0",
+  p: "0,4 0,-2;0,3 1,4 3,4 4,3 4,1 3,0 1,0 0,1",
+  q: "4,4 4,-2;4,3 3,4 1,4 0,3 0,1 1,0 3,0 4,1",
+  r: "0.5,4 0.5,0;0.5,3 1.5,4 3,4 3.5,3.5",
+  s: "4,3.2 3,4 1,4 0,3.2 0,2.6 1,2 3,2 4,1.4 4,0.8 3,0 1,0 0,0.8",
+  t: "1.5,6 1.5,1 2.5,0 3.5,0;0.5,4 3,4",
+  u: "0,4 0,1 1,0 3,0 4,1;4,4 4,0",
+  v: "0,4 2,0 4,4",
+  w: "0,4 1,0 2,3 3,0 4,4",
+  x: "0,0 4,4;0,4 4,0",
+  y: "0,4 2,0;4,4 1,-2 0,-2",
+  z: "0,4 4,4 0,0 4,0",
+  ".": "2,0.1",
+  ",": "2,0.3 2,0 1.4,-0.9",
+  ":": "2,0.1;2,3.2",
+  ";": "2,0.3 2,0 1.4,-0.9;2,3.2",
+  "-": "0.8,2.5 3.2,2.5",
+  "\u2013": "0,2.5 4,2.5",
+  "\u2014": "0,2.5 4,2.5",
+  "+": "0.5,2.5 3.5,2.5;2,1 2,4",
+  "/": "0.5,0 3.5,6",
+  "\\": "0.5,6 3.5,0",
+  "(": "2.8,6.5 1.5,5 1.5,1 2.8,-0.5",
+  ")": "1.2,6.5 2.5,5 2.5,1 1.2,-0.5",
+  "[": "3,6.5 1.5,6.5 1.5,-0.5 3,-0.5",
+  "]": "1,6.5 2.5,6.5 2.5,-0.5 1,-0.5",
+  "'": "2,6 2,4.8",
+  '"': "1.3,6 1.3,4.8;2.7,6 2.7,4.8",
+  "=": "0.5,3.3 3.5,3.3;0.5,1.7 3.5,1.7",
+  "_": "0,-0.6 4,-0.6",
+  "*": "2,2 2,5;0.7,2.75 3.3,4.25;0.7,4.25 3.3,2.75",
+  "#": "1.2,0.5 1.8,5.5;2.6,0.5 3.2,5.5;0.3,2 3.8,2;0.4,4 3.9,4",
+  "%": "0.5,0 3.5,6;0.3,5.9 1.3,5.9 1.3,4.6 0.3,4.6 0.3,5.9;2.7,1.4 3.7,1.4 3.7,0.1 2.7,0.1 2.7,1.4",
+  "\xB0": "1.3,6 2.7,6 2.7,4.6 1.3,4.6 1.3,6",
+  "\xB2": "0.8,5.6 1.3,6 2.4,6 2.9,5.6 2.9,5 0.8,3.4 3,3.4",
+  "<": "3.5,4.5 0.5,2.5 3.5,0.5",
+  ">": "0.5,4.5 3.5,2.5 0.5,0.5",
+  "!": "2,6 2,1.6;2,0.1",
+  "?": "0.3,5 1.2,6 2.8,6 3.7,5 3.7,4 2,2.6 2,1.6;2,0.1",
+  "&": "4,0 1,4.5 1,5.4 1.8,6 2.6,5.4 2.6,4.6 0,2 0,1 1,0 2.2,0 4,2.2",
+  "\xD7": "0.7,1 3.3,4;0.7,4 3.3,1",
+  "\u2192": "0,2.5 4,2.5;2.8,3.7 4,2.5 2.8,1.3",
+  "\xB7": "2,2.6",
+  "\xDF": "0,0 0,5 1,6 2.5,6 3.3,5 3.3,4 2,3 3.5,2.4 3.8,1.2 3,0 1.6,0",
+  " ": ""
+};
+var UNKNOWN = "0.5,0 3.5,0 3.5,5 0.5,5 0.5,0";
+var DOTS_LOW = "1,5.5;3,5.5";
+var DOTS_HIGH = "1,7.1;3,7.1";
+var NARROW = "iIljt.,:;'!|()[]";
+var parsed = /* @__PURE__ */ new Map();
+function strokesOf(def) {
+  let s = parsed.get(def);
+  if (!s) {
+    s = def ? def.split(";").map((line) => line.trim().split(/[ ,]+/).map(Number)) : [];
+    parsed.set(def, s);
+  }
+  return s;
+}
+function textStrokes(text) {
+  const u = 0.72 / 6, glyphW = 0.8, adv = 0.6, inset = (adv - 4 * glyphW * u) / 2;
+  const strokes = [];
+  let x = 0, last = "", lastW = adv;
+  for (const ch of text.normalize("NFD")) {
+    const code = ch.codePointAt(0);
+    if (code >= 768 && code <= 879) {
+      if (code === 776) for (const s of strokesOf(last === last.toUpperCase() && last !== last.toLowerCase() ? DOTS_HIGH : DOTS_LOW)) {
+        strokes.push(s.map((v, i) => i % 2 === 0 ? x - (adv + lastW) / 2 + inset + v * glyphW * u : v * u));
+      }
+      continue;
+    }
+    const w = NARROW.includes(ch) ? 0.36 : ch === " " ? 0.45 : adv;
+    for (const s of strokesOf(GLYPHS[ch] ?? UNKNOWN)) strokes.push(s.map((v, i) => i % 2 === 0 ? x + inset - (adv - w) / 2 + v * glyphW * u : v * u));
+    x += w;
+    lastW = w;
+    last = ch;
+  }
+  return { strokes, advance: x };
+}
+function rasterizeSheet(sheet, opts = {}) {
+  const prims = sheet.explode();
+  const b = boundsOf(prims) ?? { min: { x: 0, y: 0 }, max: { x: 1, y: 1 } };
+  const mmPerUnit = 1e3 / sheet.scale;
+  const margin = opts.margin ?? 8;
+  const wMm = Math.max(1e-6, (b.max.x - b.min.x) * mmPerUnit) + 2 * margin;
+  const hMm = Math.max(1e-6, (b.max.y - b.min.y) * mmPerUnit) + 2 * margin;
+  const wantW = Math.max(16, Math.round(opts.width ?? 1600));
+  const pxPerMm = Math.min(wantW / wMm, (opts.maxHeight ?? 2400) / hMm);
+  const width = Math.max(1, Math.round(wMm * pxPerMm)), height = Math.max(1, Math.round(hMm * pxPerMm));
+  const ss = width * height * 9 <= 24e6 ? 3 : 2;
+  const W = width * ss, H = height * ss;
+  const k = mmPerUnit * pxPerMm * ss;
+  const X = (p) => (p.x - b.min.x) * k + margin * pxPerMm * ss;
+  const Y = (p) => (b.max.y - p.y) * k + margin * pxPerMm * ss;
+  const mm = (v) => v * pxPerMm * ss;
+  const buf = new Uint8Array(W * H * 3);
+  const bg = parseColor(opts.background ?? "#ffffff");
+  for (let i = 0; i < buf.length; i += 3) {
+    buf[i] = bg[0];
+    buf[i + 1] = bg[1];
+    buf[i + 2] = bg[2];
+  }
+  const fill = (rings, c) => {
+    let y0 = Infinity, y1 = -Infinity;
+    for (const r of rings) for (let i = 1; i < r.length; i += 2) {
+      y0 = Math.min(y0, r[i]);
+      y1 = Math.max(y1, r[i]);
+    }
+    const ya = Math.max(0, Math.floor(y0)), yb = Math.min(H - 1, Math.ceil(y1));
+    const xs = [];
+    for (let y = ya; y <= yb; y++) {
+      const sy = y + 0.5;
+      xs.length = 0;
+      for (const r of rings) {
+        const n2 = r.length / 2;
+        for (let i = 0, j = n2 - 1; i < n2; j = i++) {
+          const ay = r[j * 2 + 1], by = r[i * 2 + 1];
+          if (ay <= sy === by <= sy) continue;
+          xs.push(r[j * 2] + (sy - ay) / (by - ay) * (r[i * 2] - r[j * 2]));
+        }
+      }
+      xs.sort((p, q) => p - q);
+      for (let e = 0; e + 1 < xs.length; e += 2) {
+        const xa = Math.max(0, Math.ceil(xs[e] - 0.5)), xb = Math.min(W - 1, Math.floor(xs[e + 1] - 0.5));
+        for (let x = xa, o = (y * W + xa) * 3; x <= xb; x++, o += 3) {
+          buf[o] = c[0];
+          buf[o + 1] = c[1];
+          buf[o + 2] = c[2];
+        }
+      }
+    }
+  };
+  const segment = (ax, ay, bx, by, w, c, flat = false) => {
+    let dx = bx - ax, dy = by - ay;
+    const len = Math.hypot(dx, dy);
+    const h = w / 2;
+    if (len < 1e-9) {
+      fill([[ax - h, ay - h, ax + h, ay - h, ax + h, ay + h, ax - h, ay + h]], c);
+      return;
+    }
+    dx = dx / len * h;
+    dy = dy / len * h;
+    const ex = flat ? 0 : dx, ey = flat ? 0 : dy;
+    fill([[ax - ex + dy, ay - ey - dx, bx + ex + dy, by + ey - dx, bx + ex - dy, by + ey + dx, ax - ex - dy, ay - ey + dx]], c);
+  };
+  const stroke = (pts, w, c, pattern) => {
+    if (pts.length === 2) {
+      segment(pts[0], pts[1], pts[0], pts[1], w, c);
+      return;
+    }
+    let phase = 0, idx = 0;
+    for (let i = 0; i + 3 < pts.length; i += 2) {
+      const ax = pts[i], ay = pts[i + 1], bx = pts[i + 2], by = pts[i + 3];
+      if (!pattern) {
+        segment(ax, ay, bx, by, w, c);
+        continue;
+      }
+      const len = Math.hypot(bx - ax, by - ay);
+      let t = 0;
+      while (t < len - 1e-9) {
+        const step = Math.min(pattern[idx] - phase, len - t);
+        if (idx % 2 === 0) segment(ax + (bx - ax) * t / len, ay + (by - ay) * t / len, ax + (bx - ax) * (t + step) / len, ay + (by - ay) * (t + step) / len, w, c, true);
+        t += step;
+        phase += step;
+        if (phase >= pattern[idx] - 1e-9) {
+          phase = 0;
+          idx = (idx + 1) % pattern.length;
+        }
+      }
+    }
+  };
+  const penOf = (weightMm) => Math.max(ss * 0.8, mm(weightMm));
+  const dashOf = (dash) => dash === "solid" ? void 0 : DASH_PATTERNS[dash].map((d) => Math.max(1, mm(d)));
+  const arcPoints = (center, radius, startDeg, sweepDeg) => {
+    const steps = Math.max(8, Math.ceil(Math.abs(sweepDeg) / 360 * Math.max(24, radius * k * 0.5)));
+    const out = [];
+    for (let i = 0; i <= steps; i++) {
+      const a = (startDeg + sweepDeg * i / steps) * Math.PI / 180;
+      const p = { x: center.x + radius * Math.cos(a), y: center.y + radius * Math.sin(a) };
+      out.push(X(p), Y(p));
+    }
+    return out;
+  };
+  for (const p of prims) {
+    if (p.kind === "fill") {
+      fill(p.rings.map((r) => r.flatMap((q) => [X(q), Y(q)])), parseColor(p.color));
+    } else if (p.kind === "polyline") {
+      const pts = p.points.flatMap((q) => [X(q), Y(q)]);
+      if (p.closed && p.points.length > 2) pts.push(pts[0], pts[1]);
+      stroke(pts, penOf(p.style.weight), parseColor(p.style.color), dashOf(p.style.dash));
+    } else if (p.kind === "circle") {
+      stroke(arcPoints(p.center, p.radius, 0, 360), penOf(p.style.weight), parseColor(p.style.color), dashOf(p.style.dash));
+    } else if (p.kind === "arc") {
+      let sweep = (p.endDeg - p.startDeg) % 360;
+      if (sweep <= 0) sweep += 360;
+      stroke(arcPoints(p.center, p.radius, p.startDeg, sweep), penOf(p.style.weight), parseColor(p.style.color), dashOf(p.style.dash));
+    } else {
+      const { strokes, advance } = textStrokes(p.text);
+      const size = p.height * k;
+      const ox = p.align === "left" ? 0 : p.align === "center" ? -advance / 2 : -advance;
+      const oy = p.baseline === "bottom" ? 0 : p.baseline === "middle" ? -0.36 : -0.72;
+      const r = p.rotation * Math.PI / 180, cos = Math.cos(r), sin = Math.sin(r);
+      const ax = X(p.at), ay = Y(p.at);
+      const pen = Math.max(ss * 0.9, size * 0.085);
+      const c = parseColor(p.style.color);
+      for (const s of strokes) {
+        const pts = [];
+        for (let i = 0; i < s.length; i += 2) {
+          const x = (s[i] + ox) * size, y = (s[i + 1] + oy) * size;
+          pts.push(ax + x * cos - y * sin, ay - (x * sin + y * cos));
+        }
+        stroke(pts, pen, c);
+      }
+    }
+  }
+  const data = new Uint8ClampedArray(width * height * 4);
+  const n = ss * ss;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let r = 0, g = 0, bl = 0;
+      for (let j = 0; j < ss; j++) {
+        let o2 = ((y * ss + j) * W + x * ss) * 3;
+        for (let i = 0; i < ss; i++, o2 += 3) {
+          r += buf[o2];
+          g += buf[o2 + 1];
+          bl += buf[o2 + 2];
+        }
+      }
+      const o = (y * width + x) * 4;
+      data[o] = r / n;
+      data[o + 1] = g / n;
+      data[o + 2] = bl / n;
+      data[o + 3] = 255;
+    }
+  }
+  return { width, height, data, toPixel: (p) => ({ x: X(p) / ss, y: Y(p) / ss }) };
+}
+var crcTable = null;
+function crc32(bytes) {
+  if (!crcTable) {
+    crcTable = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c2 = n;
+      for (let i = 0; i < 8; i++) c2 = c2 & 1 ? 3988292384 ^ c2 >>> 1 : c2 >>> 1;
+      crcTable[n] = c2 >>> 0;
+    }
+  }
+  let c = 4294967295;
+  for (let i = 0; i < bytes.length; i++) c = crcTable[(c ^ bytes[i]) & 255] ^ c >>> 8;
+  return (c ^ 4294967295) >>> 0;
+}
+async function encodePNG(image) {
+  const { width, height, data } = image;
+  const raw = new Uint8Array(height * (1 + width * 3));
+  for (let y = 0, o2 = 0; y < height; y++) {
+    raw[o2++] = 0;
+    for (let x = 0, i = y * width * 4; x < width; x++, i += 4) {
+      raw[o2++] = data[i];
+      raw[o2++] = data[i + 1];
+      raw[o2++] = data[i + 2];
+    }
+  }
+  if (typeof CompressionStream === "undefined") throw new Error("encodePNG needs CompressionStream (a browser, or Node 18 or later)");
+  const packed = new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new CompressionStream("deflate"))).arrayBuffer());
+  const chunk = (type, body) => {
+    const out2 = new Uint8Array(12 + body.length);
+    const view = new DataView(out2.buffer);
+    view.setUint32(0, body.length);
+    for (let i = 0; i < 4; i++) out2[4 + i] = type.charCodeAt(i);
+    out2.set(body, 8);
+    view.setUint32(8 + body.length, crc32(out2.subarray(4, 8 + body.length)));
+    return out2;
+  };
+  const head = new Uint8Array(13);
+  const hv = new DataView(head.buffer);
+  hv.setUint32(0, width);
+  hv.setUint32(4, height);
+  head[8] = 8;
+  head[9] = 2;
+  const parts = [new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]), chunk("IHDR", head), chunk("IDAT", packed), chunk("IEND", new Uint8Array(0))];
+  const out = new Uint8Array(parts.reduce((sum, p) => sum + p.length, 0));
+  let o = 0;
+  for (const p of parts) {
+    out.set(p, o);
+    o += p.length;
+  }
+  return out;
+}
+async function sheetToPNG(sheet, opts = {}) {
+  return encodePNG(rasterizeSheet(sheet, opts));
+}
+
 // src/core/drawing/Sheet.ts
 var DASH_PATTERNS = {
   dashed: [3, 1.5],
@@ -3966,6 +5124,29 @@ var DASH_PATTERNS = {
   center: [6, 1.2, 1, 1.2]
 };
 var DEFAULT_STYLE = { color: "#000000", weight: 0.25, dash: "solid" };
+var TEXT_MM = 2;
+var NOTE_MM = 1.8;
+var TITLE_MM = 3.5;
+var DRAWING_PALETTE = {
+  /** Lines and text. */
+  ink: "#1a1a1a",
+  /** Dimensions, levels, leaders, secondary text. */
+  annotation: "#6b6b6b",
+  /** Hidden and overhead lines, axes. */
+  faint: "#a6a6a6",
+  /** What is cut, in general (pale blue). */
+  cut: "#cfe2f2",
+  /** Cut steel or metal. */
+  steel: "#9fb4c7",
+  /** Cut concrete or masonry (pale green). */
+  concrete: "#dbe9d2",
+  /** Cut timber. */
+  timber: "#ead9bd",
+  /** Poché in greyscale. */
+  poche: "#d4d4d4",
+  /** The one strong colour: loads, forces, what changed. */
+  accent: "#d0453b"
+};
 var SheetView = class {
   /** @internal — views come from `sheet.view(name)`. */
   constructor(sheet, name, opts) {
@@ -4023,14 +5204,15 @@ var SheetView = class {
     return this;
   }
   /** A leader: an arrow at `points[0]` (what it points at), lines through the rest, and the
-   *  text beside the last point. */
+   *  text beside the last point, level with it. A leader that does not end level gets a short
+   *  level shoulder (3 mm), so its text always continues a level line. */
   leader(points, text, opts = {}) {
     const pts = points.map((p) => this.local(p));
     if (pts.length >= 2) this.entities.push({ t: "leader", points: pts, text, o: opts });
     return this;
   }
-  /** A level mark: a triangle standing on the level at `at`, and the level in metres with
-   *  its sign ("+2.450", "±0.000"). */
+  /** A level mark: a triangle with its tip on the level at `at`, a level line under it, and on
+   *  that line the level in metres with its sign ("+2.450", "±0.000"). */
   level(at, opts = {}) {
     this.entities.push({ t: "level", at: this.local(at), o: opts });
     return this;
@@ -4063,6 +5245,7 @@ var Sheet = class {
   constructor(opts = {}) {
     this.layerStyles = /* @__PURE__ */ new Map();
     this.views = /* @__PURE__ */ new Map();
+    this.block = null;
     this.scale = opts.scale ?? 1;
     if (!(this.scale > 0)) throw new Error(`Sheet: scale must be positive (50 = 1:50), got ${opts.scale}`);
     for (const [name, style] of Object.entries(opts.layers ?? {})) this.layerStyles.set(name, style);
@@ -4083,6 +5266,11 @@ var Sheet = class {
       this.views.set(name, v);
     }
     return v;
+  }
+  /** The sheet's title block (Plankopf): drawn left of the views, level with their top, unless `at` places it. */
+  titleBlock(opts) {
+    this.block = opts;
+    return this;
   }
   /** The default view at the origin (`sheet.main.polyline(…)`). */
   get main() {
@@ -4109,14 +5297,86 @@ var Sheet = class {
       for (const e of view.entities) this.explodeEntity(e, P2, local);
       if (vo.title) {
         const b = boundsOf(local);
-        if (b) local.push(textPrim(vo.title, { x: (b.min.x + b.max.x) / 2, y: b.min.y - P2(8) }, P2(3.5), 0, "center", "top", this.style({})));
+        const scaleText = vo.titleScale === false || /\b1\s*:\s*\d/.test(vo.title) ? "" : ` ${this.ratio(k)}`;
+        if (b) local.push(textPrim(vo.title + scaleText, { x: b.min.x, y: b.max.y + P2(5) }, P2(TITLE_MM), 0, "left", "bottom", this.style({})));
       }
       for (const p of local) {
         const q = transformPrim(p, T, k, vo.rotation ?? 0);
         (q.kind === "fill" ? fills : rest).push(q);
       }
     }
+    if (this.block) rest.push(...this.explodeTitleBlock(this.block, boundsOf([...fills, ...rest])));
     return [...fills, ...rest];
+  }
+  /** "1:20" for a view enlarged `k` times on this sheet. */
+  ratio(k) {
+    const r = this.scale / k;
+    return `1:${Number.isInteger(r) ? r : r.toFixed(1)}`;
+  }
+  /** The title block's lines and text, in sheet units, top-left at `at` (or left of `drawing`). */
+  explodeTitleBlock(o, drawing) {
+    const P2 = (mm) => this.paper(mm);
+    const W = o.width ?? 150;
+    const top = o.at ? toPt(o.at) : { x: (drawing?.min.x ?? 0) - P2(W + 20), y: drawing?.max.y ?? 0 };
+    const at = (x, y2) => ({ x: top.x + P2(x), y: top.y - P2(y2) });
+    const ink = this.style({ color: DRAWING_PALETTE.ink, weight: 0.18 });
+    const grey = this.style({ color: DRAWING_PALETTE.annotation, weight: 0.18 });
+    const out = [];
+    const text = (t, x, y2, mm, st = ink) => {
+      out.push(textPrim(t, at(x, y2), P2(mm), 0, "left", "top", st));
+    };
+    const line = (x0, y0, x1, y1) => {
+      out.push({ kind: "polyline", points: [at(x0, y0), at(x1, y1)], closed: false, style: ink });
+    };
+    const ks = [...new Set([...this.views.values()].filter((v) => v.entities.length).map((v) => v.options.scale ?? 1))].sort((a, b) => a - b);
+    const scale = o.scale ?? (ks.length ? ks.map((k) => this.ratio(k)).join(" / ") : this.ratio(1));
+    let y = 0;
+    if (o.office) {
+      text(o.office, 0, y, 1.6, grey);
+      y += 4;
+    }
+    if (o.project) {
+      text(o.project, 0, y, 2);
+      y += 7;
+    }
+    text(`${o.title} ${scale}`, 0, y, 3.5);
+    y += 6;
+    if (o.phase) {
+      text(o.phase, 0, y, 2.2);
+      y += 4;
+    }
+    const facts = [["DATE", o.date], ["DRAWN", o.drawn], ["CHECKED", o.checked], ["SCALE", scale], ["FORMAT", o.format]];
+    const rows = facts.filter((r) => !!r[1]);
+    const box0 = y + 4, rowH = 3.2, boxH = Math.max(16, rows.length * rowH + 3), split = W * 0.45;
+    line(0, box0, W, box0);
+    line(0, box0 + boxH, W, box0 + boxH);
+    line(0, box0, 0, box0 + boxH);
+    line(W, box0, W, box0 + boxH);
+    line(split, box0, split, box0 + boxH);
+    text("PLAN NO.", 2, box0 + 2, 1.4, grey);
+    if (o.number) text(o.number, 2, box0 + 7, 4.5);
+    rows.forEach(([k, v], i) => {
+      text(k, split + 2, box0 + 2 + i * rowH, 1.4, grey);
+      text(v, split + 22, box0 + 1.9 + i * rowH, 1.6);
+    });
+    y = box0 + boxH;
+    if (o.revisions?.length) {
+      const cols = [0, 14, 36, 54, W];
+      const h = 3.6, n = o.revisions.length + 1;
+      for (let r = 0; r <= n; r++) line(0, y + r * h, W, y + r * h);
+      for (const c of cols) line(c, y, c, y + n * h);
+      ["INDEX", "DATE", "BY", "CHANGE"].forEach((t, i) => text(t, cols[i] + 1.2, y + 1, 1.4, grey));
+      o.revisions.forEach((rv, r) => [rv.index, rv.date ?? "", rv.by ?? "", rv.note ?? ""].forEach((t, i) => {
+        if (t) text(t, cols[i] + 1.2, y + (r + 1) * h + 1, 1.6);
+      }));
+      y += n * h;
+    }
+    y += 8;
+    for (const n of o.notes ?? []) {
+      if (n) text(n, 0, y, 2);
+      y += 3.4;
+    }
+    return out;
   }
   /** Bounds of the exploded drawing (text estimated), or null when empty. */
   bounds() {
@@ -4136,6 +5396,13 @@ var Sheet = class {
   /** The sheet as an SVG document, sized in millimetres on paper (`margin` in mm). */
   toSVG(opts = {}) {
     return sheetToSVG(this, opts);
+  }
+  /**
+   * The sheet as a PNG file, drawn without a browser (so an agent in Node can look at it):
+   * `width` pixels wide (default 1600), text in a built-in stroke font. See `rasterizeSheet`.
+   */
+  toPNG(opts = {}) {
+    return sheetToPNG(this, opts);
   }
   /**
    * The sheet as DXF R12: lines, polylines, arcs, circles, text with its alignment, dashed
@@ -4168,7 +5435,7 @@ var Sheet = class {
       }
       case "text": {
         const o = e.o;
-        out.push({ ...textPrim(e.text, e.at, P2(o.size ?? 2.5), o.rotation ?? 0, o.align ?? "left", o.baseline ?? "bottom", st), ...key ? { key } : {} });
+        out.push({ ...textPrim(e.text, e.at, P2(o.size ?? TEXT_MM), o.rotation ?? 0, o.align ?? "left", o.baseline ?? "bottom", st), ...key ? { key } : {} });
         break;
       }
       case "dim":
@@ -4226,7 +5493,7 @@ function explodeDim(a, b, o, st, P2, out) {
   const text = o.text ?? formatLength(measured, o);
   const ang = upright(ux, uy), r = ang * Math.PI / 180;
   const mid = { x: (da.x + db.x) / 2 - Math.sin(r) * P2(1), y: (da.y + db.y) / 2 + Math.cos(r) * P2(1) };
-  out.push(textPrim(text, mid, P2(o.size ?? 2.5), ang, "center", "bottom", st));
+  out.push(textPrim(text, mid, P2(o.size ?? NOTE_MM), ang, "center", "bottom", st));
 }
 function explodeRadius(c, radius, angle, o, st, P2, out) {
   const ux = Math.cos(angle * Math.PI / 180), uy = Math.sin(angle * Math.PI / 180);
@@ -4238,24 +5505,31 @@ function explodeRadius(c, radius, angle, o, st, P2, out) {
   out.push(arrow(end, ux, uy, P2, st));
   const ang = upright(ux, uy), r = ang * Math.PI / 180;
   const mid = { x: c.x + ux * radius / 2 - Math.sin(r) * P2(1), y: c.y + uy * radius / 2 + Math.cos(r) * P2(1) };
-  out.push(textPrim(o.text ?? `R ${formatLength(radius, o)}`, mid, P2(o.size ?? 2.5), ang, "center", "bottom", st));
+  out.push(textPrim(o.text ?? `R ${formatLength(radius, o)}`, mid, P2(o.size ?? NOTE_MM), ang, "center", "bottom", st));
 }
 function explodeLeader(points, text, o, st, P2, out) {
+  const SHOULDER_MM = 3;
+  const a = points[points.length - 2], end = points[points.length - 1];
+  const right = end.x >= a.x;
+  const level = Math.abs(end.y - a.y) <= 0.02 * Math.abs(end.x - a.x);
+  if (!level) points = [...points, { x: end.x + (right ? 1 : -1) * P2(SHOULDER_MM), y: end.y }];
   out.push({ kind: "polyline", points, closed: false, style: st });
   const [p0, p1] = points, L = Math.hypot(p1.x - p0.x, p1.y - p0.y);
   if (L > 0) out.push(arrow(p0, (p0.x - p1.x) / L, (p0.y - p1.y) / L, P2, st));
-  const a = points[points.length - 2], b = points[points.length - 1];
-  const right = b.x >= a.x;
+  const b = points[points.length - 1];
   const at = { x: b.x + (right ? P2(1) : -P2(1)), y: b.y };
-  out.push(textPrim(text, at, P2(o.size ?? 2.5), 0, o.align ?? (right ? "left" : "right"), o.baseline ?? "middle", st));
+  out.push(textPrim(text, at, P2(o.size ?? NOTE_MM), 0, o.align ?? (right ? "left" : "right"), o.baseline ?? "middle", st));
 }
 function explodeLevel(at, o, st, P2, out) {
-  const h = P2(2.2), w = P2(1.3);
+  const h = P2(2.2), w = P2(1.3), gap = P2(0.8);
   out.push({ kind: "polyline", points: [at, { x: at.x - w, y: at.y + h }, { x: at.x + w, y: at.y + h }], closed: true, style: st });
   const v = o.value ?? at.y;
   const s = v.toFixed(o.decimals ?? 3);
   const text = o.text ?? (Number(s) === 0 ? `\xB1${s.replace("-", "")}` : v > 0 ? `+${s}` : s);
-  out.push(textPrim(text, { x: at.x + w + P2(1), y: at.y + h / 2 }, P2(o.size ?? 2.5), 0, "left", "middle", st));
+  const t = textPrim(text, { x: at.x + w + gap, y: at.y + P2(0.6) }, P2(o.size ?? NOTE_MM), 0, "left", "bottom", st);
+  const right = Math.max(...textCorners(t).map((c) => c.x));
+  out.push({ kind: "polyline", points: [{ x: at.x - w, y: at.y }, { x: right, y: at.y }], closed: false, style: st });
+  out.push(t);
 }
 function arrow(p, ux, uy, P2, st) {
   const L = P2(2.5), c = Math.cos(0.3), s = Math.sin(0.3);
@@ -4449,6 +5723,106 @@ function sheetToDXF(sheet, opts) {
 function triangulateRings(rings) {
   const all = rings.flat();
   return Polygon2D.triangulateWithHoles(rings[0], rings.slice(1)).map((t) => t.map((i) => all[i]));
+}
+
+// src/core/drawing/Axonometric.ts
+var ISO_ELEVATION = Math.asin(1 / Math.sqrt(3)) * 180 / Math.PI;
+var Axonometric = class _Axonometric {
+  constructor(opts = {}) {
+    this.azimuth = opts.azimuth ?? 225;
+    this.elevation = opts.elevation ?? 30;
+    this.up = opts.up ?? "z";
+    if (!Number.isFinite(this.azimuth) || !Number.isFinite(this.elevation) || this.elevation < -90 || this.elevation > 90) {
+      throw new Error(`Axonometric: azimuth must be a number and elevation between -90 and 90 degrees, got ${opts.azimuth} and ${opts.elevation}`);
+    }
+    const az = this.azimuth * Math.PI / 180;
+    const el = Math.max(-89.999, Math.min(89.999, this.elevation)) * Math.PI / 180;
+    const h = Math.cos(el), v = Math.sin(el);
+    const yUp = this.up === "y";
+    const eye = yUp ? new Vec3(h * Math.cos(az), v, -h * Math.sin(az)) : new Vec3(h * Math.cos(az), h * Math.sin(az), v);
+    const worldUp = yUp ? new Vec3(0, 1, 0) : new Vec3(0, 0, 1);
+    this.forward = eye.neg();
+    this.right = this.forward.cross(worldUp).normalize();
+    this.upward = this.right.cross(this.forward).normalize();
+    this.light = worldUp.mul(1.4).sub(this.right.mul(0.7)).sub(this.forward.mul(0.5)).normalize();
+  }
+  /** An isometric view: the three axes equally foreshortened (elevation 35.26°), from the front left unless `azimuth` says otherwise. */
+  static isometric(opts = {}) {
+    return new _Axonometric({ azimuth: 225, ...opts, elevation: ISO_ELEVATION });
+  }
+  /** A model point in the view (y up). */
+  project(p) {
+    return new Vec2(p.dot(this.right), p.dot(this.upward));
+  }
+  /** How far a point is from the viewer, along the view: larger is farther. */
+  depth(p) {
+    return p.dot(this.forward);
+  }
+  /** Whether a face with this outward normal is turned towards the viewer. */
+  facing(normal) {
+    return normal.dot(this.forward) < 0;
+  }
+  /** 0 to 1: how much a face with this normal turns to the light (0 when it turns away). */
+  shade(normal) {
+    return Math.max(0, normal.normalize().dot(this.light));
+  }
+  /**
+   * Polygons in painter's order (far first), each projected, with its depth, normal and light.
+   * `cull` (default true) leaves out the faces turned away; a polygon's normal comes from its
+   * corners (counter-clockwise seen from outside), or from `normal` when given.
+   */
+  polygons(list, opts = {}) {
+    const cull = opts.cull ?? true;
+    const out = [];
+    for (const item of list) {
+      const pts = item.points;
+      if (pts.length < 2) continue;
+      const normal = (item.normal ?? newellNormal(pts)).normalize();
+      if (cull && pts.length >= 3 && normal.len() > 0 && !this.facing(normal)) continue;
+      let depth = 0;
+      for (const p of pts) depth += this.depth(p);
+      out.push({ points: pts.map((p) => this.project(p)), depth: depth / pts.length, normal, light: this.shade(normal), data: item.data });
+    }
+    return out.sort((a, b) => b.depth - a.depth);
+  }
+  /** A mesh's faces as `polygons`: projected, culled, far first; `data` is the face's id. */
+  meshFaces(mesh, opts = {}) {
+    const list = [];
+    for (const f of mesh.faces()) list.push({ points: f.nodes.map((id) => mesh.getPosition(id)), normal: f.normal, data: f.id });
+    return this.polygons(list, opts);
+  }
+  /**
+   * The view that fits points (already projected) into a `width × height` area with `margin`
+   * around them: `{ scale, x, y }`, a point (u, v) drawn at (`x + u * scale`, `y - v * scale`).
+   * `maxScale` caps the scale (a small model is not blown up).
+   */
+  fit(points, width, height, margin = 16, maxScale = Infinity) {
+    if (!points.length) return { scale: 1, x: width / 2, y: height / 2 };
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const p of points) {
+      x0 = Math.min(x0, p.x);
+      x1 = Math.max(x1, p.x);
+      y0 = Math.min(y0, p.y);
+      y1 = Math.max(y1, p.y);
+    }
+    const bw = Math.max(x1 - x0, 1e-9), bh = Math.max(y1 - y0, 1e-9);
+    const scale = Math.min(maxScale, Math.max(1e-9, Math.min((width - 2 * margin) / bw, (height - 2 * margin) / bh)));
+    return { scale, x: width / 2 - (x0 + x1) / 2 * scale, y: height / 2 + (y0 + y1) / 2 * scale };
+  }
+  /** The projection for a Sheet's view (`sheet.view(name, { project: axo.sheetProjection() })`). */
+  sheetProjection() {
+    return { right: this.right, up: this.upward };
+  }
+};
+function newellNormal(pts) {
+  let x = 0, y = 0, z = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[i], b = pts[(i + 1) % pts.length];
+    x += (a.y - b.y) * (a.z + b.z);
+    y += (a.z - b.z) * (a.x + b.x);
+    z += (a.x - b.x) * (a.y + b.y);
+  }
+  return new Vec3(x, y, z);
 }
 
 // src/render/SheetCanvas.ts
@@ -4711,6 +6085,7 @@ var SheetCanvas = class {
 };
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
+  Axonometric,
   Polygon2D,
   PolygonBool,
   Segment,

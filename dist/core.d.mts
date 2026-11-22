@@ -1,9 +1,9 @@
-import { V as Vec3, s as Vec2, g as Mat4, T as Triangle, A as AABB, M as Mesh, d as MeshData, S as Scene } from './Scene-BsOKEQXC.mjs';
-export { F as ColoredMeshData, e as LegacyMeshJSON, f as LightSpec, L as LightingMode, h as MeshEdge, i as MeshFace, j as MeshJSON, k as MeshNode, l as MeshValidation, O as ObjFile, m as ObjMaterial, n as ObjMeshData, P as Projection, R as RenderMode, o as SceneEvent, p as SceneEventListener, q as SceneJSON, a as SceneObject, r as SceneObjectType, b as SectionRequest, c as StandardView, t as Vec4, u as VisualStyle } from './Scene-BsOKEQXC.mjs';
-import { z as Ring2, v as MultiPoly2, S as SeededRandom, g as Dxf2DContent, B as Segment } from './download-BLqzq-jW.mjs';
-export { A as Algo, a as DASH_PATTERNS, b as Dash, c as DimOptions, d as DrawOptions, e as Dxf2DArc, f as Dxf2DCircle, h as Dxf2DLine, i as Dxf2DLook, j as Dxf2DPoint, k as Dxf2DPolyline, l as Dxf2DSolid, m as Dxf2DText, n as Dxf3DArc, o as Dxf3DCircle, p as Dxf3DContent, q as Dxf3DLine, r as Dxf3DPoint, s as Dxf3DPolyline, D as DxfLayerDef, F as FilletResult, H as HMath, L as LevelOptions, t as LineStyle, M as MathUtils, u as MeshFactory, O as OBB2D, P as Poly2, w as Polygon2D, x as PolygonBool, y as Pt, R as ResolvedStyle, C as Sheet, E as SheetOptions, G as SheetPrim, I as SheetView, T as TextOptions, V as ViewOptions, J as aciFromHex, K as closestPointOnSegment, N as createRandom, U as noise, W as pickPrim, X as polygonIntersection, Y as segmentSegmentClosest, Z as setClipSnap, _ as stampName, $ as writeDxf2D, a0 as writeDxf3D } from './download-BLqzq-jW.mjs';
-import { R as RecordSchema, D as Doc } from './Doc-iuxjrmk7.mjs';
-export { B as BoolParam, g as ButtonParam, C as CollabAdapter, h as CollabEvents, i as CollabStatus, j as CollabUser, k as ColorParam, l as DocChange, m as DocChangeSource, n as DocEditOptions, o as DocJSON, p as DocOptions, e as DocPatch, q as DocSchema, F as FloatParam, I as IntParam, r as ParamDef, s as ParamFolder, a as ParamLayout, b as ParamSchema, P as ParamStore, f as PatchResult, t as PickingView, d as Presence, u as PresenceView, v as SceneBinding, w as SchemaIssue, x as SelectParam, y as Selection, z as SharedRecord, S as SharedStore, A as SharedStoreOptions, E as StringParam, G as SupabaseLike, V as Vec3Param, H as applyPatch, J as bindScene, K as checkRecord, L as collabColor, M as createLayout, N as createParams, O as devServerAdapter, Q as localAdapter, T as memoryAdapter, U as selectOnClick, W as shareSelection, X as supabaseAdapter } from './Doc-iuxjrmk7.mjs';
+import { V as Vec3, d as Vec2, h as Mat4, T as Triangle, A as AABB, M as Mesh, e as MeshData, S as Scene } from './Scene-D4ExzRe1.mjs';
+export { F as ColoredMeshData, f as LegacyMeshJSON, g as LightSpec, L as LightingMode, i as MeshEdge, j as MeshFace, k as MeshJSON, l as MeshNode, m as MeshValidation, O as ObjFile, n as ObjMaterial, o as ObjMeshData, P as Projection, R as RenderMode, p as SceneEvent, q as SceneEventListener, r as SceneJSON, a as SceneObject, s as SceneObjectType, b as SectionRequest, c as StandardView, t as Vec4, u as VisualStyle } from './Scene-D4ExzRe1.mjs';
+import { G as Ring2, z as MultiPoly2, S as SeededRandom, k as Dxf2DContent, I as Segment, J as Sheet, T as SheetRasterOptions } from './download-Bf3TpYkF.mjs';
+export { A as Algo, a as AxoPolygon, b as Axonometric, c as AxonometricOptions, d as DASH_PATTERNS, e as DRAWING_PALETTE, f as Dash, g as DimOptions, h as DrawOptions, i as Dxf2DArc, j as Dxf2DCircle, l as Dxf2DLine, m as Dxf2DLook, n as Dxf2DPoint, o as Dxf2DPolyline, p as Dxf2DSolid, q as Dxf2DText, r as Dxf3DArc, s as Dxf3DCircle, t as Dxf3DContent, u as Dxf3DLine, v as Dxf3DPoint, w as Dxf3DPolyline, D as DxfLayerDef, F as FilletResult, H as HMath, L as LevelOptions, x as LineStyle, M as MathUtils, y as MeshFactory, O as OBB2D, P as Poly2, B as Polygon2D, C as PolygonBool, E as Pt, R as ResolvedStyle, K as SheetOptions, N as SheetPrim, Q as SheetRaster, U as SheetView, V as TextOptions, W as TitleBlockOptions, X as ViewOptions, Y as aciFromHex, Z as closestPointOnSegment, _ as createRandom, a0 as encodePNG, a1 as noise, a2 as pickPrim, a3 as polygonIntersection, a4 as rasterizeSheet, a5 as segmentSegmentClosest, a6 as setClipSnap, a7 as sheetToPNG, a8 as stampName, a9 as writeDxf2D, aa as writeDxf3D } from './download-Bf3TpYkF.mjs';
+import { f as DocPatch, D as Doc, R as RecordSchema, g as PatchResult, p as DocJSON } from './Doc-b-EFYvMi.mjs';
+export { B as BoolParam, h as ButtonParam, C as CollabAdapter, i as CollabEvents, j as CollabStatus, k as CollabUser, l as ColorParam, m as DocChange, n as DocChangeSource, o as DocEditOptions, q as DocOptions, r as DocSchema, F as FloatParam, I as IntParam, s as ParamDef, t as ParamFolder, a as ParamLayout, b as ParamSchema, P as ParamStore, u as PickingView, e as Presence, v as PresenceView, w as SceneBinding, x as SchemaIssue, y as SelectParam, z as Selection, A as SharedRecord, d as SharedStore, E as SharedStoreOptions, G as StringParam, H as SunPosition, J as SunPositionInput, S as SunPositionResult, K as SupabaseLike, V as Vec3Param, L as applyPatch, M as bindScene, N as checkRecord, O as collabColor, Q as createLayout, T as createParams, U as devServerAdapter, W as localAdapter, X as memoryAdapter, Y as selectOnClick, Z as shareSelection, _ as supabaseAdapter } from './Doc-b-EFYvMi.mjs';
 
 /**
  * Tekto VecMath — Static vector/geometry utility functions.
@@ -978,57 +978,6 @@ declare class NurbsSurface {
     private evaluate;
 }
 
-/** A UTC instant and a site (latitude/longitude in degrees) for `SunPosition.compute`. */
-interface SunPositionInput {
-    /**
-     * UTC date+time. The algorithm internally converts to Julian Date in
-     * UT, so make sure the `Date` carries UTC fields (a `new Date()` is
-     * fine — `getUTC*()` methods are used).
-     */
-    date: Date;
-    /** Latitude in degrees, north positive. e.g. Zurich = +47.37. */
-    latitude: number;
-    /** Longitude in degrees, east positive. e.g. Zurich = +8.55. */
-    longitude: number;
-}
-/** The sun's altitude and azimuth (radians) and its unit direction in the Z-up frame (+X east, +Y north). */
-interface SunPositionResult {
-    /** Solar altitude above horizon (radians). Negative ⇒ below horizon (night). */
-    altitude: number;
-    /**
-     * Solar azimuth from north, clockwise (radians).
-     * 0 = N, π/2 = E, π = S, 3π/2 = W.
-     */
-    azimuth: number;
-    /**
-     * Unit vector pointing FROM the origin TO the sun, in Z-up scene
-     * coordinates (+X = east, +Y = north, +Z = up). When daytime, this
-     * is the direction a directional light "comes from" — set the light
-     * position to `direction × distance` and aim it at the origin.
-     */
-    direction: Vec3;
-    /** Convenience: `altitude > 0`. */
-    isDaytime: boolean;
-}
-/** Sun direction from a date and a site (Michalsky 1988, ~0.01° for 1950–2050), as a Z-up vector: +X east, +Y north, +Z sky. */
-declare const SunPosition: {
-    /**
-     * Compute the sun's position in the sky for a given UTC instant and
-     * geographic coordinates.
-     *
-     * @example
-     *   // Solar noon, summer solstice, Zurich:
-     *   const sun = SunPosition.compute({
-     *     date:      new Date(Date.UTC(2025, 5, 21, 11, 30)),
-     *     latitude:  47.37,
-     *     longitude: 8.55,
-     *   });
-     *   // sun.altitude ≈ 1.10 rad (≈ 63°), sun.azimuth ≈ π (south).
-     *   threeLight.position.copy(sun.direction).multiplyScalar(50);
-     */
-    readonly compute: (opts: SunPositionInput) => SunPositionResult;
-};
-
 /**
  * Tekto Graph — Weighted graph with Dijkstra, components, flood fill.
  *
@@ -1345,15 +1294,37 @@ declare class VoxelGrid {
     clone(): VoxelGrid;
 }
 /**
- * Iso-contour of a 2D scalar grid as loose line segments in world coordinates (marching squares).
+ * Iso-contours of a 2D scalar grid (marching squares): `contours` gives polylines, closed
+ * loops and open lines that run off the grid's edge; `extract` gives the loose segments.
  *
- * @experimental No app uses this yet; it may still change.
+ * The grid's layout, as `VoxelGrid2D` keeps it: `nx × ny` samples, stored x-major, the
+ * value at column `x`, row `y` is `values[x * ny + y]`, and it sits at
+ * (`originX + x * cellSize`, `originY + y * cellSize`). Values above `iso` are inside: a
+ * contour keeps them on its left, so a loop around a high region runs counter-clockwise.
+ *
+ *   const loops = MarchingSquares.contoursFromGrid(grid, 0.5).filter((c) => c.closed);
  */
 declare const MarchingSquares: {
+    /**
+     * The iso-contours as polylines: each `{ points, closed }`, with the inside (values above
+     * `iso`) on the left. A closed loop does not repeat its first point; an open line starts
+     * and ends on the grid's border.
+     */
+    contours(values: ArrayLike<number>, nx: number, ny: number, iso?: number, cellSize?: number, originX?: number, originY?: number): {
+        points: Vec2[];
+        closed: boolean;
+    }[];
+    /** `contours` of a `VoxelGrid2D`. */
+    contoursFromGrid(grid: VoxelGrid2D, iso?: number): {
+        points: Vec2[];
+        closed: boolean;
+    }[];
+    /** The iso-contour as loose segments, in no order (`contours` joins them). Same layout as `contours`. */
     extract(values: ArrayLike<number>, nx: number, ny: number, iso?: number, cellSize?: number, originX?: number, originY?: number): {
         a: Vec2;
         b: Vec2;
     }[];
+    /** `extract` of a `VoxelGrid2D`. */
     extractFromGrid(grid: VoxelGrid2D, iso?: number): {
         a: Vec2;
         b: Vec2;
@@ -2773,6 +2744,98 @@ declare function realize(wall: Wall, ctx?: WallContext): RealizedWall;
 declare function buildCutList(parts: readonly Pick<WallPart, "material" | "profile" | "length" | "role">[], roundMm?: number): CutListItem[];
 
 /**
+ * Proposals — a change to a document that waits for a person to accept or reject it.
+ *
+ * An agent on a shared model should not rewrite it while people work in it. It proposes: the
+ * patch it would apply (`{ set, update, remove }` by `"collection/id"`) is stored as a record
+ * in the document's `proposals` collection, with who proposes it, why, and the records as
+ * they were. Everyone who has the document open sees it. Accepting applies the patch as one
+ * undo step (undo it and the proposal is open again); rejecting keeps it, with the reason, so
+ * the agent learns what was not wanted. The list of proposals is the history of what the
+ * agent changed and who agreed.
+ *
+ *   const r = propose(doc, { update: { "openings/entry": { width: 1.2 } } }, { label: "Wider entrance", by: "Claude", schema });
+ *   listProposals(doc)[0].changes;      // [{ key: "openings/entry", kind: "change", fields: [{ name: "width", from: 1.1, to: 1.2 }] }]
+ *   acceptProposal(doc, r.id!, { schema, by: "Ada" });
+ */
+
+/** The collection proposals are kept in. */
+declare const PROPOSALS = "proposals";
+/** A proposed change, as stored in the document. */
+interface Proposal {
+    /** What it does, in a few words: the undo step's name once accepted ("Accept: Wider entrance"). */
+    label: string;
+    /** Who proposes it ("Claude"). */
+    by: string;
+    /** When, in milliseconds since 1970. */
+    at: number;
+    /** Why: the reasoning a reviewer should read. */
+    note?: string;
+    patch: DocPatch;
+    status: "open" | "accepted" | "rejected";
+    /** The records the patch touches as they were when it was proposed (`null`: not there). */
+    base: Record<string, unknown>;
+    /** Who accepted or rejected it, when, and (for a rejection) why. */
+    decidedBy?: string;
+    decidedAt?: number;
+    reason?: string;
+}
+/** One record a proposal touches: added, changed (with the fields, before and after) or removed. */
+interface ProposalChange {
+    key: string;
+    kind: "add" | "change" | "remove";
+    fields?: {
+        name: string;
+        from: unknown;
+        to: unknown;
+    }[];
+}
+/** A proposal as `listProposals` gives it: with its id, what it changes, and what moved under it. */
+interface ProposalInfo extends Proposal {
+    id: string;
+    changes: ProposalChange[];
+    /** Records it touches that were changed by someone since it was proposed (an open proposal only). */
+    stale: string[];
+}
+type Collections = Record<string, Record<string, unknown>>;
+/** The collections as a patch would leave them: a copy, nothing is changed. For a preview. */
+declare function patchedCollections(collections: Collections, patch: DocPatch): Collections;
+/** What a patch changes, record by record, against the records as they were (`base`). */
+declare function patchChanges(patch: DocPatch, base: Record<string, unknown>): ProposalChange[];
+/**
+ * Propose a patch: checked like `applyPatch` would (a record that breaks `schema`, a missing
+ * record: nothing is stored, `rejected` says why), then stored as an open proposal. The
+ * document's own records do not change.
+ */
+declare function propose(doc: Doc<any>, patch: DocPatch, opts: {
+    label: string;
+    by: string;
+    note?: string;
+    schema?: Partial<Record<string, RecordSchema>>;
+}): {
+    ok: boolean;
+    id?: string;
+    rejected: PatchResult["rejected"];
+};
+/** The proposals of a document, oldest first: the open ones (default) or all. */
+declare function listProposals(doc: Doc<any>, status?: "open" | "all"): ProposalInfo[];
+/**
+ * Accept an open proposal: its patch is applied and the proposal marked accepted, as one undo
+ * step ("Accept: <label>") — undo it and the records are as before and the proposal open
+ * again. If the document has moved so the patch no longer applies, nothing changes and
+ * `rejected` says why.
+ */
+declare function acceptProposal(doc: Doc<any>, id: string, opts?: {
+    schema?: Partial<Record<string, RecordSchema>>;
+    by?: string;
+}): PatchResult;
+/** Reject an open proposal, with the reason for whoever proposed it. It stays in the document. False if it is not open. */
+declare function rejectProposal(doc: Doc<any>, id: string, opts?: {
+    by?: string;
+    reason?: string;
+}): boolean;
+
+/**
  * Steps: a program read as the steps it ran. Code that wraps its parts in `step(name, inputs,
  * fn)` — by hand, or as an AI writes it — gets recorded as it runs: each step's inputs, what it
  * produced, how long it took, an error, where in the code it was called, and (in an app) the
@@ -3372,6 +3435,27 @@ declare function boundingWalls(space: Space, walls: Wall[], tol?: number): Wall[
 
 /** Overall stair shape — maps to `IfcStairTypeEnum`. `Stair` builds the first four; "spiral" and "not_defined" name a type only. */
 type StairShape = "straight_run" | "two_straight_run" | "quarter_turn" | "half_turn" | "spiral" | "not_defined";
+/**
+ * How a stair is built — what its flights are made of and how much of them there is:
+ * - "solid": every step a block down to the stair's base (the massing).
+ * - "concrete": the steps on a sloping waist slab, 160 mm thick under the steps' inner corners.
+ * - "timber": 50 mm treads between two 60 × 300 mm stringers, open risers, each tread 30 mm over
+ *   the one below.
+ * - "steel": an 8 mm plate folded into treads and risers, on two 12 × 200 mm flat stringers.
+ */
+type StairStructure = "solid" | "concrete" | "timber" | "steel";
+/**
+ * One part of a flight as its side profile: `outline` in the flight's own plane — x along the
+ * flight from its first riser, y the absolute height — swept across the flight from `across[0]`
+ * to `across[1]` (from the centre of its width, positive to the left walking up). What a section
+ * along the flight cuts, or an elevation from its side sees.
+ */
+interface StairPart {
+    /** "step" (solid), "flight" (concrete), "stringer", "tread", "plate". */
+    name: "step" | "flight" | "stringer" | "tread" | "plate";
+    outline: Vec2[];
+    across: [number, number];
+}
 /** Options for `new StairType(...)`: name, overall shape (default "straight_run"), material, description and Psets. */
 interface StairTypeOptions {
     name: string;
@@ -3439,8 +3523,10 @@ interface StairOptions {
      * `width`: the second flight leaves from its side, flush with its far edge.
      */
     landingDepth?: number;
-    /** Thickness of the landing slab under its top. Default 0.2 m, at most down to the stair's base. */
+    /** Thickness of the landing slab under its top. Default by `structure`: 0.2 m (solid, concrete), 0.12 (timber), 0.08 (steel); at most down to the stair's base. */
     landingThickness?: number;
+    /** How the flights are built: "solid" blocks (default), a "concrete" waist slab, "timber" treads between stringers, a folded "steel" plate. */
+    structure?: StairStructure;
     /** Clear gap between the two flights of a half turn. Default 0.1 m. */
     gap?: number;
     type?: StairType;
@@ -3478,6 +3564,7 @@ declare class Stair {
     landingAfter?: number;
     landingDepth: number;
     landingThickness: number;
+    structure: StairStructure;
     gap: number;
     type?: StairType;
     properties: PropertyMap;
@@ -3487,12 +3574,24 @@ declare class Stair {
     /** Actual riser height (`totalRise` split evenly). */
     get actualRiser(): number;
     /**
-     * Compute the flight geometry: one flight per run, each built as a
-     * stepped solid. Tread i of a flight is a box spanning going
-     * [i·tread, (i+1)·tread] across the full width, from the stair's base
-     * level up to its walking surface, (i+1) risers above the flight's start.
+     * The flights' geometry, one closed solid per flight in world coordinates, built as
+     * `structure` says from the parts `parts()` describes, with the code metrics. Tread i of a
+     * flight spans going [i·tread, (i+1)·tread], (i+1) risers above the flight's start.
      */
     flights(): StairFlight[];
+    /**
+     * Each flight's parts as side profiles: where the flight starts and runs in plan (`at`, the
+     * centre of its width at its first riser; `dir`, a unit vector) and the parts `structure`
+     * builds it from. Draw `outline`s for a section along a flight or an elevation from its side:
+     * a point (x, y) of an outline is at `at + dir·x`, height y.
+     */
+    parts(): {
+        at: Vec2;
+        dir: Vec2;
+        parts: StairPart[];
+    }[];
+    /** One flight's parts, as `structure` builds it. */
+    private flightParts;
     /**
      * The landing between the two flights as a `Slab` (written as an `IfcSlab` LANDING): its top
      * `landingAfter` risers above the base, `landingThickness` thick, its plan the rectangle between the
@@ -4410,6 +4509,8 @@ interface StairRecord {
     gap?: number;
     /** Cut the well in the floor above; default true. */
     well?: boolean;
+    /** How it is built: "solid" (default), "concrete" (a waist slab), "timber" (treads between stringers), "steel" (a folded plate). */
+    structure?: StairStructure;
     name?: string;
 }
 /** The collections of a building and the record each holds: a `Doc` schema (`new Doc<BuildingRecords>`). */
@@ -4621,6 +4722,193 @@ interface BuildingBinding {
  */
 declare function bindBuilding(doc: Doc<any>, scene: Scene, opts?: BindBuildingOptions): BuildingBinding;
 
+/** Options for `buildingPlan`: which storeys, at what scale, and what is written on them. */
+interface BuildingPlanOptions {
+    /** One storey by its id (default: every storey, side by side, the lowest on the left). */
+    storey?: string;
+    /** Drawing scale, 100 = 1:100 (default: the largest of 1:20 … 1:1000 at which a storey is at most 200 mm on paper). */
+    scale?: number;
+    /** Write the records' names beside the parts ("walls/s" as "s") and the room's key under its name (default true). */
+    keys?: boolean;
+    /** Model coordinates in metres along the bottom and the left edge (default true). */
+    coordinates?: boolean;
+    /** Records to make stand out, as `"walls/s"` (what a proposal would change): drawn in the accent colour. */
+    highlight?: readonly string[];
+}
+/**
+ * The floor plans of a building as a `Sheet`: a view per storey (named by the storey's id),
+ * every part keyed by its record. See the options for the scale and what is written.
+ */
+declare function buildingPlan(building: Building, opts?: BuildingPlanOptions): Sheet;
+
+/**
+ * A building document worked on without a browser — what an agent holds in Node.
+ *
+ * In the browser an app shares its document with `agentDoc` and the MCP server reaches the
+ * open tab. A `BuildingSession` is the same set of calls on a document in memory: read the
+ * records and their schema, apply a patch as one undo step (or not at all, with the reasons),
+ * get the check's issues back, undo, and look — the floor plans as PNG images, with a
+ * summary in numbers. `toJSON()` is the file the House app saves and opens, so a building
+ * made here opens there.
+ *
+ * Given a `Doc` with a shared adapter, the session is one more participant on the live model:
+ * people with the app open see its edits arrive, and it sees theirs. That is the mode to
+ * prefer — one model, not copies of a file. `tools/mcp.mjs --doc house` serves the shared
+ * document as MCP tools, `--file house.json` a file.
+ *
+ *   const session = new BuildingSession(JSON.parse(readFileSync("house.json", "utf8")));
+ *   const r = session.apply({ set: { "walls/a": { storey: "eg", path: [[0, 0], [5, 0]] } } }, "South wall");
+ *   r.issues;                                   // what the check says now
+ *   const { plans } = await session.snapshot(); // [{ storey: "eg", png: Uint8Array }]
+ *   writeFileSync("house.json", JSON.stringify(session.toJSON(), null, 2));
+ */
+
+/** Options for `new BuildingSession(…)`: the document's name and the types its records name. */
+interface BuildingSessionOptions {
+    /** The document's name when the source has none (default "building"). */
+    name?: string;
+    /** Wall, slab, opening and room types (default `defaultBuildingTypes()`). */
+    types?: BuildingTypes;
+}
+/** A building in numbers, by storey: what `BuildingSession.summary()` returns. */
+interface BuildingSummary {
+    storeys: {
+        id: string;
+        name: string;
+        elevation: number;
+        height: number;
+        walls: number;
+        openings: number;
+        slabs: number;
+        stairs: number;
+        roofs: number;
+        /** The storey's rooms with their floor area in m². */
+        rooms: {
+            key: string;
+            name: string;
+            use?: string;
+            area: number;
+        }[];
+        /** Floor area of the storey's rooms, m². */
+        area: number;
+        /** The box around the storey's wall centrelines, `[x, y]` in metres; null without walls. */
+        bounds: {
+            min: [number, number];
+            max: [number, number];
+        } | null;
+    }[];
+    /** Floor area of all rooms, m². */
+    area: number;
+    issues: {
+        errors: number;
+        warnings: number;
+    };
+}
+/**
+ * A building document in memory, with the calls an agent makes on it: `info`, `records`,
+ * `apply`, `check`, `undo`, `snapshot`. No browser, no scene: the building is built from the
+ * records when it is asked for.
+ */
+declare class BuildingSession {
+    /** The document: its records, its undo history. Collections that are not a building's (an app's notes) are kept as they are. */
+    readonly doc: Doc<BuildingRecords>;
+    readonly types: BuildingTypes;
+    private built;
+    /**
+     * `source` is a document (a `Doc`: with a shared adapter the session works on the live
+     * model, and its edits reach everyone who has it open), a saved document (`doc.toJSON()`,
+     * what the House app's Save writes), plain building records (`{ storeys, walls, … }`), or
+     * nothing for an empty building.
+     */
+    constructor(source?: Doc<any> | DocJSON | BuildingData | null, opts?: BuildingSessionOptions);
+    /** The building's records alone (a document may hold more, e.g. notes). */
+    data(): BuildingData;
+    /** The building as built from the records now (built once per change). */
+    get building(): Building;
+    /** Each collection's JSON Schema: what `apply` checks a record against. */
+    schema(): Record<BuildingCollection, RecordSchema>;
+    /** What the document is: its name, how many records each collection holds, their schema, and the building in numbers. */
+    info(): {
+        name: string;
+        collections: Record<string, number>;
+        schema: Record<BuildingCollection, RecordSchema>;
+        summary: BuildingSummary;
+    };
+    /** Collection → id → record; one collection, or all. */
+    records(collection?: string): Record<string, Record<string, unknown>>;
+    /**
+     * Apply a patch (`{ set, update, remove }` by `"collection/id"`) as one undo step. A record
+     * that breaks the schema rejects the whole patch (`ok: false`, `rejected` says why); else
+     * `issues` is what the check says about the building as it is now.
+     */
+    apply(patch: DocPatch, label?: string): PatchResult & {
+        issues: BuildingIssue[];
+    };
+    /** What is wrong with the building now: `building.check()`, errors and warnings by record. */
+    check(): BuildingIssue[];
+    undo(): boolean;
+    redo(): boolean;
+    /** The building as a patch would leave it. Nothing is changed. */
+    preview(patch: DocPatch): Building;
+    /**
+     * Propose a patch instead of applying it: stored in the document as an open proposal for a
+     * person to accept or reject (`proposals.ts`). The answer says what the check would say
+     * with it applied: `issues`, and of those the ones it would newly cause (`added`) and the
+     * current ones it would settle (`resolved`).
+     */
+    propose(patch: DocPatch, label: string, opts?: {
+        by?: string;
+        note?: string;
+    }): {
+        ok: boolean;
+        id?: string;
+        rejected: PatchResult["rejected"];
+        issues: BuildingIssue[];
+        added: BuildingIssue[];
+        resolved: BuildingIssue[];
+    };
+    /** The proposals in the document: the open ones, or all with what became of them. */
+    proposals(status?: "open" | "all"): ProposalInfo[];
+    /** Accept an open proposal: its patch as one undo step, then the check's issues. For the person who reviews, not for the agent that proposed. */
+    accept(id: string, by?: string): PatchResult & {
+        issues: BuildingIssue[];
+    };
+    /** Reject an open proposal, with the reason for whoever proposed it. */
+    reject(id: string, opts?: {
+        by?: string;
+        reason?: string;
+    }): boolean;
+    /** The building in numbers: per storey its parts, its rooms with their areas, its extent. */
+    summary(): BuildingSummary;
+    /** The floor plans as a drawing (`buildingPlan`): `toSVG()`, `toDXF()`, `toPNG()`. */
+    plan(opts?: BuildingPlanOptions): Sheet;
+    /**
+     * Look at the building: a floor plan per storey as a PNG image (one storey with `storey`),
+     * each part named by its record, with the summary and the check's issues. A check that
+     * passes is not the same as a plan that looks right. With `proposal` (an id) the plans and
+     * the issues are of the building as that proposal would leave it, its changes in red.
+     */
+    snapshot(opts?: {
+        storey?: string;
+        proposal?: string;
+    } & SheetRasterOptions): Promise<{
+        plans: {
+            storey: string;
+            name: string;
+            png: Uint8Array;
+        }[];
+        summary: BuildingSummary;
+        issues: BuildingIssue[];
+    }>;
+    /** The document as the House app saves and opens it. */
+    toJSON(): DocJSON;
+    /** The building as an IFC file (`building.toIfc`). */
+    toIfc(opts?: {
+        projectName?: string;
+        members?: boolean;
+    }): string;
+}
+
 /**
  * Which elements touch which, worked out from geometry.
  *
@@ -4730,4 +5018,4 @@ declare function neighboursOf(id: number, all: Adjacency[]): {
     tolerance: number;
 }[];
 
-export { AABB, type AddWallSystemOptions, type Adjacency, type AdjacencyOptions, ArcCurve, type Axis, BUILDING_COLLECTIONS, BUILDING_SCHEMA, BalloonFrame, type BalloonFrameOptions, type BindBuildingOptions, BlobDetect, type Box, type BspNode, type BspPolygon, BspTree, Building, type BuildingBinding, type BuildingCollection, type BuildingData, type BuildingDetail, type BuildingIssue, type BuildingRecords, type BuildingSlabType, type BuildingSpaceType, type BuildingTypes, type BuildingWallType, Capsule2D, CltConstruction, type CltOptions, type ConnectionType, type Contact, CubicBezierCurve, Curvature, CurveUtils, type CutListItem, Delaunay2D, DistanceTransform, Doc, type DoorOperation, Dxf2DContent, ExtrudedRibbon, type ExtrudedRibbonOptions, MeshData as FlatMeshData, FloodFill, Graph, GridGraph, HelixCurve, HolzrahmenBau, HolzrahmenBauJointStyle, type HolzrahmenBauOptions, type ICurve, type IMetricCurve, type ISdf, type IfcElementData, IfcFile, IfcModel, type IfcModelData, type IfcParseElementsOptions, type IfcParseOptions, type IfcRelations, type IfcSpatialNode, IfcWriter, type IfcWriterOptions, type Intersect2DResult, Intersections, type JointKind, type JointParticipant, type JointStyle, type JointTrim, type JoistOrientationOptions, JoistedSlab, type JoistedSlabOptions, type LatticeType, type LayerPosition, LineCurve, MITER_LIMIT, MarchingCubes, MarchingSquares, Mat4, type MaterialLayer, Mesh, MeshAnalysis, type MeshBuffers, MeshCleanup, MeshSubdivide, MeshTransform, type MicroPatternType, MultiPoly2, NoFitPolygon, NurbsCurve, NurbsSurface, type OpeningFillPart, type OpeningRecord, OpeningType, type OpeningTypeOptions, PGFace, PGHalfEdge, PGVertex, type PartProfile, Particles2D, type Particles2DSpring, type Pdf2DOptions, type PerpSegment, PixelView, PlanarGraph, PlanarGraphCleanup, PlanarGraphRepair, Plane, type PointClassification, PolylineCurve, type PropertyMap, Ray, type RealizedSlab, type RealizedStorey, type RealizedWall, RecordSchema, RibbonEndTrim, RibbonFrame, RibbonJoint, RibbonOpening, RibbonSystem, RigidBody2D, type RigidBodyConfig, Ring2, Roof, type RoofGable, type RoofKind, type RoofOptions, type RoofPlane, type RoofRecord, Scene, SdfBlend, SdfBoundedExtrude, SdfBox, SdfCapsule, SdfCone, SdfCylinder, SdfEllipsoid, SdfExtrude, SdfGradient, SdfIntersect, SdfLattice, SdfLine as SdfLineField, SdfMicrostructure, SdfMirror, SdfOffset, SdfOnion, SdfOps, SdfPlane as SdfPlaneField, SdfRadialArray, SdfRevolution, SdfShell, SdfSmoothSubtract, SdfSmoothUnion, SdfSphere, SdfSubtract, SdfTorus, SdfTransform, SdfTwist, SdfUnion, SdfUtils, SdfVoronoi, SeededRandom, Segment, Slab, type SlabConstruction, type SlabContext, SlabOpening, type SlabOpeningRecord, type SlabOptions, type SlabPart, type SlabPartRole, type SlabRecord, SlabType, type SlabTypeOptions, SolidConstruction, SolidSlabConstruction, Space, type SpaceOptions, type SpaceRecord, Sphere, type Spring, Spring2D, type SpringConfig, SpringSystem3D, Stair, type StairFlight, type StairOpeningOptions, type StairOptions, type StairRecord, type StairShape, StairType, type StairTypeOptions, type StepAnalysis, type StepEdge, type StepInput, type StepRecord, StepTrace, type StepTraceJSON, type StoreyRecord, type StreamlineOptions, StreamlineTracer, SunPosition, type SunPositionInput, type SunPositionResult, Triangle, type UpAxis, Vec2, Vec3, VecMath, type VertexCurvature, Voronoi2D, type VoronoiCell, type VoronoiOptions, VoxelGrid, VoxelGrid2D, Wall, type WallConstruction, WallJoint, type WallJointOptions, WallOpening, type WallOptions, type WallPart, type WallPartRole, type WallRecord, WallSystem, WallType, type WindowPartitioning, type XY, bindBuilding, boundingWalls, boxOf, buildCutList, buildingSchema, chooseJoistDirection, clampedUniformKnots, cltLayers, contactBetween, defaultBuildingTypes, describeValue, edgeOutwardVisibility, findAdjacent, holzrahmenbauLayers, joistDirectionFromBounds, joistDirectionFromPCA, joistDirectionFromSupports, lineClipPolygon, neighboursOf, openingFill, perpVisibility, perpVisibilityOfPolys, polygonFromVertices, realize, realizeBuilding, realizeSlab, repelBodies, reverse as reverseContact, validateBuilding, writePdf2D };
+export { AABB, type AddWallSystemOptions, type Adjacency, type AdjacencyOptions, ArcCurve, type Axis, BUILDING_COLLECTIONS, BUILDING_SCHEMA, BalloonFrame, type BalloonFrameOptions, type BindBuildingOptions, BlobDetect, type Box, type BspNode, type BspPolygon, BspTree, Building, type BuildingBinding, type BuildingCollection, type BuildingData, type BuildingDetail, type BuildingIssue, type BuildingPlanOptions, type BuildingRecords, BuildingSession, type BuildingSessionOptions, type BuildingSlabType, type BuildingSpaceType, type BuildingSummary, type BuildingTypes, type BuildingWallType, Capsule2D, CltConstruction, type CltOptions, type ConnectionType, type Contact, CubicBezierCurve, Curvature, CurveUtils, type CutListItem, Delaunay2D, DistanceTransform, Doc, DocJSON, DocPatch, type DoorOperation, Dxf2DContent, ExtrudedRibbon, type ExtrudedRibbonOptions, MeshData as FlatMeshData, FloodFill, Graph, GridGraph, HelixCurve, HolzrahmenBau, HolzrahmenBauJointStyle, type HolzrahmenBauOptions, type ICurve, type IMetricCurve, type ISdf, type IfcElementData, IfcFile, IfcModel, type IfcModelData, type IfcParseElementsOptions, type IfcParseOptions, type IfcRelations, type IfcSpatialNode, IfcWriter, type IfcWriterOptions, type Intersect2DResult, Intersections, type JointKind, type JointParticipant, type JointStyle, type JointTrim, type JoistOrientationOptions, JoistedSlab, type JoistedSlabOptions, type LatticeType, type LayerPosition, LineCurve, MITER_LIMIT, MarchingCubes, MarchingSquares, Mat4, type MaterialLayer, Mesh, MeshAnalysis, type MeshBuffers, MeshCleanup, MeshSubdivide, MeshTransform, type MicroPatternType, MultiPoly2, NoFitPolygon, NurbsCurve, NurbsSurface, type OpeningFillPart, type OpeningRecord, OpeningType, type OpeningTypeOptions, PGFace, PGHalfEdge, PGVertex, PROPOSALS, type PartProfile, Particles2D, type Particles2DSpring, PatchResult, type Pdf2DOptions, type PerpSegment, PixelView, PlanarGraph, PlanarGraphCleanup, PlanarGraphRepair, Plane, type PointClassification, PolylineCurve, type PropertyMap, type Proposal, type ProposalChange, type ProposalInfo, Ray, type RealizedSlab, type RealizedStorey, type RealizedWall, RecordSchema, RibbonEndTrim, RibbonFrame, RibbonJoint, RibbonOpening, RibbonSystem, RigidBody2D, type RigidBodyConfig, Ring2, Roof, type RoofGable, type RoofKind, type RoofOptions, type RoofPlane, type RoofRecord, Scene, SdfBlend, SdfBoundedExtrude, SdfBox, SdfCapsule, SdfCone, SdfCylinder, SdfEllipsoid, SdfExtrude, SdfGradient, SdfIntersect, SdfLattice, SdfLine as SdfLineField, SdfMicrostructure, SdfMirror, SdfOffset, SdfOnion, SdfOps, SdfPlane as SdfPlaneField, SdfRadialArray, SdfRevolution, SdfShell, SdfSmoothSubtract, SdfSmoothUnion, SdfSphere, SdfSubtract, SdfTorus, SdfTransform, SdfTwist, SdfUnion, SdfUtils, SdfVoronoi, SeededRandom, Segment, Sheet, SheetRasterOptions, Slab, type SlabConstruction, type SlabContext, SlabOpening, type SlabOpeningRecord, type SlabOptions, type SlabPart, type SlabPartRole, type SlabRecord, SlabType, type SlabTypeOptions, SolidConstruction, SolidSlabConstruction, Space, type SpaceOptions, type SpaceRecord, Sphere, type Spring, Spring2D, type SpringConfig, SpringSystem3D, Stair, type StairFlight, type StairOpeningOptions, type StairOptions, type StairPart, type StairRecord, type StairShape, type StairStructure, StairType, type StairTypeOptions, type StepAnalysis, type StepEdge, type StepInput, type StepRecord, StepTrace, type StepTraceJSON, type StoreyRecord, type StreamlineOptions, StreamlineTracer, Triangle, type UpAxis, Vec2, Vec3, VecMath, type VertexCurvature, Voronoi2D, type VoronoiCell, type VoronoiOptions, VoxelGrid, VoxelGrid2D, Wall, type WallConstruction, WallJoint, type WallJointOptions, WallOpening, type WallOptions, type WallPart, type WallPartRole, type WallRecord, WallSystem, WallType, type WindowPartitioning, type XY, acceptProposal, bindBuilding, boundingWalls, boxOf, buildCutList, buildingPlan, buildingSchema, chooseJoistDirection, clampedUniformKnots, cltLayers, contactBetween, defaultBuildingTypes, describeValue, edgeOutwardVisibility, findAdjacent, holzrahmenbauLayers, joistDirectionFromBounds, joistDirectionFromPCA, joistDirectionFromSupports, lineClipPolygon, listProposals, neighboursOf, openingFill, patchChanges, patchedCollections, perpVisibility, perpVisibilityOfPolys, polygonFromVertices, propose, realize, realizeBuilding, realizeSlab, rejectProposal, repelBodies, reverse as reverseContact, validateBuilding, writePdf2D };

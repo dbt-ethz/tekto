@@ -83,6 +83,8 @@ export type { TopBarOptions } from "./sketch/ViewerToolbar";
 
 export { PresenceBar } from "./collab/PresenceBar";
 export type { PresenceBarOptions } from "./collab/PresenceBar";
+export { ProposalBar } from "./collab/ProposalBar";
+export type { ProposalBarOptions } from "./collab/ProposalBar";
 
 // Markup overlay types (the overlay itself is mounted by sketch(); see sketch/Markup.ts)
 export type { MarkupBundle, MarkupCaptureOptions, MarkupObjectRef, MarkKind, MarkupRenderer } from "./sketch/Markup";

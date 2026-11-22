@@ -29,6 +29,8 @@ export interface BuildingPlanOptions {
   keys?: boolean;
   /** Model coordinates in metres along the bottom and the left edge (default true). */
   coordinates?: boolean;
+  /** Records to make stand out, as `"walls/s"` (what a proposal would change): drawn in the accent colour. */
+  highlight?: readonly string[];
 }
 
 const WALL = "#2b2b2b";
@@ -147,6 +149,8 @@ export function buildingPlan(building: Building, opts: BuildingPlanOptions = {})
   const extent = Math.max(1, ...boxes.map((b) => Math.max(b.x1 - b.x0, b.y1 - b.y0)));
   const scale = opts.scale ?? SCALES.find((s) => (extent * 1000) / s <= 200) ?? 1000;
   const keys = opts.keys ?? true, coordinates = opts.coordinates ?? true;
+  const marked = new Set(opts.highlight ?? []);
+  const HOT = DRAWING_PALETTE.accent;
 
   const sheet = new Sheet({
     scale,
@@ -183,12 +187,13 @@ export function buildingPlan(building: Building, opts: BuildingPlanOptions = {})
     for (const [id, space] of s.spaces) {
       const colour = building.types.spaces?.[(data.spaces?.[id]?.use ?? "").toLowerCase()]?.colour;
       view.fill(space.boundary, { color: colour ? pale(colour, 0.55) : "#f1f1f1", layer: "room", key: `spaces/${id}` });
+      if (marked.has(`spaces/${id}`)) view.polyline(space.boundary, { closed: true, color: HOT, weight: 0.5, dash: "dashed", key: `spaces/${id}` });
     }
 
     // Stairs: the outline.
     for (const [id, stair] of s.stairs) {
       const outline = stair.footprint();
-      view.polyline(outline, { closed: true, layer: "stair", key: `stairs/${id}` });
+      view.polyline(outline, { closed: true, layer: "stair", key: `stairs/${id}`, ...(marked.has(`stairs/${id}`) ? { color: HOT, weight: 0.5 } : {}) });
       if (keys) view.text(id, Polygon2D.centroid2D(outline), { size: 1.6, layer: "key", align: "center", baseline: "middle", key: `stairs/${id}` });
     }
 
@@ -208,7 +213,7 @@ export function buildingPlan(building: Building, opts: BuildingPlanOptions = {})
       // that starts in the middle of its first opening.
       if (closed && !holes.length) {
         const loop = line.slice(0, -1);
-        view.fill([ring(loop, t / 2), ring(loop, -t / 2)], { color: WALL, layer: "wall", key: `walls/${id}` });
+        view.fill([ring(loop, t / 2), ring(loop, -t / 2)], { color: marked.has(`walls/${id}`) ? HOT : WALL, layer: "wall", key: `walls/${id}` });
       } else {
         let run = line, gaps = holes.map((h) => ({ a: h.a, b: h.b }));
         if (closed) {
@@ -220,7 +225,7 @@ export function buildingPlan(building: Building, opts: BuildingPlanOptions = {})
         for (const gap of [...gaps, { a: length, b: length }]) {
           if (gap.a - from > 1e-6) {
             const outline = band(piece(run, from, gap.a), t, from === 0 && !closed && meets(line[0]) ? t / 2 : 0, gap.a === length && !closed && meets(line[line.length - 1]) ? t / 2 : 0);
-            view.fill(outline, { color: WALL, layer: "wall", key: `walls/${id}` });
+            view.fill(outline, { color: marked.has(`walls/${id}`) ? HOT : WALL, layer: "wall", key: `walls/${id}` });
           }
           from = Math.max(from, gap.b);
         }
@@ -231,10 +236,10 @@ export function buildingPlan(building: Building, opts: BuildingPlanOptions = {})
         const n = new Vec2(-a.dir.y, a.dir.x);
         const key = `openings/${hole.id}`;
         const h = t / 2;
-        view.fill([[a.p.x + n.x * h, a.p.y + n.y * h], [b.p.x + n.x * h, b.p.y + n.y * h], [b.p.x - n.x * h, b.p.y - n.y * h], [a.p.x - n.x * h, a.p.y - n.y * h]], { color: "#ffffff", layer: "opening", key });
+        view.fill([[a.p.x + n.x * h, a.p.y + n.y * h], [b.p.x + n.x * h, b.p.y + n.y * h], [b.p.x - n.x * h, b.p.y - n.y * h], [a.p.x - n.x * h, a.p.y - n.y * h]], { color: marked.has(key) ? pale(HOT, 0.6) : "#ffffff", layer: "opening", key });
         for (const side of hole.kind === "window" ? [-1, 0, 1] : [-1, 1]) {
           const o = (side * t) / 2;
-          view.polyline([[a.p.x + n.x * o, a.p.y + n.y * o], [b.p.x + n.x * o, b.p.y + n.y * o]], { layer: "opening", weight: side === 0 ? 0.25 : 0.13, key });
+          view.polyline([[a.p.x + n.x * o, a.p.y + n.y * o], [b.p.x + n.x * o, b.p.y + n.y * o]], { layer: "opening", weight: marked.has(key) ? 0.5 : side === 0 ? 0.25 : 0.13, key, ...(marked.has(key) ? { color: HOT } : {}) });
         }
         if (keys) {
           const m = along(line, (hole.a + hole.b) / 2);

@@ -25,6 +25,10 @@
  * the House app's Save JSON writes; plain building records are read too), created with the
  * first edit. In both the agent reads and patches the records, gets the check's issues,
  * undoes its steps, and looks at the floor plans as images.
+ *
+ * With `--propose` (TEKTO_PROPOSE=1), in any mode, the agent cannot change the model itself:
+ * tekto_apply and tekto_undo are not offered, only tekto_propose, whose changes wait in the
+ * document for a person to accept or reject. The way to run an agent on a model people share.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -80,6 +84,8 @@ if (docArg >= 0 && !process.argv[docArg + 1]) {
 const DOC = FILE ? null : docArg >= 0 ? process.argv[docArg + 1] : process.env.TEKTO_DOC || null;
 /** The server holds the building itself (no page). */
 const HEADLESS = Boolean(FILE || DOC);
+/** The agent may only propose: tekto_apply and tekto_undo are not offered (`--propose`, TEKTO_PROPOSE=1). */
+const PROPOSE_ONLY = process.argv.includes("--propose") || process.env.TEKTO_PROPOSE === "1";
 
 let session = null;        // the BuildingSession on FILE
 let sessionStamp = -1;     // the file's modification time as this server last read or wrote it
@@ -159,7 +165,14 @@ async function local(op, args = {}) {
       if (undone) saved();
       return { undone };
     }
-    case "snapshot": return s.snapshot({ storey: args.storey });
+    case "snapshot": return s.snapshot({ storey: args.storey, proposal: args.proposal });
+    case "propose": {
+      if (!String(args.label ?? "").trim()) throw new Error("label is required: a few words saying what the proposal does");
+      const r = s.propose(args.patch ?? {}, String(args.label).trim(), { by: AGENT, note: args.note });
+      if (r.ok) saved();
+      return r;
+    }
+    case "proposals": return s.proposals(args.status === "all" ? "all" : "open").map(({ patch: _patch, base: _base, ...p }) => p);
     case "export": {
       const format = args.format ?? "ifc";
       const base = FILE ? FILE.replace(/\.json$/i, "") : path.resolve(DOC.replace(/[^\w.-]/g, "_"));
@@ -249,8 +262,9 @@ const TOOLS = [
     inputSchema: { type: "object", properties: { note: { type: "string", description: "Written into the snapshot's legend" } } },
     run: async (a) => {
       if (HEADLESS) {
-        const r = await call("snapshot", { storey: a.storey });
+        const r = await call("snapshot", { storey: a.storey, proposal: a.proposal });
         const out = [];
+        if (a.proposal) out.push(text(`The building as proposal ${a.proposal} would leave it; what it adds or changes is drawn in red. The issues below are the check's with it applied.`));
         for (const p of r.plans) out.push(text(`Floor plan of ${p.name} (storeys/${p.storey}). Red names are record ids: a wall "s" is walls/s, an opening "d1" is openings/d1, the name under a room's area its spaces/ id. Coordinates in metres along the edges.`), { type: "image", data: Buffer.from(p.png).toString("base64"), mimeType: "image/png" });
         if (!r.plans.length) out.push(text("Nothing to draw yet: the building has no storey."));
         out.push(text({ building: r.summary, issues: r.issues }));
@@ -303,6 +317,29 @@ const TOOLS = [
   },
 ];
 
+TOOLS.push(
+  {
+    name: "tekto_propose",
+    description: "Propose a change instead of making it: the same patch as tekto_apply (`set`, `update`, `remove` by \"collection/id\"), stored in the document as an open proposal that a person accepts or rejects in the app. Nothing in the model changes until they accept. Checked against the schema first (`rejected` says why it could not be proposed). The answer has the proposal's `id` and what the check would say with it applied: `issues`, of those the ones it would newly cause (`added`), and the current ones it would settle (`resolved`). Give `label` (a few words: what it does) and `note` (why: what the reviewer should know). One proposal per decision a person would make: do not bundle unrelated changes.",
+    inputSchema: {
+      type: "object", required: ["patch", "label"],
+      properties: {
+        patch: { type: "object", properties: { set: { type: "object", additionalProperties: { type: "object" } }, update: { type: "object", additionalProperties: { type: "object" } }, remove: { type: "array", items: { type: "string" } } } },
+        label: { type: "string", description: "What it does, in a few words (\"Wider entrance door\")" },
+        note: { type: "string", description: "Why: the reasoning the reviewer should read" },
+      },
+    },
+    run: async (a) => [text(await call("propose", { patch: a.patch ?? {}, label: a.label, note: a.note }))],
+  },
+  {
+    name: "tekto_proposals",
+    description: "The proposals in the document: by default the open ones (waiting for a person); `status: \"all\"` adds the accepted and the rejected ones, with who decided and, for a rejection, the reason: read it before proposing again. Each lists the records it changes (`changes`) and the ones someone has changed since it was proposed (`stale`).",
+    inputSchema: { type: "object", properties: { status: { type: "string", enum: ["open", "all"] } } },
+    run: async (a) => [text(await call("proposals", { status: a.status }))],
+  },
+);
+if (PROPOSE_ONLY) for (const name of ["tekto_apply", "tekto_undo"]) TOOLS.splice(TOOLS.findIndex((t) => t.name === name), 1);
+
 /** What the server offers when it holds the building: the document tools, a look, and the files to hand on. */
 const FILE_TOOLS = [
   {
@@ -322,8 +359,10 @@ const FILE_TOOLS = [
   {
     name: "tekto_snapshot",
     description: "See the building: a floor plan per storey as an image (walls, doors and windows, rooms with name and area, stairs), every part labelled with its record id and the model's coordinates along the edges, then the building in numbers and the check's issues. Look after edits: a check passing is not the same as a plan looking right.",
-    inputSchema: { type: "object", properties: { storey: { type: "string", description: "One storey's id; default: every storey, an image each" } } },
+    inputSchema: { type: "object", properties: { storey: { type: "string", description: "One storey's id; default: every storey, an image each" }, proposal: { type: "string", description: "A proposal's id: see the building as that proposal would leave it, its changes in red" } } },
   },
+  { name: "tekto_propose" },
+  { name: "tekto_proposals" },
   {
     name: "tekto_undo",
     description: "Undo your last edit to the building: your own steps since this server started, not other people's.",
@@ -334,12 +373,12 @@ const FILE_TOOLS = [
     inputSchema: { type: "object", properties: { format: { type: "string", enum: ["ifc", "svg", "dxf"] }, storey: { type: "string", description: "For svg and dxf: one storey's id (default all, side by side)" }, path: { type: "string", description: "Where to write (default: the building's name with the format's ending)" } } },
     run: async (a) => [text(await call("export", { format: a.format, storey: a.storey, path: a.path }))],
   },
-].map((t) => ({ ...TOOLS.find((p) => p.name === t.name), ...t }));
+].filter((t) => !PROPOSE_ONLY || !["tekto_apply", "tekto_undo"].includes(t.name)).map((t) => ({ ...TOOLS.find((p) => p.name === t.name), ...t }));
 
 /** The tools of this server's mode. */
 const ACTIVE = HEADLESS ? FILE_TOOLS : TOOLS;
 
-const FILE_INSTRUCTIONS = `These tools work on a building ${DOC ? "that people share live: your edits reach everyone who has it open at once, and theirs reach you, so read the records again before you build on them" : "file, without a browser"}. The building is plain records (storeys, walls, openings, slabs, spaces, roofs, stairs) that reference each other by id. Start with tekto_info: it gives the collections and the JSON Schema of their records. Make changes with tekto_apply (one undo step each), read its issues and fix them, and look with tekto_snapshot: the floor plans as images. Z up, metres.`;
+const FILE_INSTRUCTIONS = `These tools work on a building ${DOC ? "that people share live: your edits reach everyone who has it open at once, and theirs reach you, so read the records again before you build on them" : "file, without a browser"}. The building is plain records (storeys, walls, openings, slabs, spaces, roofs, stairs) that reference each other by id. Start with tekto_info: it gives the collections and the JSON Schema of their records. ${PROPOSE_ONLY ? "You cannot change the model yourself: propose each change with tekto_propose (a label and a note saying why), read the issues it would cause, look at it with tekto_snapshot and the proposal's id, and leave it for a person to accept or reject. tekto_proposals tells you what became of earlier ones." : "Make changes with tekto_apply (one undo step each), read its issues and fix them; where people should decide, use tekto_propose instead."} Look with tekto_snapshot: the floor plans as images. Z up, metres.`;
 
 const INSTRUCTIONS = HEADLESS ? FILE_INSTRUCTIONS : "These tools work in the tekto app open in the person's browser. Start with tekto_info: it gives the document's collections and the JSON Schema of their records. Make changes with tekto_apply (one undo step each), read tekto_apply's issues and fix them, and look with tekto_snapshot. If tekto_info reports open notes, they are what the person wants changed: read them with tekto_notes, and resolve each with what you did.";
 

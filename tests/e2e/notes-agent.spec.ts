@@ -71,11 +71,11 @@ test("Markup's Save keeps the marks as notes and names them in the bundle", asyn
   await page.mouse.move((at[0].x + at[1].x) / 2, (at[0].y + at[1].y) / 2, { steps: 4 });
   await page.mouse.move(at[1].x, at[1].y, { steps: 4 });
   await page.mouse.up();
-  const input = page.getByPlaceholder(/note for 1/);
+  const input = page.getByPlaceholder(/Mark 1:/);
   await input.fill("Door here");
   await input.press("Enter");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByText(/kept 1 note/)).toBeVisible();
+  await page.getByRole("button", { name: "Save for Claude" }).click();
+  await expect(page.getByText(/1 note pinned to the model/)).toBeVisible();
 
   const notes = await page.evaluate(() => (window as any).__tekto.notes.describe());
   expect(notes).toHaveLength(1);

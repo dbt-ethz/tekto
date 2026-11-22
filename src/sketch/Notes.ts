@@ -6,7 +6,7 @@
  *
  * A `NotesLayer` draws the notes over the view from any camera: their strokes, and a numbered
  * pin each. A pin opens the note, with "Go to view" (the camera it was drawn from) and
- * "Delete". Markup's "Keep as notes" turns marks into notes (`markup(…, { notes })`,
+ * "Delete". Markup's "Pin notes to the model" turns marks into notes (`markup(…, { notes })`,
  * `appShell({ notes: doc })`).
  *
  * A note is also how a person tells an agent what to change: it is open until someone marks
@@ -158,7 +158,7 @@ export class NotesLayer {
     this.doc.update(this.collection, id, (n: Note) => ({ ...n, status: "open" }), { label: "Reopen note" });
   }
 
-  /** Keep several notes as one undo step ("Keep as notes"). Returns their ids. */
+  /** Keep several notes as one undo step ("Pin notes to the model"). Returns their ids. */
   keep(notes: readonly Note[]): string[] {
     return this.doc.transact(notes.length > 1 ? "Add notes" : "Add note", () => notes.map((n) => this.doc.add(this.collection, n)));
   }
@@ -256,7 +256,7 @@ export class NotesLayer {
     b.dataset.note = id;
     b.setAttribute("aria-label", "Note");
     b.style.cssText = `position:absolute;width:22px;height:22px;border-radius:50%;border:2px solid #fff;background:${INK};`
-      + "color:#14161e;font:700 11px/1 system-ui,sans-serif;display:flex;align-items:center;justify-content:center;"
+      + "color:#1e1e1e;font:700 11px/1 system-ui,sans-serif;display:flex;align-items:center;justify-content:center;"
       + "padding:0;cursor:pointer;pointer-events:auto;box-shadow:0 1px 4px rgba(0,0,0,.45);";
     b.addEventListener("click", (e) => { e.stopPropagation(); this.openId === id ? this.closeCard() : this.openCard(id); });
     this.pinLayer.appendChild(b);
@@ -274,7 +274,7 @@ export class NotesLayer {
     const card = this.card = document.createElement("div");
     card.dataset.noteCard = id;
     card.style.cssText = "position:absolute;z-index:17;width:230px;padding:10px 12px;border-radius:8px;pointer-events:auto;"
-      + "background:#11131a;border:1px solid rgba(255,255,255,.12);box-shadow:0 6px 18px rgba(0,0,0,.45);"
+      + "background:#1e1e1e;border:1px solid rgba(255,255,255,.12);box-shadow:0 6px 18px rgba(0,0,0,.45);"
       + "color:#e8ebf0;font:12px/1.45 system-ui,sans-serif;";
     const text = document.createElement("div");
     text.textContent = n.text || "(no text)";

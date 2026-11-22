@@ -13,7 +13,7 @@
  *                 stairs, slabs, spaces), coloured by the .mtl downloaded with it
  *   agentDoc      an agent reads and edits the records (`__tekto.doc`, or from outside through
  *                 the dev server: `tools/mcp.mjs`), each patch one undo step, answered with the issues
- *   notes         ✎ Markup: draw on the house, Save — the marks become notes with the model
+ *   notes         ✎ Markup: draw on the house, "Pin notes to the model" — the marks become notes with the model
  *                 (pinned, saved, undoable). An agent lists the open notes (`tekto_notes`), makes
  *                 the change, and resolves each with what it did; the pin turns grey
  *   ?empty        start on an empty site (the Empty site button does the same, undoably)
@@ -95,9 +95,6 @@ export default function (container: HTMLElement) {
   const app = appShell({
     title: "House",
     container,
-    topBar: false,
-    navGizmo: true,
-    shadingBar: true,
     units: "m",
     // Notes with the model: Markup's marks are kept in the doc's `notes`, for people and the agent.
     notes: doc,
@@ -107,20 +104,8 @@ export default function (container: HTMLElement) {
     params: {
       framing: { type: "bool", default: false, label: "Framing" },
       issues: { type: "bool", default: true, label: "Show issues", display: true },
-      undo: { type: "button", label: "Undo", action: () => doc.undo() },
-      redo: { type: "button", label: "Redo", action: () => doc.redo() },
-      reset: { type: "button", label: "Example house", action: () => load(EXAMPLE, "Example house") },
-      empty: { type: "button", label: "Empty site", action: () => load({}, "Clear the site") },
-      ifc: { type: "button", label: "Export IFC", action: () => download(house.building.toIfc({ projectName: "House" }), "house.ifc", { stamp: true }) },
-      obj: { type: "button", label: "Export OBJ", action: () => exportObj() },
-      save: { type: "button", label: "Save JSON", action: () => download(JSON.stringify(doc.toJSON(), null, 2), "house.json", { stamp: true }) },
-      open: { type: "button", label: "Open JSON", action: () => openJson() },
     },
-    groups: {
-      Show: ["framing", "issues"],
-      History: ["undo", "redo"],
-      File: ["reset", "empty", "ifc", "obj", "save", "open"],
-    },
+    groups: { Show: ["framing", "issues"] },
   });
 
   // Walls and slabs are flat: their tessellation says nothing, so no wire overlay.
@@ -202,7 +187,14 @@ export default function (container: HTMLElement) {
     download(ObjFile.serialize(data, { mtllib: mtl }), obj);
   }
 
+  // The menu bar is these commands: File and Edit over the document (the sidebar is the model's own).
   app.commands.add([
+    { id: "file.new.example", label: "New: example house", group: "File", run: () => load(EXAMPLE, "Example house") },
+    { id: "file.new.empty", label: "New: empty site", group: "File", run: () => load({}, "Clear the site") },
+    { id: "file.open", label: "Open JSON…", keys: "Mod+O", group: "File", run: () => openJson() },
+    { id: "file.save", label: "Save JSON", keys: "Mod+S", group: "File", run: () => download(JSON.stringify(doc.toJSON(), null, 2), "house.json", { stamp: true }) },
+    { id: "file.export.ifc", label: "Export IFC", group: "File", run: () => download(house.building.toIfc({ projectName: "House" }), "house.ifc", { stamp: true }) },
+    { id: "file.export.obj", label: "Export OBJ", group: "File", run: () => exportObj() },
     { id: "edit.undo", label: "Undo", keys: "Mod+Z", group: "Edit", run: () => { doc.undo(); }, enabled: () => doc.canUndo() },
     { id: "edit.redo", label: "Redo", keys: ["Shift+Mod+Z", "Mod+Y"], group: "Edit", run: () => { doc.redo(); }, enabled: () => doc.canRedo() },
   ]);

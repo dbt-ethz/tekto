@@ -34,12 +34,12 @@ Every edit is one undo step, whoever made it: you, a script, or Claude.
 
 ![Two marks on the house, each with its instruction](/shots/ui-markup.webp)
 
-**✎ Markup** turns the view into a sheet to draw on.
+**✎ Markup** turns the view into a sheet to draw on. A bar at the top says what to do next.
 
 1. **Drag** around what you mean: a window, a roof edge. Each mark gets a number.
-2. **Type** what to change in the box beside the mark, and press Enter. **Shift**-drag adds strokes to the last mark.
-3. **Save** (⌘S) keeps the view with the marks and a file that says, for each mark, which parts it touches. In the House, **Keep as notes** keeps the marks with the model as notes.
-4. **Undo** (⌘Z) takes back the last mark, **Clear** all of them. **Done** closes Markup.
+2. **Type** what to change in the box beside the mark, and press Enter. **Shift**-drag adds strokes to the last mark. Something no single mark shows goes in the bar's box for a general instruction.
+3. **Save for Claude** (⌘S) keeps the view with the marks and a file that says, for each mark, which parts it touches. In the House, **Pin notes to the model** keeps the marks with the model as notes.
+4. **Undo mark** (⌘Z) takes back the last mark, **Clear marks** all of them. **Done** closes Markup; marks that were not saved or pinned are dropped.
 
 A mark is not a picture of a circle: tekto works out which records it encloses (`walls/s`, `openings/ew1`) and where in space it lies, so Claude reads exactly what you pointed at.
 

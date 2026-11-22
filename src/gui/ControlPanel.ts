@@ -81,9 +81,19 @@ export interface ControlPanelConfig {
   onAction?: () => void;
   /** The user switched to another tab (panel re-renders itself first). */
   onTabChange?: (tab: string) => void;
+  /** The panel rebuilt its controls (a frame with an automatic width re-fits). */
+  onRender?: () => void;
+  /** Where the tabs are: a bar on top (default), or a list down the panel's left side, which holds more and longer names. */
+  tabs?: "top" | "side";
 }
 
 const DEFAULT_GROUP = "Parameters";
+/** The label column: at least this wide, at most that (a longer label wraps). */
+const LABEL_MIN = 56, LABEL_MAX = 170;
+/** A control beside its label: a slider with its value needs the first, a select may ask for up to the second. */
+const CONTROL_MIN = 150, CONTROL_MAX = 220;
+/** A section's horizontal padding. */
+const SECTION_PAD = 14;
 
 // Rectangular ("scientific") range sliders — flat track, square thumb — the
 // tekto default look. Pseudo-element thumbs can't be styled inline, so a
@@ -96,12 +106,18 @@ export function ensureSliderStyle(doc: Document): void {
   el.id = SLIDER_STYLE_ID;
   el.textContent = `
     .tekto-slider{-webkit-appearance:none;appearance:none;background:transparent;cursor:pointer;height:16px;outline:none;padding:0;}
-    .tekto-slider::-webkit-slider-runnable-track{height:4px;background:var(--tekto-track,#2a2d44);}
+    .tekto-slider::-webkit-slider-runnable-track{height:4px;background:var(--tekto-track,#444444);}
     .tekto-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:7px;height:14px;margin-top:-5px;border-radius:0;background:var(--tekto-thumb,#ffffff);}
-    .tekto-slider::-moz-range-track{height:4px;background:var(--tekto-track,#2a2d44);}
+    .tekto-slider::-moz-range-track{height:4px;background:var(--tekto-track,#444444);}
     .tekto-slider::-moz-range-thumb{width:7px;height:14px;border-radius:0;border:none;background:var(--tekto-thumb,#ffffff);}
   `;
   doc.head.appendChild(el);
+}
+
+/** A label for a control that was given none: its key, spaced and with a capital ("floorHeight" → "Floor height"). */
+function labelFromKey(key: string): string {
+  const words = key.replace(/[_-]+/g, " ").replace(/([a-z0-9])([A-Z])/g, "$1 $2").trim().toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 // ─── ControlPanel ────────────────────────────────────────────────────
@@ -149,6 +165,8 @@ export class ControlPanel {
     // One document-level listener to close open menus (added once, not per render)
     this.docClick = () => this.closeMenus();
     document.addEventListener("click", this.docClick);
+    // Widths are measured in the panel's font: measure again once it has loaded.
+    document.fonts?.ready.then(() => { if (this.items.length) { this.fitLabels(); this.cfg.onRender?.(); } });
   }
 
   dispose(): void {
@@ -164,6 +182,7 @@ export class ControlPanel {
     this.extraTabs = extraTabs;
     this.updaters.clear();
     this.el.innerHTML = "";
+    this.railWidth = 0;
 
     const t = this.theme;
     const buttons = this.cfg.getButtons?.() ?? [];
@@ -190,12 +209,26 @@ export class ControlPanel {
     const pinnedButtons = hasTabs ? buttons.filter(b => !b.tab && !b.menu) : [];
     if (pinnedItems.length || pinnedButtons.length) {
       const strip = document.createElement("div");
-      strip.style.cssText = `padding:4px 8px 2px;border-bottom:1px solid ${t.border};`;
+      strip.style.cssText = `padding:4px 8px 2px 8px;border-bottom:1px solid ${t.border};`;
       for (const it of pinnedItems) { const row = this.buildControl(it); if (row) strip.appendChild(row); }
       for (const b of pinnedButtons) strip.appendChild(this.buildButtonRow(b));
       this.el.appendChild(strip);
     }
-    if (hasTabs) this.el.appendChild(this.buildTabBar(tabOrder));
+    // Tabs on top: a bar, then the sections. Tabs on the side: a list beside the sections.
+    const side = hasTabs && this.cfg.tabs === "side";
+    let body = this.el;
+    // (single properties: the owner may have styled the element itself)
+    this.el.style.display = side ? "flex" : "";
+    this.el.style.flexDirection = side ? "column" : "";
+    this.el.style.minHeight = side ? "100%" : "";
+    if (side) {
+      const row = document.createElement("div");
+      row.style.cssText = "display:flex;align-items:stretch;flex:1;";
+      body = document.createElement("div");
+      body.style.cssText = "flex:1;min-width:0;";
+      row.append(this.buildTabList(tabOrder, items, buttons), body);
+      this.el.appendChild(row);
+    } else if (hasTabs) this.el.appendChild(this.buildTabBar(tabOrder));
 
     // An extra tab (the sketch's Info) renders its own content, below the controls declared in
     // that tab if there are any — so a sketch can put settings beside its log.
@@ -216,16 +249,68 @@ export class ControlPanel {
     for (const b of buttons) if (inTab(b.tab, b.menu)) groupOf(b.group).buttons.push(b);
     for (const r of customRows) if (inTab(r.tab)) groupOf(r.group).rows.push(r);
 
+    // Nothing but the default group: no heading over it. "Parameters" over the only list of
+    // parameters says nothing (the panel's own top row, or the tab, names it already).
+    const bare = groups.size === 1 && groups.has(DEFAULT_GROUP);
     for (const [name, content] of groups) {
-      this.el.appendChild(this.buildSection(name, content));
+      body.appendChild(this.buildSection(name, content, bare));
     }
     if (activeExtra) {
       const host = document.createElement("div");
       activeExtra.render(host);
-      this.el.appendChild(host);
+      body.appendChild(host);
     }
 
-    this.el.appendChild(this.footer);
+    body.appendChild(this.footer);
+    this.fitLabels();
+    this.cfg.onRender?.();
+  }
+
+  // ── Width ──
+
+  private measureCtx: CanvasRenderingContext2D | null = null;
+  /** The width of `text` in the panel's font at `px`, in CSS pixels. */
+  private textWidth(text: string, px: number): number {
+    this.measureCtx ??= document.createElement("canvas").getContext("2d");
+    if (!this.measureCtx) return text.length * px * 0.6;
+    this.measureCtx.font = `${px}px ${this.theme.font}`;
+    return this.measureCtx.measureText(text).width;
+  }
+
+  private labelWidth = LABEL_MIN;
+  private railWidth = 0;
+
+  /** Size the label column to the longest label of any tab (between LABEL_MIN and LABEL_MAX; longer ones wrap). */
+  private fitLabels(): void {
+    let w = LABEL_MIN;
+    for (const it of this.items) {
+      const def = this.store.getDef(it.key) as ParamDef | undefined;
+      if (!def || it.menu || def.type === "button") continue;
+      w = Math.max(w, Math.ceil(this.textWidth(def.label ?? labelFromKey(it.key), 11)) + 2);
+    }
+    this.labelWidth = Math.min(w, LABEL_MAX);
+    this.el.style.setProperty("--tekto-label-w", `${this.labelWidth}px`);
+  }
+
+  /**
+   * The panel width its controls ask for, in px: the label column, a control beside it
+   * (wider for a select with long options), a button's text, and the tab list when the tabs
+   * are on the side. A frame with `panelWidth: "auto"` asks after every render.
+   */
+  preferredWidth(): number {
+    let control = CONTROL_MIN;
+    let lone = 0;   // rows without a label column: buttons
+    for (const it of this.items) {
+      const def = this.store.getDef(it.key) as ParamDef | undefined;
+      if (def?.type === "select") {
+        for (const opt of def.options ?? []) control = Math.max(control, this.textWidth(String(opt), 11) + 36);
+      } else if (def?.type === "button") {
+        lone = Math.max(lone, this.textWidth(def.label ?? it.key, 10) + 24);
+      }
+    }
+    for (const b of this.cfg.getButtons?.() ?? []) if (!b.menu) lone = Math.max(lone, this.textWidth(b.label, 10) + 24);
+    const row = this.labelWidth + 8 + Math.min(control, CONTROL_MAX);
+    return Math.ceil(this.railWidth + 2 * SECTION_PAD + Math.max(row, lone)) + 1;
   }
 
   /** Push a value into a live control without going through the store. */
@@ -405,16 +490,62 @@ export class ControlPanel {
     return bar;
   }
 
+  /** The tabs as a list down the panel's left side: a name, and how many controls it holds. */
+  private buildTabList(tabOrder: string[], items: ControlItem[], buttons: PanelButton[]): HTMLElement {
+    const t = this.theme;
+    const list = document.createElement("nav");
+    list.dataset.tektoTabs = "side";
+    let w = 0;
+    for (const tab of tabOrder) w = Math.max(w, this.textWidth(tab, 11));
+    this.railWidth = Math.min(Math.max(Math.ceil(w) + 26, 72), 160);
+    list.style.cssText = `flex:0 0 ${this.railWidth}px;box-sizing:border-box;padding:6px 0;border-right:1px solid ${t.border};`;
+    for (const tab of tabOrder) {
+      const on = tab === this.activeTab;
+      const n = items.filter(it => it.tab === tab).length + buttons.filter(b => b.tab === tab).length;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.setAttribute("aria-pressed", String(on));
+      btn.style.cssText = `
+        display:block;width:100%;box-sizing:border-box;padding:7px 10px 7px 12px;border:none;
+        border-left:2px solid ${on ? t.accent : "transparent"};text-align:left;cursor:pointer;
+        background:${on ? t.hoverBg : "transparent"};color:${on ? t.accent : t.textDim};
+        font-family:inherit;font-size:11px;line-height:1.3;transition:background .12s;
+      `;
+      const name = document.createElement("span");
+      name.style.cssText = `display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:${on ? 600 : 400};`;
+      name.textContent = tab;
+      btn.appendChild(name);
+      if (n > 0) {
+        const count = document.createElement("span");
+        count.style.cssText = `display:block;font-size:9px;color:${t.textFaint};`;
+        count.textContent = `${n} control${n === 1 ? "" : "s"}`;
+        btn.appendChild(count);
+      }
+      if (!on) {
+        btn.addEventListener("mouseenter", () => { btn.style.background = t.hoverBg; });
+        btn.addEventListener("mouseleave", () => { btn.style.background = "transparent"; });
+      }
+      btn.addEventListener("click", () => {
+        this.activeTab = tab;
+        this.render(this.items, this.customRows, this.extraTabs);
+        this.cfg.onTabChange?.(tab);
+      });
+      list.appendChild(btn);
+    }
+    return list;
+  }
+
   // ── Sections ──
 
   private buildSection(
     name: string,
     content: { items: ControlItem[]; buttons: PanelButton[]; rows: CustomRow[] },
+    bare = false,
   ): HTMLElement {
     const t = this.theme;
     const section = document.createElement("div");
     section.style.cssText = `border-bottom:1px solid ${t.border};`;
-    const collapsed = this.collapsedGroups.has(name);
+    const collapsed = !bare && this.collapsedGroups.has(name);
 
     const header = document.createElement("div");
     header.style.cssText = `
@@ -424,19 +555,24 @@ export class ControlPanel {
     header.addEventListener("mouseenter", () => { header.style.background = t.hoverBg; });
     header.addEventListener("mouseleave", () => { header.style.background = "transparent"; });
 
+    // A plain panel shows the arrow only on a folded section: the name alone is the heading.
     const arrow = document.createElement("span");
     arrow.style.cssText = `font-size:8px;color:${t.textFaint};transition:transform .15s;width:10px;`;
-    arrow.textContent = collapsed ? "▶" : "▼";
+    const paintArrow = (c: boolean) => {
+      arrow.textContent = c ? "▶" : "▼";
+      if (t.plain) arrow.style.display = c ? "" : "none";
+    };
+    paintArrow(collapsed);
     header.appendChild(arrow);
 
     const title = document.createElement("span");
     title.style.cssText = `font-size:9px;font-weight:500;text-transform:uppercase;letter-spacing:1.8px;color:${t.textFaint};`;
     title.textContent = name;
     header.appendChild(title);
-    section.appendChild(header);
+    if (!bare) section.appendChild(header);
 
     const body = document.createElement("div");
-    body.style.cssText = `padding:0 14px 10px;${collapsed ? "display:none;" : ""}`;
+    body.style.cssText = `padding:${bare ? 10 : 0}px ${SECTION_PAD}px 10px;${collapsed ? "display:none;" : ""}`;
 
     for (const it of content.items) {
       const row = this.buildControl(it);
@@ -445,7 +581,7 @@ export class ControlPanel {
     for (const r of content.rows) {
       if (r.fullBleed) {
         const wrap = document.createElement("div");
-        wrap.style.cssText = "margin:0 -14px;";
+        wrap.style.cssText = `margin:0 -${SECTION_PAD}px;`;
         wrap.appendChild(r.el);
         body.appendChild(wrap);
       } else {
@@ -462,7 +598,7 @@ export class ControlPanel {
       if (isCollapsed) this.collapsedGroups.delete(name);
       else this.collapsedGroups.add(name);
       body.style.display = isCollapsed ? "" : "none";
-      arrow.textContent = isCollapsed ? "▼" : "▶";
+      paintArrow(!isCollapsed);
     });
 
     return section;
@@ -509,8 +645,9 @@ export class ControlPanel {
     row.style.cssText = "display:flex;align-items:center;gap:8px;margin-bottom:5px;min-height:26px;";
 
     const label = document.createElement("span");
-    label.style.cssText = `width:80px;flex-shrink:0;font-size:11px;color:${t.textDim};text-transform:capitalize;`;
-    label.textContent = def.label ?? it.key;
+    // As written: "Width m" keeps its unit. Only a bare key is tidied ("floorHeight" → "Floor height").
+    label.style.cssText = `width:var(--tekto-label-w,80px);flex-shrink:0;font-size:11px;color:${t.textDim};`;
+    label.textContent = def.label ?? labelFromKey(it.key);
     row.appendChild(label);
 
     switch (def.type) {
@@ -524,7 +661,8 @@ export class ControlPanel {
         input.step = String(step);
         input.value = String(this.store.get(it.key));
         input.className = "tekto-slider";
-        input.style.cssText = `flex:1;--tekto-track:${t.controlBorder};--tekto-thumb:${it.accent || t.accent};`;
+        // width:0 + flex: a range input's own minimum width (129 px) must not push its value out of a narrow panel
+        input.style.cssText = `flex:1;width:0;min-width:40px;--tekto-track:${t.controlBorder};--tekto-thumb:${it.accent || t.accent};`;
 
         const valueSpan = document.createElement("span");
         valueSpan.style.cssText = `width:42px;text-align:right;font-size:10px;color:${t.accent};`;

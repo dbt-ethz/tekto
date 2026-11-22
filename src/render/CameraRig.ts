@@ -68,10 +68,17 @@ export class CameraRig {
     return { x, y, visible };
   }
 
+  private _gizmoShown = true;
+  /** Show or hide the axis widget (with the viewer's other tools); it stays hidden in a strict-2D view. */
+  setGizmoShown(shown: boolean): void {
+    this._gizmoShown = shown;
+    this.navGizmo?.setVisible(shown && this._rotateEnabled);
+  }
+
   setOrbitRotateEnabled(enabled: boolean): void {
     this._rotateEnabled = enabled;
     if (this.core.controls) (this.core.controls as { enableRotate?: boolean }).enableRotate = enabled;
-    this.navGizmo?.setVisible(enabled);   // a flat sheet has no axes to turn to
+    this.navGizmo?.setVisible(enabled && this._gizmoShown);   // a flat sheet has no axes to turn to
     if (enabled) this.setHandMode(false);  // the hand is a flat sheet's tool
   }
 

@@ -100,14 +100,14 @@ The playground ([playground/pages/](playground/pages/)) is the canonical place t
 
 The testbench ([playground/testbench.html](playground/testbench.html) + [.ts](playground/testbench.ts)) provides a top-bar shell that *every* sketch mounted into it inherits:
 
-- **Brand · Page chooser** (left).
-- **Render Mode** · **Lighting** · **Sun ▾** popover · **Export ▾** · **Import ▾** (right).
+- **Brand · Page chooser · Docs · Source**, then a slot for the running app's menu bar (`data-tekto-menu-slot`: File, Edit, View and the app's own, from its commands).
+- Nothing about the view: render style, lighting, sun (named, or by date and place), section, overlays and snapshot are in each 3D view's own header (the viewer tools), the same in every app.
 
 A sketch participates in the shell by:
 
 - Letting the shell auto-detect a `data-shell="…"` container and suppress the sketch's own 44 px title bar. No code change needed if you mount via `sketch({ container })`.
-- Calling `lab.registerExport({name, fileName, handler})` / `lab.registerImport({name, accept, handler})` to populate the menus. Sketches that don't register anything just hide those buttons.
-- The shell drives the directional light via `SketchInstance.setSunDirection(direction)` based on the popover's date/lat/lon — sketches don't need their own sun controls. They CAN call `lab.setSunDirection(dir)` inside the sketch fn to override per-frame (animated daily cycles).
+- Calling `lab.registerExport({name, fileName, handler})` / `lab.registerImport({name, accept, handler})`: they become File menu items.
+- The sun is the viewer's: sketches don't need their own sun controls. They CAN call `lab.setSunDirection(dir)` inside the sketch fn to override per-frame (animated daily cycles); `renderer.setSunAt({ latitude, longitude, date, hour })` sets it by date and place.
 
 When you build a new custom app outside the testbench: use `appShell()` from [src/sketch/AppShell.ts](src/sketch/AppShell.ts) — it provides the panel (via the shared `ControlPanel`), the Scene + ThreeRenderer harness, and the top bar (`viewerToolbar` in [src/sketch/ViewerToolbar.ts](src/sketch/ViewerToolbar.ts): lighting and AO / render mode / camera / Cut / Sun; a React app mounts the same bar as `tekto/react`'s `ViewerToolbar`). Do NOT copy panel/top-bar code into an app; if the shell lacks something, extend `AppShell.ts` or `ViewerToolbar.ts` in the library.
 
@@ -141,9 +141,13 @@ When you need a constant for tuning (e.g., "this taper margin should be ~0.5 m")
 
 ## GUI defaults (sketch2d / lab panels)
 
-Panel chrome is WHITE on the dark background: white slider accents and value
+The dark theme is neutral GREY, as an editor's (VS Code): chrome (panels, bars,
+the viewer header) `#1e1e1e`, its menus and popovers a step lighter `#252526`, the view
+behind it almost black `#0b0b0b`,
+borders and text grey — no blue-black, no navy. Never write those hex values in a
+harness or an app: read `getTheme()`. Panel chrome is WHITE on it: white slider accents and value
 labels, white toggle tracks (dark knob when ON), plain white title — NO green
-accents (#38d9a9) and NO gradient text in labels/titles. This is the intended
+anywhere in chrome (#38d9a9: not the name "Tekto", not a hover) and NO gradient text in labels/titles. This is the intended
 default for every tekto app; if you build a new control type for the lab
 panel, style it white-on-dark to match. (The `colorPicker` DEFAULT COLOR VALUE
 is content, not chrome — it may stay whatever the sketch wants.)
@@ -153,6 +157,15 @@ and ALL controls are rendered by [src/gui/ControlPanel.ts](src/gui/ControlPanel.
 (shared by `sketch`, `sketch2d`, and `appShell`; values live in `ParamStore`).
 Add or restyle a control type THERE, never inline in Sketch.ts / Sketch2D.ts /
 AppShell.ts — those files only declare params and mount the panel.
+
+Labels are shown as written (no `text-transform`): write "Width m", not "width_m". The
+panel's frame (its top row with the panel's name and the fold chevron, level with the viewer
+header; resize by its edge; `panelWidth: "auto"`; no panel at all while it is empty) is
+[src/sketch/panelFrame.ts](src/sketch/panelFrame.ts), shared by all three harnesses: never
+give one harness its own collapse button or width logic, and never put an app's control in
+the top row. A second look,
+`style: "paper"` (white, one ink, no title bar; `getTheme("paper")`, `theme.plain`), is for 2D
+figures such as the lecture apps; it is a preset of the same components, not a second set.
 
 Sliders are the rectangular "scientific" style: flat 4 px track, square white
 7×14 px thumb, no rounded pill — via the injected `.tekto-slider` stylesheet in

@@ -23,6 +23,8 @@ export interface RendererCore {
   readonly controls?: OrbitControls;
   readonly config: { backgroundColor: number; units: string | null; flatLighting: FlatLighting;
     studioLighting: StudioLighting };
+  /** The colour behind the model now: the background, or in hidden line the drawing's page. */
+  pageColor(): number;
   /** Whether a built-in overlay ("grid", "axes", "wireframe", "labels") is on. */
   overlay(name: string): boolean;
   readonly camera: THREE.PerspectiveCamera;

@@ -6,6 +6,106 @@ before 1.0, breaking changes bump the minor version. See
 
 ## Unreleased
 
+- **The panel has a top row of its own, and an empty panel is not there.** The first row of
+  the panel in `sketch`, `sketch2d` and `appShell` belongs to its frame: the panel's name on
+  the left ("Parameters"; `panelTitle` changes it, `""` leaves it free; a paper figure shows
+  its title there) and the fold chevron on the right. The controls start below it, so nothing
+  sits beside the chevron any more, and the row is as high as the viewer header, one band
+  across the app. An app that declares no control has no panel at all — no column, no rail,
+  no chevron — and the view takes the whole width; the panel appears with its first content.
+  A panel whose controls are all ungrouped lists them without the "Parameters" heading
+  (the top row says it already).
+  A folded panel takes no room either (it used to leave a rail down the whole height): the
+  chevron that brings it back sits in the view's top left corner, where the viewer header
+  moves its own content aside.
+
+- **Hidden line is a drawing on white paper, in a dark app too.** It used to fill the faces
+  with the view's background and draw the creases in a fixed dark grey: on a dark view, faint
+  grey lines on black. Now the view turns white while the mode is on, with dark lines and a
+  pale grid (an app whose background is light keeps it); a sunset no longer tints the page.
+  Clicking the Hidden line button again, or View ▸ Hidden line: paper / inverse
+  (`view.hiddenLineInverse`), draws it inverse: light lines on the dark view
+  (`renderer.setHiddenLineInverse(on)`, `hiddenLineInverse` in the config). Lines, points,
+  labels and edge colours that would vanish into the page (a white line on white paper) are
+  drawn in the drawing's ink; others keep their colour. `hiddenLinePage` and `inkOn` are the
+  rules, exported. An app that relied on hidden line staying dark sets `hiddenLineInverse: true`.
+
+- **The sun by date and place is in the viewer's sun menu.** The sun button of the viewer
+  header (and of the corner shading bar) has a fourth choice beside Morning, Noon and Sunset:
+  Date, which opens a place (24 cities, or a latitude and longitude), the model's north, a
+  day, an hour and Now under the row, with the sun's altitude and azimuth. North is CAD's
+  "true north": degrees clockwise from the model's +Y axis (up on the plan) to north, 0 by
+  default (`north` on the site). It lights the model as the named suns
+  do (Studio, the light following the sun, so the evening and the night come with the hour),
+  and it is in every 3D view: `sketch`, `appShell`, a bare `ThreeRenderer`. In code:
+  `renderer.setSunAt({ latitude, longitude, date: "2026-06-21", hour: 17 })` and
+  `renderer.sunSite`; `sunFor(site)`, `SUN_PLACES` and the `SunSite` type are exported. Hours
+  are the place's standard time (no summer time). The place last chosen is remembered. The
+  playground's own Sun dropdown in its top bar is gone, and with it the sun it pushed into
+  every sketch page on load: a page starts with the renderer's default sun.
+
+- **The dark theme is grey, not blue.** Panels, bars, menus and the viewer header are a neutral
+  dark grey (`#1e1e1e`, as an editor's dark theme), with grey borders and text; the view behind
+  them (a 3D view, a 2D canvas) is darker still, almost black (`#0b0b0b`, was the navy
+  `#0a0b14`), and its grid lines are grey. `getTheme()` returns the new colours, so an app
+  that reads the theme follows; an app that set `background: 0x0a0b14` itself keeps it. No
+  chrome is green: the playground's name and hovers are white.
+
+- **A menu bar, and Undo in every app.** `sketch`, `sketch2d` and `appShell` now show a menu
+  bar drawn from the app's commands: File, Edit and View first, then the app's own menus, each
+  command in the menu its `group` names (`app.commands.add({ id: "file.save", label: "Save
+  JSON", keys: "Mod+S", group: "File", run })`, `lab.command(…)`), with its keys beside it and
+  greyed while it cannot run. It sits in the title bar, or in the slot of a shell that has a
+  bar of its own (an element marked `data-tekto-menu-slot`, as the playground's); `menuBar(
+  commands)` and `menuSlot` are exported for an app with its own chrome. Exports and imports
+  registered with `lab.registerExport` / `registerImport` are File items and commands
+  (`file.export.ifc`); the sketch's own Export ▾ / Import ▾ buttons are gone. Edit ▸ Undo and
+  Redo (Mod+Z, Shift+Mod+Z) work over the controls of every app (`ParamHistory`: one step per
+  finished change, a slider drag is one); an app with a `Doc` declares `edit.undo` over its
+  document as before, which replaces it. A 2D sketch has `commands` now. The paper style shows
+  no menu bar; its keys work. The playground's House, Site Editor, Framed Floor, Roofs and
+  Drawing Sheet pages moved their File and History buttons from the sidebar into the menus.
+
+- **✎ Markup's bar says what it is for.** Its first line is a sentence on what to do next
+  (draw, type what should change at the mark, where the marks go), and the buttons say what
+  they act on: **Undo mark**, **Clear marks**, **Pin notes to the model** (was "Keep as
+  notes") and **Save for Claude** (was "Save"). The box in the bar is the "general
+  instruction, not tied to a mark", a mark's own box asks "what should change here?". The
+  buttons that need a mark are greyed out until there is one. No API change.
+
+- **The viewer's tools in every 3D view.** The viewer header (a strip across the top of the
+  view with icons for the render style, lighting, ambient occlusion, sun, section, overlays and
+  snapshot, ✎ Markup at its end) and the axis widget with the zoom column under it are now the
+  default of `sketch()` and `appShell()`, also inside a shell such as the playground.
+  `viewerTools: { sun: false, section: false, … }` drops single tools (`ViewerTools`: `modes`,
+  `light`, `sun`, `section`, `overlays`, `snapshot`, `zoom`), and
+  `renderer.setViewerToolsVisible(false)` hides them while the view shows something they do not
+  apply to (a drawing laid over it). **Changed defaults:** `navGizmo` is on (`navGizmo: false`
+  for an app with its own panels in that corner); `appShell`'s `shadingBar` is `"header"` (was
+  off) and its text toolbar `topBar` is off (was on): `topBar: true` shows it as before, and it
+  is the only place with the sun for a date and a site. An `appShell` inside a shell (`<div
+  data-shell>`) drops its title bar (`showHeader: true` keeps it). The playground's own Render,
+  Cut and Light dropdowns are gone: they repeated the header.
+  `PresenceBar` (shared editing) now takes its place in the header's row by itself, between
+  the view's tools and ✎ Markup, when the view has a header; a given `position` floats it as
+  before.
+
+- **One panel frame, a paper style, tabs down the side.** The control panel now behaves the
+  same in `sketch`, `sketch2d` and `appShell`: drag its right edge to resize it (double-click to
+  reset), fold it with the chevron at its top right corner (it used to sit in the header of a
+  2D sketch, and an `appShell` had none), both remembered per app title. `panelWidth: "auto"`
+  sizes the panel to its longest label and widest control, and the label column now fits its
+  labels (56 to 170 px) instead of a fixed 80. `tabs: "side"` lists a panel's tabs down its left
+  edge, each with its number of controls, for more and longer names than the bar on top holds;
+  `lab.slider/toggle/select/colorPicker/button` of a 2D sketch take `tab`. `sketch2d(fn,
+  { style: "paper" })` draws the app as a figure in a book: white, one ink, no title bar, section
+  names without arrows, the panel as wide as it needs (`UiStyle`, `getTheme("paper")`). The
+  playground's lecture apps use it. Changed for every app: labels are shown as written
+  ("Width m" was shown as "Width M"; a control declared without a label gets one from its key,
+  "floorHeight" reads "Floor height"); the status line of a 2D sketch (`lab.log`) is a row under
+  the canvas and no longer a box over the drawing; a 2D sketch inside a shell (`<div
+  data-shell>`) drops its own title bar, as a 3D sketch does (`showHeader: true` keeps it).
+
 - **Round meshes are closed.** `MeshFactory.sphere`, `torus`, `cylinder` (and a cone, a top
   or bottom radius of 0) and a full `revolve` no longer repeat the seam, the poles, a cone's tip
   or a profile point on the axis: each is one vertex, so these meshes have no open edges and

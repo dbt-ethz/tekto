@@ -28,14 +28,22 @@ test("Markup's marks are kept as notes with the model, pinned, and come back fro
   await open(page);
   const block = await page.evaluate(() => { const { doc } = (window as any).siteEditor; const id = doc.ids("blocks")[0]; return { id, ...doc.get("blocks", id) }; });
 
-  // Mark the block, write the note, keep it.
+  // Mark the block, write the note, keep it. The bar says what to do at each step, and the
+  // buttons that need a mark wait for one.
   await page.getByRole("button", { name: /Markup/ }).click();
+  const hint = page.locator("[data-markup-hint]");
+  const pinNotes = page.getByRole("button", { name: "Pin notes to the model" });
+  await expect(hint).toContainText("Draw on the view what should change");
+  await expect(pinNotes).toBeDisabled();
   const at = await screenOf(page, { x: block.x, y: block.y, z: block.h / 2 });
   await page.mouse.click(at.x, at.y);
-  const input = page.getByPlaceholder(/note for 1/);
+  const input = page.getByPlaceholder(/Mark 1:/);
+  await expect(hint).toContainText("Type what should change at mark 1");
   await input.fill("check the setback here");
   await input.press("Enter");
-  await page.getByRole("button", { name: "Keep as notes" }).click();
+  await expect(hint).toContainText("1 mark. Draw the next one, then pin or save.");
+  await pinNotes.click();
+  await expect(hint).toContainText("1 note pinned to the model");
   await page.getByRole("button", { name: "Done" }).click();
 
   const kept = await page.evaluate(() => (window as any).siteEditor.doc.all("notes").map(([, n]: [string, any]) => n));

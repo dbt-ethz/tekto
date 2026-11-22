@@ -2,7 +2,7 @@
 
 **An AI-first platform for online CAD experiments.** Describe a design idea to a coding agent and get a running, interactive CAD app in the browser. Then point at what to change, right in the viewport, and iterate together.
 
-**[Documentation](https://dbt-ethz.github.io/tekto/)** · **[Playground](https://dbt-ethz.github.io/tekto/play/)**: 36 apps, live in the browser.
+**[Documentation](https://dbt-ethz.github.io/tekto/)** · **[Playground](https://dbt-ethz.github.io/tekto/play/)**: 64 apps, live in the browser, among them the 28 of the lecture *Digital Theory and Culture in Architecture*.
 
 Tekto is designed so that people and AI agents work on the same model:
 
@@ -182,10 +182,10 @@ lists that every edit maintains incrementally. Both old APIs live on it.
 ### Three access levels
 
 1. **Sketch API** — `sketch()` (3D) / `sketch2d()` (2D canvas): one function, zero framework knowledge. For students and quick experiments. The function re-runs on every parameter change.
-2. **App Shell** — `appShell()`: a persistent sidebar + viewer for real apps. The panel is built ONCE from a declarative `params` schema and updated in place, so animation loops never fight the GUI. Comes with the top bar (lighting / render mode / camera / Cut / Sun; `topBar: { cut: false }` drops a control the app has no use for) and the axis widget for plans and elevations. Subscribe with `app.params.onChange(...)`.
+2. **App Shell** — `appShell()`: a persistent sidebar + viewer for real apps. The panel is built ONCE from a declarative `params` schema and updated in place, so animation loops never fight the GUI. Comes with the viewer's tools, the same as in a sketch: the header across the view (render style, lighting, sun, section, overlays, snapshot, ✎ Markup; `viewerTools: { sun: false }` drops one the app has no use for) and the axis widget for plans and elevations. The older text toolbar (`topBar: true`) adds the sun for a date and a site. Subscribe with `app.params.onChange(...)`.
 3. **React components** *(optional)* — `<ParamPanel>`, `<InspectorPanel>`, hooks, imported from **`tekto/react`** (install `react` + `react-dom`). Only reach for this when you need React ecosystem integration; levels 1–2 cover most apps. The core `tekto` barrel is React-free.
 
-All three levels share the same GUI foundation: values live in a `ParamStore`, panels are rendered by the shared `ControlPanel`, colors come from `getTheme()`. A control type added there appears everywhere.
+All three levels share the same GUI foundation: values live in a `ParamStore`, panels are rendered by the shared `ControlPanel`, colors come from `getTheme()`. A control type added there appears everywhere. The panel's frame is shared too: drag its edge to resize it, fold it at its corner, `panelWidth: "auto"` sizes it to its controls, and `tabs: "side"` lists its tabs down its left edge.
 
 ### Two scene models: rebuilt vs retained
 
@@ -311,15 +311,15 @@ Walls stand on their storey's elevation and run up to the underside of the floor
 
 The playground's testbench ([playground/testbench.html](playground/testbench.html) + [.ts](playground/testbench.ts)) is also a *template* for custom apps. Three reusable pieces:
 
-- **Top-bar** with global controls — page chooser (categorised dropdown), render mode (solid / wireframe / hidden-line / ghost), Cut (a section along Z, X or Y, and where), lighting preset (Flat / Studio with PBR + soft shadows + ACES tonemapping), Sun popover (city / lat-lon / date / hour / `Now` button), Export ▾ and Import ▾ menus populated dynamically from the current sketch.
+- **Top-bar** — the page chooser (categorised dropdown), links to the page's docs and source, and a slot (`data-tekto-menu-slot`) where the running app mounts its menu bar (File, Edit, View and its own, from its commands). The view's own tools (render style, lighting, sun, section, overlays, snapshot) are not in it: they are in each 3D view's header, the same in every app.
 - **`SketchConfig.showHeader`** — set `false` (or auto-detected when the container has `data-shell="…"`) to suppress the sketch's internal title bar so the shell's top bar becomes the single source of page identity.
-- **`lab.registerExport({ name, fileName, handler })`** / **`lab.registerImport({ name, accept, handler })`** — sketches register handlers; the shell discovers them via `SketchInstance.getExports/getImports` + `onExportsChange/onImportsChange` and shows menu items automatically.
+- **`lab.registerExport({ name, fileName, handler })`** / **`lab.registerImport({ name, accept, handler })`** — sketches register handlers; they appear as items of the File menu.
 
 A custom app can either copy the relevant blocks out of `testbench.html` / `testbench.ts` and adapt them, or use the testbench unchanged and add its own pages under `playground/pages/`.
 
 ## Lighting presets
 
-Two presets, switchable from the top bar's *Light* dropdown (persisted in `localStorage`):
+Two presets, switchable in the viewer header:
 
 | Mode | Materials | Shadows | Tonemapping | Best for |
 |---|---|---|---|---|
@@ -328,7 +328,7 @@ Two presets, switchable from the top bar's *Light* dropdown (persisted in `local
 
 Flat is tuned for a dark page: a dim blue sky, so colours read darker and cooler. An app whose colours are a key beside the model sets `flatLighting: "plain"` on the renderer (`appShell({ renderer: { flatLighting: "plain" } })`): a white sky under which a face turned to it shows its own colour.
 
-The sun direction is driven from the top-bar Sun popover (`SunPosition.compute({ date, latitude, longitude })` → `SketchInstance.setSunDirection(direction)`). Inside a sketch, `lab.setSunDirection(dir)` lets the sketch override per-frame (animated daily cycles, etc.).
+The sun is set in the viewer header's sun menu: Morning, Noon, Sunset, or Date — a place (a city, or latitude and longitude), the model's north (degrees clockwise from +Y, as a CAD tool's true north), a day and an hour, with Studio's light following it into the evening and the night. In code: `renderer.setSunPreset("sunset")`, `renderer.setSunAt({ latitude: 47.37, longitude: 8.55, date: "2026-06-21", hour: 17 })`, or a direction of your own (`SunPosition.compute({ date, latitude, longitude })` → `setSunDirection(direction)`). Inside a sketch, `lab.setSunDirection(dir)` lets the sketch override per-frame (animated daily cycles, etc.).
 
 ### Flat vs smooth shading
 
@@ -366,6 +366,12 @@ color readable in the line drawing:
 scene.addMesh(building, { edgeAngle: 20 });                      // a touch more detail
 scene.addMesh(flat, { color: "#e0a14f", edgeColor: "#e0a14f" }); // colored edges
 ```
+
+A hidden-line view is a drawing on paper: dark lines on white, also in an app with a
+dark view (an app's own light background is kept). Clicking the Hidden line button again,
+or View ▸ Hidden line: paper / inverse, draws it inverse, light lines on the dark view
+(`renderer.setHiddenLineInverse(true)`). A line or an `edgeColor` that would vanish into
+the page is drawn in the drawing's ink instead.
 
 Note this draws creases, not view-dependent silhouettes — a smooth sphere has no
 sharp edges, so in hidden-line it reads as the occluding solid with no lines.
@@ -454,7 +460,7 @@ wherever it is changed (`renderer.onProjection`).
 
 ## Markup — instructions for an AI, drawn on the view
 
-Every 3D `sketch()` has a **✎ Markup** button in the viewport corner. Draw on the view, give each mark a short note, write an overall instruction and press **Save** (⌘S). The capture is a bundle an agent can read:
+Every 3D `sketch()` has a **✎ Markup** button in the viewport corner. Draw on the view, give each mark a short note, write a general instruction if you have one and press **Save for Claude** (⌘S). The capture is a bundle an agent can read:
 
 ```
 .tekto/markup/<stamp>-<sketch>/     (and a copy in .tekto/markup/latest/)
@@ -481,7 +487,7 @@ import tektoMarkup from "tekto/markup-vite";
 export default { plugins: [tektoMarkup()] };
 ```
 
-Without the plugin, Save downloads the three files instead. Turn the button off with `sketch(fn, { markup: false })`.
+Without the plugin, the button downloads the three files instead. Turn the button off with `sketch(fn, { markup: false })`.
 
 ### A program as its steps
 
@@ -526,7 +532,7 @@ The House page ([playground/pages/house.ts](playground/pages/house.ts)) shares i
 
 Tested with a fresh agent and only that brief: a 144 m² house in two patches, with doors, windows, a U stair to the landing and a gable roof.
 
-**Notes are how you tell it what to change.** In an app with notes (`appShell({ notes: doc })`), ✎ Markup's **Save** keeps each mark as a note with the model — pinned where it was drawn, naming the records it touches, saved, undoable, and on a shared document visible to everyone. A note is open until it is done. The agent sees how many are open (`tekto_info`), lists them (`tekto_notes`), makes the change, and resolves each with what it did (`tekto_note_resolve`) or asks back (`tekto_note_reply`); the note's card shows the answer, its pin turns grey, and Reopen brings it back. Every step is yours to undo. While the agent works, a chip at the top of the page names it and what it is doing, and with `PresenceBar` on a shared document everyone sees its badge beside the person whose window it works through. With several tabs open, `TEKTO_PAGE=house` (or `"page"` in a relay call) picks the one whose URL or title contains it. An app with its own UI shares its notes layer with `agentDoc(doc, { notes: layer })`.
+**Notes are how you tell it what to change.** In an app with notes (`appShell({ notes: doc })`), ✎ Markup's **Pin notes to the model** (and **Save for Claude**) keeps each mark as a note with the model — pinned where it was drawn, naming the records it touches, saved, undoable, and on a shared document visible to everyone. A note is open until it is done. The agent sees how many are open (`tekto_info`), lists them (`tekto_notes`), makes the change, and resolves each with what it did (`tekto_note_resolve`) or asks back (`tekto_note_reply`); the note's card shows the answer, its pin turns grey, and Reopen brings it back. Every step is yours to undo. While the agent works, a chip at the top of the page names it and what it is doing, and with `PresenceBar` on a shared document everyone sees its badge beside the person whose window it works through. With several tabs open, `TEKTO_PAGE=house` (or `"page"` in a relay call) picks the one whose URL or title contains it. An app with its own UI shares its notes layer with `agentDoc(doc, { notes: layer })`.
 
 ## Shared editing — several people (and agents) on one model
 
@@ -749,9 +755,9 @@ Or use IDE autocomplete on the import line — every export is typed, and the co
 - **IO**: `ObjFile` (OBJ with `g` groups and `usemtl` materials both ways, `serializeMtl` for the .mtl; `scene.toMeshData({ groupBy: "layer" })` — or `"object"` — gives a scene grouped, with its colours, for Rhino or Cinema 4D), `DxfExporter` (2D hidden-line views of meshes), `Sheet` (a drawing at a scale: views placed on the sheet — plan, elevations projected from 3D, details — with lines, arcs, fills, text, dimensions, leaders and level marks, view titles with their scale, a title block (`sheet.titleBlock`) and a minimal palette (`DRAWING_PALETTE`); `toSVG` and `toDXF` export the same primitives; on screen `SheetCanvas` — pan, zoom, pick by `key`, highlight — or `drawSheet` into any canvas; over a 3D app in `app.overlay()` or a sketch's `lab.overlay()` — see the *Sketch + drawing* page), `writeDxf2D` (raw drawings: polylines, lines, circles, arcs, text, solids, line types; `scale: 1000` → mm), `writePdf2D` (the same content as a vector PDF at a true scale, `scale: 50` → 1:50, one page sized to the drawing, title + scale bar), `writeDxf3D` (true-3D polylines/lines/points/arcs/circles in world space — all emit AutoCAD-safe R12), `download` / `stampName` (save a file from the browser — a `sketch()` lists `lab.registerExport` items in its Export menu), `IfcFile` (IFC *import* — needs `npm install web-ifc`), `IfcWriter` (IFC *export* — no extra deps).
 - **Sketch API**: `sketch` (3D), `sketch2d` (2D canvas), `Lab` / `Lab2D` (the API surfaces you'll mostly use). Types `MarkupBundle` / `MarkupCaptureOptions` / `MarkupObjectRef` / `MarkKind` for the [Markup](#markup--instructions-for-an-ai-drawn-on-the-view) capture; `markup(renderer, scene)` mounts Markup in an app with its own UI (React: `<Markup />`); `agentDoc(doc, { schema, check })` shares an app's document with agents (`__tekto.doc`; from outside through `tekto/markup-vite` and the MCP server `tools/mcp.mjs`); `notesLayer(renderer, doc)` keeps sketched notes with the model in a `Doc` collection, pinned in the view (`appShell({ notes: doc })`); a note is open until done and carries its replies, and an agent lists, answers and resolves them (`__tekto.notes`). `lab.step` / `app.step` record a program as its steps, drawn by the steps panel (`StepsPanel`), recorded by `StepTrace`.
 - **Shared editing**: `SharedStore` (keyed records, last write wins, presence, broadcasts), `memoryAdapter` / `devServerAdapter` / `supabaseAdapter`, `PresenceBar`, `collabColor` — see [Shared editing](#shared-editing--several-people-and-agents-on-one-model).
-- **App Shell**: `appShell` — persistent-panel apps (panel built once, animation-friendly) with a built-in top bar (Flat/Studio lighting, render mode with an icon per mode, Persp/Iso camera, Cut and Sun popovers — each can be switched off), and a status line over the view (`app.status`) that folds to an ⓘ (`statusCollapsed`).
+- **App Shell**: `appShell` — persistent-panel apps (panel built once, animation-friendly) with the viewer header and the axis widget every 3D view has (`viewerTools` switches single tools off, `ViewerTools`), an optional text toolbar (`topBar: true`: Flat/Studio lighting, render mode, Persp/Iso camera, Cut and Sun popovers), and a status line over the view (`app.status`) that folds to an ⓘ (`statusCollapsed`).
 - **React** (from `tekto/react`): `AccordionColumn` — a column of collapsible sections, one of which takes the leftover height and scrolls; headers stay visible with their own summary, open sections drag taller, and the arrangement persists. The shape every inspector ends up with. `ViewModeIcon` — a render mode's icon as a component.
-- **GUI building blocks**: `ParamStore` (the one parameter model — all entry APIs store values here), `ControlPanel` (the shared slider/toggle/select/color/menu/tab renderer), `getTheme` (the white-on-dark panel palette), `LayerPanel` (a Rhino-style layer tree: active layer, on/off, lock, colour swatch; helpers `computeEffectiveVisibility`, `computeEffectiveLock`, `layerDefaults`, `activateLayer` — in a sketch it is `lab.layerTree`), `viewModeIconSvg` (a cube drawn the way each render mode draws — solid, ghost, hidden line, wireframe — for a mode switch).
+- **GUI building blocks**: `ParamStore` (the one parameter model — all entry APIs store values here), `ControlPanel` (the shared slider/toggle/select/color/menu/tab renderer), `menuBar` (File, Edit, View and the app's own menus, drawn from its `Commands`; `menuSlot` finds where a shell wants it), `ParamHistory` (undo and redo over a `ParamStore`, the Edit menu's default), `getTheme` (the white-on-dark panel palette; `"light"`, and `"paper"` for the minimal white style a 2D figure asks for with `sketch2d(fn, { style: "paper" })`, type `UiStyle`), `LayerPanel` (a Rhino-style layer tree: active layer, on/off, lock, colour swatch; helpers `computeEffectiveVisibility`, `computeEffectiveLock`, `layerDefaults`, `activateLayer` — in a sketch it is `lab.layerTree`), `viewModeIconSvg` (a cube drawn the way each render mode draws — solid, ghost, hidden line, wireframe — for a mode switch).
 
 For curated category breakdowns see **[Generators](#generators)**, **[Algorithms](#algorithms)**, and **[BIM walls, slabs, and IFC export](#bim-walls-slabs-and-ifc-export)** above. For a hands-on walk-through, open the playground (`npm run playground` in the tekto repo) and click any demo — the page's `.ts` file under [playground/pages/](playground/pages/) is exactly the kind of code you'd write to use the same API.
 

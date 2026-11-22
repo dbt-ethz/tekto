@@ -88,8 +88,6 @@ export default function (container: HTMLElement): SketchInstance {
   }, {
     container,
     title: "MeshFactory",
-    background: 0x0a0b14,
-    shadingBar: true,
     camera: [10, 8, 12],
     target: [0, 0, 0],
   });

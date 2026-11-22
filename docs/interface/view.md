@@ -34,12 +34,12 @@ Top view, orthographic, and a cut a little above the floor is a plan.
 
 1. **Solid**: shaded surfaces.
 2. **Wireframe**: every edge of every face.
-3. **Hidden line**: black lines on white, edges behind surfaces left out, as a drawing.
+3. **Hidden line**: black lines on white, edges behind surfaces left out, as a drawing. Click it again for the inverse, light lines on dark.
 4. **Ghost**: see-through, to see what is inside.
 5. **Flat lighting**: quick, no shadows. For working.
 6. **Studio lighting**: soft shadows, for looking.
 7. **Ambient occlusion**: darker where surfaces meet (Solid, perspective).
-8. **Sun**: morning, noon or sunset, and Studio's light follows it.
+8. **Sun**: morning, noon or sunset, or **Date** for a place, a day and an hour; Studio's light follows it.
 9. **Section**: cut the model (below).
 10. **Overlays**: grid, axes, wireframe, labels, notes on or off.
 11. **Frame**: fit the view to the selection, or to everything.

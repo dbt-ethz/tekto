@@ -73,7 +73,6 @@ export default function (container: HTMLElement): SketchInstance {
   }, {
     container,
     title: "DXF 3D Writer",
-    background: 0x0a0b14,
     camera: [8, 8, 8],
     target: [0, 0, 2.5],
   });

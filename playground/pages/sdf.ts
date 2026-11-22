@@ -70,7 +70,6 @@ export default function (container: HTMLElement): SketchInstance {
   }, {
     container,
     title: "SDF + Marching Cubes",
-    background: 0x0a0b14,
     camera: [3, 3, 4],
     target: [0, 0, 0],
   });

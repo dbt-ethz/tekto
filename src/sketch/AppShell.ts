@@ -41,13 +41,16 @@ import { Scene } from "../scene/Scene";
 import { ThreeRenderer, ThreeRendererConfig } from "../render/ThreeRenderer";
 import { ParamStore, ParamSchema } from "../gui/Params";
 import { ControlPanel, ControlItem } from "../gui/ControlPanel";
-import { getTheme, Theme } from "../gui/theme";
+import { getTheme, Theme, VIEW_BG_DARK } from "../gui/theme";
 import { installAgentBridge, plainBundle, sceneSummary, describeSceneObject, addOverlay, snapshotWithOverlays, callSite } from "./AgentBridge";
 import { StepTrace } from "../core/steps/StepTrace";
 import { StepsPanel, type StepMark } from "./StepsPanel";
 import { Commands, viewCommands } from "../gui/Commands";
 import { viewerToolbar, type TopBarOptions } from "./ViewerToolbar";
-import { VIEWER_HEADER_H } from "../render/ShadingBar";
+import { panelFrame, type PanelFrame } from "./panelFrame";
+import { menuBar, menuSlot } from "../gui/MenuBar";
+import { ParamHistory } from "../gui/ParamHistory";
+import { VIEWER_HEADER_H, type ViewerTools } from "../render/ShadingBar";
 import { NotesLayer, type Note } from "./Notes";
 import type { Doc } from "../collab/Doc";
 import { MarkupOverlay, type MarkupCaptureOptions } from "./Markup";
@@ -67,14 +70,22 @@ export interface AppShellConfig<S extends ParamSchema = ParamSchema> {
   /** Camera up-axis. Default "z" (tekto Z-up convention). Use "y" for the Y-up built-in primitives. */
   up?: "y" | "z";
   theme?: "dark" | "light";
-  /** Panel width in pixels (default: 260) */
-  panelWidth?: number;
+  /** Panel width in pixels (default 260), or "auto": as wide as its controls need. A width dragged by hand wins. */
+  panelWidth?: number | "auto";
+  /** The name in the panel's top row, beside the chevron that folds it. Default "Parameters"; "" leaves the row free. */
+  panelTitle?: string;
+  /** Tabs as a bar on top of the panel (default) or as a list down its left side. */
+  tabs?: "top" | "side";
   /** Renderer config overrides */
   renderer?: Partial<ThreeRendererConfig>;
-  /** Top bar with Lighting / Render-mode / Camera / Cut / Sun controls. Default: true.
-   *  An object turns single controls off where they don't make sense for the app
-   *  (`{ cut: false, sun: false }`). */
+  /** The older text toolbar in the title bar (Light / Mode / Cam / Cut / Sun, the sun for a
+   *  place and a date). Default: false: the view's own header has these as icons (`shadingBar`,
+   *  `viewerTools`). `true` or an object of its controls shows it as well. */
   topBar?: boolean | TopBarOptions;
+  /** Show the title bar. Default: yes, except inside a shell that has its own bar (`<div data-shell>`). */
+  showHeader?: boolean;
+  /** Which of the viewer's tools to show (`{ sun: false, section: false }`): each is on unless false. */
+  viewerTools?: ViewerTools;
   /** Show the ✎ Markup button (draw instructions on the view; marks name document records). Default `true`. */
   markup?: boolean;
   /**
@@ -83,16 +94,18 @@ export interface AppShellConfig<S extends ParamSchema = ParamSchema> {
    */
   statusCollapsed?: boolean;
   /** Notes that live with the model: the doc whose `notes` collection keeps them (or
-   *  `{ doc, collection, author }`). Markup then offers "Keep as notes" (and Save keeps the
-   *  marks as notes too), the notes are drawn over the view with a pin each (`app.notes`), and
+   *  `{ doc, collection, author }`). Markup then offers "Pin notes to the model" (and "Save for Claude"
+   *  pins the marks as notes too), the notes are drawn over the view with a pin each (`app.notes`), and
    *  an agent lists, answers and resolves them (`__tekto.notes`). */
   notes?: Doc<any> | { doc: Doc<any>; collection?: string; author?: string };
-  /** The axis widget in a viewport corner (`true` = bottom right): click an axis for a plan
-   *  or an elevation, toggle persp/ortho under it. Default `false` — an app may have its own
-   *  panels in that corner. */
+  /** The axis widget (default on, top right under the viewer header): click an axis for a plan
+   *  or an elevation, toggle persp/ortho under it. A corner places it; `false` hides it, for an
+   *  app with its own panels there. */
   navGizmo?: boolean | "top-left" | "top-right" | "bottom-left" | "bottom-right";
-  /** The shading bar in a viewport corner (`true` = top left): icons for the render style, the
-   *  lighting and the sun (morning, noon, sunset). Default `false`. */
+  /** The view's tools, the same in every tekto 3D view. `"header"` (the default): a strip across
+   *  the top of the view with icons for the render style, lighting, sun, section, overlays and
+   *  snapshot, and ✎ Markup at its end. A corner (`true` = top left) is the compact bar instead;
+   *  `false` hides it. `viewerTools` drops single tools. */
   shadingBar?: boolean | "top-left" | "top-right" | "bottom-left" | "bottom-right" | "header";
   /** The scene's unit (`"m"`, `"mm"`…): readouts show coordinates in it. Unset: relative to
    *  the content's extent. */
@@ -173,14 +186,18 @@ export interface AppShellInstance<S extends ParamSchema = ParamSchema> {
  */
 export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppShellInstance<S> {
   const t = getTheme(config.theme);
-  const panelWidth = config.panelWidth ?? 260;
 
   // ── Layout ──
 
+  // A shell (the testbench: `<div data-shell>`) shows the title in its own bar.
+  const showHeader = config.showHeader ?? (config.container.dataset.shell == null || !!config.topBar);
+  const headerH = showHeader ? 36 : 0;
+  const bodyRow = showHeader ? 2 : 1;
+
   const root = document.createElement("div");
   root.style.cssText = `
-    display:grid; grid-template-columns:${panelWidth}px 1fr;
-    grid-template-rows:36px 1fr;
+    display:grid; grid-template-columns:260px 1fr;
+    grid-template-rows:${showHeader ? "36px " : ""}1fr; position:relative;
     width:100%; height:100%; font-family:${t.font};
     font-size:12px; color:${t.text}; background:${t.panelBg};
   `;
@@ -198,19 +215,19 @@ export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppS
     <span style="font-size:9px;padding:2px 6px;border-radius:3px;
       background:${t.hoverBg};color:${t.accent}">LIVE</span>
   `;
-  root.appendChild(header);
+  if (showHeader) root.appendChild(header);
 
   // Panel
   const panelEl = document.createElement("div");
   panelEl.style.cssText = `
-    overflow-y:auto; overflow-x:hidden; padding:0;
+    overflow-y:auto; overflow-x:hidden; padding:0; grid-column:1; grid-row:${bodyRow};
     background:${t.panelBg}; border-right:1px solid ${t.border};
   `;
   root.appendChild(panelEl);
 
-  // Viewport wrapper
+  // Viewport wrapper (pinned to its cell: a folded panel leaves the grid flow)
   const vpWrap = document.createElement("div");
-  vpWrap.style.cssText = "position:relative;overflow:hidden;";
+  vpWrap.style.cssText = `position:relative;overflow:hidden;grid-column:2;grid-row:${bodyRow};`;
 
   const viewportEl = document.createElement("div");
   // Its own stacking context: what the 3D view puts in its corners (the axis widget) stays
@@ -225,10 +242,10 @@ export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppS
   statusEl.style.cssText = `
     position:absolute; bottom:12px; left:12px;
     border-radius:6px;
-    background:rgba(7,8,14,.85); backdrop-filter:blur(8px);
+    background:rgba(30,30,30,.92); backdrop-filter:blur(8px);
     font-size:11px; line-height:1.7; color:${t.textDim};
     pointer-events:none; max-width:340px;
-    border:1px solid rgba(22,24,42,.8);
+    border:1px solid rgba(255,255,255,.1);
     font-family:${t.font};
     display:none; align-items:flex-start;
   `;
@@ -273,7 +290,10 @@ export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppS
   // ── ParamStore + shared ControlPanel sidebar ──
 
   const params = new ParamStore(config.params);
-  const panel = new ControlPanel({ store: params, theme: t });
+  let frame: PanelFrame | null = null;
+  // Undo for the params (Edit ▸ Undo); an app with a document declares its own `edit.undo` over it.
+  const history = new ParamHistory(params);
+  const panel = new ControlPanel({ store: params, theme: t, tabs: config.tabs, onRender: () => frame?.fit(), onCommit: () => history.commit() });
 
   const groups = config.groups ?? { Parameters: Object.keys(config.params) };
   const items: ControlItem[] = [];
@@ -282,20 +302,29 @@ export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppS
   }
   panel.render(items);
   panelEl.appendChild(panel.el);
+  // The same frame as a sketch's panel: drag its edge, fold it, or let it size itself.
+  frame = panelFrame({
+    root, panelEl, theme: t, top: headerH,
+    width: config.panelWidth ?? 260,
+    title: config.panelTitle ?? "Parameters",
+    storageKey: config.title ?? "app",
+    preferred: () => panel.preferredWidth(),
+  });
 
   // ── Scene + Renderer ──
 
   const scene = new Scene();
   const renderer = new ThreeRenderer(scene, viewportEl, {
-    backgroundColor: config.background ?? 0x0a0b14,
+    backgroundColor: config.background ?? VIEW_BG_DARK,
     cameraPosition: config.camera ?? [6, 8, 10],
     cameraTarget: config.target ?? [0, 0, 0],
     // Z-up by default — matches the tekto convention (XY = ground plane) and
     // the architectural / BIM / voxel geometry these apps usually build. Pass
     // `up: "y"` if you're showing the Y-up built-in primitives (box/cylinder/sphere).
     up: config.up ?? "z",
-    navGizmo: config.navGizmo ?? false,
-    shadingBar: config.shadingBar ?? false,
+    navGizmo: config.navGizmo ?? true,
+    shadingBar: config.shadingBar ?? "header",
+    viewerTools: config.viewerTools ?? {},
     headerHost: vpWrap,   // the viewer header (shadingBar: "header") above overlays and ✎ Markup
     units: config.units ?? null,
     ...config.renderer,
@@ -303,12 +332,17 @@ export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppS
 
   // ── Commands: the view's from the start, keys bound while the app is mounted ──
   const commands = new Commands();
+  commands.add(history.commands());
   commands.add(viewCommands(renderer));
   const unbindKeys = commands.bindKeys();
+  // The menu bar, from the commands: in the title bar, or in the slot of a shell that has its own.
+  const menuHost = menuSlot(showHeader ? header : null);
+  const menus = menuHost ? menuBar(commands, { theme: t }) : null;
+  if (menus) menuHost!.appendChild(menus.el);
 
   // ── Top bar: lighting · render mode · camera · cut · sun (the viewer toolbar) ──
-  const toolbar = config.topBar === false ? null
-    : viewerToolbar(scene, renderer, { ...(config.topBar === true || config.topBar === undefined ? {} : config.topBar), theme: t });
+  const toolbar = !config.topBar ? null
+    : viewerToolbar(scene, renderer, { ...(config.topBar === true ? {} : config.topBar), theme: t });
   if (toolbar) header.appendChild(toolbar.el);
 
   // ── Notes that live with the model (a Doc collection), drawn over the view ──
@@ -405,6 +439,7 @@ export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppS
       bridge.dispose();
       unbindKeys();
       toolbar?.dispose();
+      menus?.dispose();
       notes?.dispose();
       panel.dispose();
       renderer.dispose();

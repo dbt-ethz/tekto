@@ -67,14 +67,14 @@ test("controls can be set from code, and a design round-trips through getParams/
   await expect.poll(level).toBe(3);
 });
 
-test("a standalone sketch shows its registered exports and downloads them", async ({ page }) => {
+test("a standalone sketch lists its registered exports in its File menu and downloads them", async ({ page }) => {
   await page.goto("/");                                   // playground/main.ts: a sketch() with no shell
-  const exportBtn = page.getByRole("button", { name: "Export ▾" });
-  await expect(exportBtn).toBeVisible({ timeout: 15_000 });
-  await exportBtn.click();
+  const file = page.locator("[data-tekto-menubar]").getByRole("button", { name: "File", exact: true });
+  await expect(file).toBeVisible({ timeout: 15_000 });
+  await file.click();
   const [dl] = await Promise.all([
     page.waitForEvent("download"),
-    page.getByRole("button", { name: "Plan (DXF)" }).click(),
+    page.getByRole("menuitem", { name: "Export Plan (DXF)" }).click(),
   ]);
   expect(dl.suggestedFilename()).toBe("playground-plan.dxf");
   expect(await dl.failure()).toBeNull();                   // the file arrived whole (content: tests/dxf-2d)
@@ -99,7 +99,7 @@ test("appShell has ✎ Markup: a loop drawn on the view resolves to the objects 
   for (let a = 0; a <= Math.PI * 2 + 0.2; a += 0.2) await page.mouse.move(at.x + R * Math.cos(a), at.y + R * Math.sin(a));
   await page.mouse.up();
   // The note field opens at the mark; Enter there keeps the mark (Esc on the overlay would close Markup).
-  const note = page.getByPlaceholder("note for 1…");
+  const note = page.getByPlaceholder("Mark 1: what should change here?");
   await expect(note).toBeFocused();
   await note.fill("thicker slabs");
   await note.press("Enter");

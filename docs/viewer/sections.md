@@ -34,5 +34,5 @@ app.renderer.setSectionLevels([{ name: "Ground floor", elevation: 0 }, { name: "
 `coordinate` is a position in model units; `at` is a fraction of the content's extent along the axis. `setSectionLevels` gives the shading bar a chip per storey that cuts a plan 1.2 m above its floor. An agent cuts the same way with the MCP tool `tekto_section`.
 
 ::: tip Playground
-[House](https://github.com/dbt-ethz/tekto/blob/main/playground/pages/house.ts) (`?page=house`): the section icon in the shading bar, one chip per storey. [Framed Wall](https://github.com/dbt-ethz/tekto/blob/main/playground/pages/framed-wall.ts) has Cut ▾ in the top bar.
+[House](https://github.com/dbt-ethz/tekto/blob/main/playground/pages/house.ts) (`?page=house`): the section icon in the viewer header, one chip per storey.
 :::

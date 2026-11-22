@@ -55,13 +55,13 @@ export class StepsPanel {
     this.pill.type = "button";
     this.pill.dataset.tektoSteps = "pill";
     this.pill.style.cssText = `position:absolute;bottom:12px;left:50%;transform:translateX(-50%);z-index:20;display:none;
-      padding:5px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.18);background:rgba(7,8,14,.85);
+      padding:5px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.18);background:rgba(30,30,30,.92);
       backdrop-filter:blur(8px);color:${t.text};font:500 11px/1.2 ${t.font};cursor:pointer;`;
     this.pill.addEventListener("click", () => this.setOpen(true));
 
     this.el.dataset.tektoSteps = "panel";
     this.el.style.cssText = `position:absolute;left:0;right:0;bottom:0;height:38%;min-height:200px;max-height:340px;z-index:20;
-      display:none;flex-direction:column;background:rgba(7,8,14,.92);backdrop-filter:blur(8px);
+      display:none;flex-direction:column;background:rgba(30,30,30,.96);backdrop-filter:blur(8px);
       border-top:1px solid rgba(255,255,255,.12);color:${t.textDim};font:11px/1.45 ${t.font};`;
     const head = document.createElement("div");
     head.style.cssText = "display:flex;align-items:center;gap:10px;padding:6px 10px 6px 14px;border-bottom:1px solid rgba(255,255,255,.08);";

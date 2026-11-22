@@ -26,7 +26,7 @@ const OUTLINE_NAMES = Object.keys(OUTLINES) as OutlineName[];
 const MODES = ["Packing", "Bubble diagram"] as const;
 type Mode = typeof MODES[number];
 
-const BACKGROUND = "#0a0b14";
+const BACKGROUND = "#0b0b0b";
 const PACK_STEPS = 200;                  // the applet's iteration count
 const BUBBLE_MAX_STEPS = 1500;
 const BUBBLE_TOLERANCE = 1e-3;           // m: settled once nothing moves more

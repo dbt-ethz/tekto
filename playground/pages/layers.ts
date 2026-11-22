@@ -57,7 +57,6 @@ export default function (container: HTMLElement): SketchInstance {
   }, {
     container,
     title: "Layers",
-    background: 0x0a0b14,
     camera: [9, 7, 11],
     target: [0, 1.5, 0],
   });

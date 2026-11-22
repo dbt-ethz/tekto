@@ -13,6 +13,11 @@ const srgb = (hex: number) => new THREE.Vector3((hex >> 16 & 255) / 255, (hex >>
 export class FadingGrid {
   readonly mesh: THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial>;
 
+  /** The page changed (a hidden-line drawing's paper): the lines a step off the new one. */
+  setBackground(background: THREE.ColorRepresentation): void {
+    this.mesh.material.uniforms.uLine.value = srgb(gridLineColour(background));
+  }
+
   constructor(background: THREE.ColorRepresentation, zUp: boolean) {
     const material = new THREE.ShaderMaterial({
       transparent: true,

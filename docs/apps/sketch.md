@@ -28,7 +28,8 @@ sketch((lab) => {
 - **Ids are positional.** Objects are re-declared each run, so an id holds only while the run declares the same objects in the same order. For selection, undo and save, use [appShell](/apps/app-shell) and a [Doc](/buildings/doc).
 - **Y-up by default.** Pass `{ up: "z" }` for CAD content, so plans, buildings and the sun agree.
 - **Set a control from code** with `handle.set(value)`; save and restore all of them with `getParams()` / `setParams()` on the returned `SketchInstance`.
-- **Commands**: `lab.command([{ id, label, keys, run }])` gives a person a key and an agent an id (`__tekto.run("…")`).
+- **Commands are the menu bar.** `lab.command([{ id, label, keys, group, run }])` gives a person a menu item and a key, and an agent an id (`__tekto.run("…")`). `group` names the menu: File, Edit and View come first, then your own. `lab.registerExport` and `lab.registerImport` add to File.
+- **Undo is built in.** Edit ▸ Undo and Redo (⌘Z / Ctrl+Z) step back through changes to the controls, one step per finished change.
 
 ::: tip Playground
 [Transforms](https://github.com/dbt-ethz/tekto/blob/main/playground/pages/transforms.ts) and [MeshFactory](https://github.com/dbt-ethz/tekto/blob/main/playground/pages/mesh-factory.ts): `npm run playground`, then `?page=transforms`.

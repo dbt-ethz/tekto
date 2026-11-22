@@ -124,7 +124,6 @@ export default function (container: HTMLElement) {
   const app = appShell({
     title: "Drawing Sheet",
     container,
-    topBar: false,
     camera: [24, -24, 16],
     target: [6, 3.5, 2],
     params: {
@@ -136,15 +135,18 @@ export default function (container: HTMLElement) {
       roof: { type: "float", min: 0.15, max: 0.8, default: 0.35, step: 0.05, label: "Roof" },
       show: { type: "select", options: ["Drawing", "3D"], default: "Drawing", label: "Show", display: true },
       fit: { type: "button", label: "Fit drawing", action: () => view.fit() },
-      svg: { type: "button", label: "Export SVG", action: () => download(sheet.toSVG({ background: "#ffffff" }), "pavilion.svg", { stamp: true }) },
-      dxf: { type: "button", label: "Export DXF", action: () => download(sheet.toDXF(), "pavilion.dxf", { stamp: true }) },
     },
     groups: {
       Pavilion: ["width", "depth", "height", "bays", "column", "roof"],
       View: ["show", "fit"],
-      Export: ["svg", "dxf"],
     },
   });
+
+  // File ▸ Export …: the drawing as SVG and as DXF (the menu bar is the app's commands).
+  app.commands.add([
+    { id: "file.export.svg", label: "Export SVG", group: "File", run: () => download(sheet.toSVG({ background: "#ffffff" }), "pavilion.svg", { stamp: true }) },
+    { id: "file.export.dxf", label: "Export DXF", group: "File", run: () => download(sheet.toDXF(), "pavilion.dxf", { stamp: true }) },
+  ]);
 
   const model = (): Model => ({
     w: app.params.get("width"), d: app.params.get("depth"), h: app.params.get("height"),
@@ -179,7 +181,11 @@ export default function (container: HTMLElement) {
     view.setSheet(sheet);
     status();
   });
-  app.onDisplay(() => { overlay.style.display = app.params.get("show") === "Drawing" ? "" : "none"; });
+  app.onDisplay(() => {
+    const drawing = app.params.get("show") === "Drawing";
+    overlay.style.display = drawing ? "" : "none";
+    app.renderer.setViewerToolsVisible(!drawing);   // the render style, sun and section are the 3D view's
+  });
 
   function status() {
     const n = selection.size;

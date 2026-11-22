@@ -22,7 +22,7 @@ test("an app without a shell gets ✎ Markup, and a mark names the record under 
     return { x: rect.left + p.x, y: rect.top + p.y };
   });
   await page.mouse.click(at.x, at.y);
-  const note = page.getByPlaceholder(/note for 1/);
+  const note = page.getByPlaceholder(/Mark 1:/);
   await note.fill("make it taller");
   await note.press("Enter");
 

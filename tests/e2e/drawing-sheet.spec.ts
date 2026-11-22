@@ -67,7 +67,7 @@ test("a rebuild keeps the zoom; double-click fits; DXF exports the drawing", asy
 
   const [dl] = await Promise.all([
     page.waitForEvent("download"),
-    page.getByRole("button", { name: "Export DXF" }).click(),
+    page.getByRole("button", { name: "File", exact: true }).click().then(() => page.getByRole("menuitem", { name: "Export DXF" }).click()),
   ]);
   expect(dl.suggestedFilename()).toMatch(/^pavilion-\d{8}-\d{4}\.dxf$/);
   expect(await dl.failure()).toBeNull();

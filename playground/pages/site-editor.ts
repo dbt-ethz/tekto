@@ -30,12 +30,8 @@ export default function (container: HTMLElement) {
   const app = appShell({
     title: "Site Editor",
     container,
-    topBar: false,
-    navGizmo: true,
-    // No top bar here: the render style, lighting and sun as icons in the view instead.
-    shadingBar: true,
     units: "m",                 // a site in metres: the section reads in metres
-    // Notes that live with the model: ✎ Markup → "Keep as notes" keeps marks in the doc's
+    // Notes that live with the model: ✎ Markup → "Pin notes to the model" keeps marks in the doc's
     // `notes` collection (saved, undoable, shared), pinned in the view.
     notes: doc,
     // A site wants a sense of scale: a ground ruled in metres that fades out, fitted to the blocks.
@@ -49,16 +45,10 @@ export default function (container: HTMLElement) {
       add: { type: "button", label: "Add block", action: () => addBlock() },
       duplicate: { type: "button", label: "Duplicate", action: () => duplicate() },
       remove: { type: "button", label: "Delete", action: () => removeSelected() },
-      undo: { type: "button", label: "Undo", action: () => doc.undo() },
-      redo: { type: "button", label: "Redo", action: () => doc.redo() },
-      save: { type: "button", label: "Save JSON", action: () => download(JSON.stringify(doc.toJSON(), null, 2), "site.json", { stamp: true }) },
-      open: { type: "button", label: "Open JSON", action: () => openJson() },
     },
     groups: {
       "Selected block": ["w", "d", "h"],
-      Edit: ["add", "duplicate", "remove"],
-      History: ["undo", "redo"],
-      File: ["save", "open"],
+      Actions: ["add", "duplicate", "remove"],
     },
   });
 
@@ -137,7 +127,10 @@ export default function (container: HTMLElement) {
   // ── Keys, as commands: one list a person, a palette and an agent all read ──
   const STEP = 0.5;
   const selected = () => selection.ids("blocks").length > 0;
+  // The menu bar is these commands: File ▸ Open / Save, Edit ▸ Undo …, Move.
   app.commands.add([
+    { id: "file.open", label: "Open JSON…", keys: "Mod+O", group: "File", run: () => openJson() },
+    { id: "file.save", label: "Save JSON", keys: "Mod+S", group: "File", run: () => download(JSON.stringify(doc.toJSON(), null, 2), "site.json", { stamp: true }) },
     { id: "edit.undo", label: "Undo", keys: "Mod+Z", group: "Edit", run: () => doc.undo(), enabled: () => doc.canUndo() },
     { id: "edit.redo", label: "Redo", keys: ["Shift+Mod+Z", "Mod+Y"], group: "Edit", run: () => doc.redo(), enabled: () => doc.canRedo() },
     { id: "edit.add", label: "Add block", group: "Edit", run: addBlock },

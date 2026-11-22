@@ -23,9 +23,13 @@ export type { IdBufferOptions } from "./io/IdBufferHiddenLine";
 // GUI: shared theme + control renderer (used by sketch / sketch2d / appShell;
 // also usable standalone for custom panels).
 export { getTheme } from "./gui/theme";
-export type { Theme } from "./gui/theme";
+export type { Theme, UiStyle } from "./gui/theme";
 // Commands: what an app can do, with its keys — run by key, listed for a palette, run by agents.
 export { Commands, keyMatches, formatKeys, viewCommands } from "./gui/Commands";
+// The menu bar (File, Edit, View, the app's own) drawn from an app's commands; undo over a ParamStore.
+export { menuBar, menuSlot } from "./gui/MenuBar";
+export type { MenuBarOptions } from "./gui/MenuBar";
+export { ParamHistory } from "./gui/ParamHistory";
 export type { Command, CommandInfo, ViewControl } from "./gui/Commands";
 // A cube per render mode, drawn the way the mode draws: for a mode switch.
 export { viewModeIconShapes, viewModeIconSvg, VIEW_MODE_ICON_SVG, VIEW_MODE_ICON_CORNERS } from "./gui/viewModeIcons";
@@ -39,15 +43,17 @@ export type {
 export { ThreeRenderer } from "./render/ThreeRenderer";
 export type { ThreeRendererConfig, PickInfo } from "./render/ThreeRenderer";
 export type { AmbientOcclusionOptions } from "./render/AmbientOcclusion";
-export type { ShadingBarCorner, ShadingBarPlacement } from "./render/ShadingBar";
+export type { ShadingBarCorner, ShadingBarPlacement, ViewerTools } from "./render/ShadingBar";
 export type { SunPreset } from "./render/viewRules";
+export { SUN_PLACES, sunFor } from "./render/sunSite";
+export type { SunSite, SunPlace } from "./render/sunSite";
 export { SVGRenderer } from "./render/SVGRenderer";
 export { SheetCanvas, drawSheet, fitSheet } from "./render/SheetCanvas";
 export type { SheetCanvasOptions, SheetTransform, DrawSheetOptions } from "./render/SheetCanvas";
 export type { SVGRendererConfig } from "./render/SVGRenderer";
 // The rules the renderer draws by, as plain functions: mode looks, named views, fitting, sections.
 export {
-  edgeStyle, surfaceAppearance, lightBalance, modeBackground,
+  edgeStyle, surfaceAppearance, lightBalance, modeBackground, hiddenLinePage, inkOn,
   groundAppearance, sectionAppearance, DEFAULT_BACKGROUND,
   standardOrbit, orbitFor, shortestTurn, nearestAxis, easeInOut,
   fitRadius, orthoFrustum, sectionPlane, flatLights, studioLights,

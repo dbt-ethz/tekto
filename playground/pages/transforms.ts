@@ -47,7 +47,6 @@ export default function (container: HTMLElement): SketchInstance {
   }, {
     container,
     title: "Transforms",
-    background: 0x0a0b14,
     camera: [8, 8, 12],
     target: [2, 0, 0],
   });

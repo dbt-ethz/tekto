@@ -32,6 +32,31 @@ export interface Appearance {
 /** The page shaded and hidden-line are drawn on, when the host names none. */
 export const DEFAULT_BACKGROUND = 0xf5f7fa;
 
+/** White paper, and the dark page of an inverse drawing. */
+const PAPER = 0xffffff, DARK_PAGE = 0x0b0b0b;
+
+/**
+ * The page a hidden-line drawing is drawn on. A drawing is dark lines on light paper,
+ * whatever the app's own background: the app's background if it is light, else white.
+ * Inverse: light lines on a dark page — the app's background if it is dark, else near black.
+ */
+export function hiddenLinePage(background: THREE.ColorRepresentation, inverse = false): number {
+  const light = luminance(background) > 0.5;
+  if (inverse) return light ? DARK_PAGE : new THREE.Color(background).getHex();
+  return light ? new THREE.Color(background).getHex() : PAPER;
+}
+
+/**
+ * A colour as a hidden-line drawing draws it on `page`: its own while it reads there, and
+ * the drawing's ink (dark on a light page, light on a dark one) where it would vanish into
+ * the page — a white line of a dark app on white paper, a dark crease on a dark page.
+ */
+export function inkOn<C extends THREE.ColorRepresentation>(page: THREE.ColorRepresentation, colour: C): C | string {
+  const a = luminance(page), b = luminance(colour);
+  const contrast = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+  return contrast >= 1.6 ? colour : a > 0.5 ? "#2f2f2f" : "#d8d8d8";
+}
+
 /** Crease colour and weight for a mode. Hidden line draws them at full strength
  *  because in that mode the lines are the drawing. `background` (default: the dark ground
  *  ghost brings with it) turns ghost's pale creases dark on a light page. */

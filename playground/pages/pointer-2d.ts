@@ -4,9 +4,9 @@
  * Demonstrates the sketch2d pointer API: `lab.onPointerDown / onPointerMove /
  * onPointerUp`, each receiving `{ x, y, id }` in canvas CSS-pixels, unified
  * across mouse + touch + pen. The `id` lets several fingers drag different
- * handles at once (try it on a touchscreen). `lab.animate(() => {})` keeps the
- * canvas redrawing every frame so drags show live — pointer events themselves
- * don't trigger a redraw.
+ * handles at once (try it on a touchscreen). After a pointer handler runs the
+ * canvas is drawn again, so drags show live with no animation loop. (For a single
+ * point the person drags, `lab.dragHandle` does all of this: see Axonometric.)
  *
  * This is also the canonical "2D interactive app" example: a page that returns
  * a Sketch2DInstance instead of a 3D SketchInstance. The testbench hides the
@@ -80,8 +80,5 @@ export default function (container: HTMLElement): Sketch2DInstance {
       lab.log("Points", points.length);
       lab.log("Active drags", dragging.size);
     });
-
-    // Pointer events don't auto-redraw; this keeps drag feedback live.
-    lab.animate(() => {});
   }, { container, title: "Pointer Input", background: "#0a0a12" });
 }

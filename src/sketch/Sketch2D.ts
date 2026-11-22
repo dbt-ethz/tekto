@@ -26,7 +26,8 @@
  *
  *   Like Sketch, the function re-runs when any parameter changes.
  *   The draw callback receives a 2D context and canvas dimensions.
- *   Use lab.animate() for continuous rendering.
+ *   Use lab.animate() for continuous rendering; lab.redraw() to draw once more;
+ *   lab.dragHandle() for points the person drags.
  *
  *   Params live in a ParamStore and the panel is rendered by the shared
  *   ControlPanel (src/gui/) — the same system the 3D sketch API and
@@ -94,6 +95,30 @@ export interface Pointer2D {
 /** A handler for `lab.onPointerDown` / `onPointerMove` / `onPointerUp`. */
 export type PointerFn = (p: Pointer2D) => void;
 
+/**
+ * Model coordinates on the canvas, y up: a model point (mx, my) is drawn at
+ * (`x + mx * scale`, `y - my * scale`) CSS pixels. `fitSheet(bounds, w, h)` makes one.
+ */
+export interface View2D { scale: number; x: number; y: number; }
+
+/** Options for `lab.dragHandle`. */
+export interface DragHandle2DOpts {
+  /** Keeps the handle across re-runs (default: its place among the sketch's handles). */
+  name?: string;
+  /**
+   * The handle's coordinates are the model's, drawn through this view (read at every frame
+   * and every pointer event, so a view the draw callback recomputes is followed). Default:
+   * canvas pixels, y down.
+   */
+  view?: View2D | (() => View2D);
+  /** Moves a dragged position, e.g. onto a line or a grid: gets and returns `[x, y]` in the handle's coordinates. */
+  constrain?: (x: number, y: number) => [number, number];
+  /** Radius in CSS pixels (default 6). */
+  size?: number;
+  /** Fill colour (default white, with a dark ring so it shows on any drawing). */
+  color?: string;
+}
+
 /** The lab context passed to the sketch function */
 export interface Lab2D {
   // ── GUI Controls ──
@@ -105,6 +130,22 @@ export interface Lab2D {
 
   /** Register the draw callback. Called on every re-run and animation frame. */
   draw(fn: DrawFn): void;
+  /**
+   * Draw again, once, on the next frame: after state the sketch keeps itself changed (a
+   * timer, a fetch). Pointer handlers need no call: after one runs, the canvas is redrawn.
+   */
+  redraw(): void;
+  /**
+   * A point the person drags on the canvas, drawn over the drawing. Returns its position
+   * (`.value`); dragging it re-runs the sketch, as moving a slider does. It follows `x, y`
+   * until it is dragged, and again when `x, y` change (a slider moved it). A press on a
+   * handle does not reach the sketch's own `onPointerDown`.
+   *
+   *   const view = { scale: 40, x: 60, y: 400 };                 // model metres, y up
+   *   const a = lab.dragHandle(2, 3, { name: "attractor", view: () => view });
+   *   lab.draw((ctx) => { const p = a.value; … });
+   */
+  dragHandle(x: number, y: number, opts?: DragHandle2DOpts): Reactive<Vec2>;
   /** Enable continuous animation. Callback runs each frame. */
   animate(fn: AnimateFn): void;
   /**
@@ -229,6 +270,12 @@ export class Sketch2DInstance {
   private pointerMoveFns: PointerFn[] = [];
   private pointerUpFns: PointerFn[] = [];
   private continuous = false;
+  private drawQueued = 0;
+  /** Handle name → its position, and the `x, y` it was declared with (it follows those until dragged). */
+  private handleState = new Map<string, { value: Vec2; declared: Vec2 }>();
+  /** The handles this run declared, in order. */
+  private handleList: { name: string; opts: DragHandle2DOpts }[] = [];
+  private dragging: { name: string; id: number } | null = null;
   private _prevFingerprint = "";
   private _baseLogCount = 0;
   private _onceRan: boolean[] = [];
@@ -421,20 +468,44 @@ export class Sketch2DInstance {
       return { x: e.clientX - rect.left, y: e.clientY - rect.top, id: e.pointerId };
     };
 
+    // After a pointer handler the sketch's state may have changed: draw again (once a frame).
+    const run = (fns: PointerFn[], p: Pointer2D) => { if (!fns.length) return; for (const fn of fns) fn(p); this.queueDraw(); };
+
     this.canvas.addEventListener("pointerdown", (e) => {
       const p = sample(e);
       this._mouseX = p.x; this._mouseY = p.y; this._mousePressed = true;
-      for (const fn of this.pointerDownFns) fn(p);
+      const hit = this.handleAt(p.x, p.y);
+      if (hit) {                                               // a handle takes the press
+        this.dragging = { name: hit.name, id: p.id };
+        try { this.canvas.setPointerCapture(p.id); } catch { /* synthetic events have no capture */ }
+        this.canvas.style.cursor = "grabbing";
+        this.queueDraw();
+        return;
+      }
+      run(this.pointerDownFns, p);
     });
     this.canvas.addEventListener("pointermove", (e) => {
       const p = sample(e);
       this._mouseX = p.x; this._mouseY = p.y;
-      for (const fn of this.pointerMoveFns) fn(p);
+      if (this.dragging && this.dragging.id === p.id) {
+        const h = this.handleList.find((x) => x.name === this.dragging!.name);
+        const st = this.handleState.get(this.dragging.name);
+        if (h && st) { st.value = this.fromScreen(p.x, p.y, h.opts); this.scheduleRerun(); }
+        return;
+      }
+      if (this.handleList.length) this.canvas.style.cursor = this.handleAt(p.x, p.y) ? "grab" : "";
+      run(this.pointerMoveFns, p);
     });
     const onUp = (e: PointerEvent) => {
       const p = sample(e);
       this._mouseX = p.x; this._mouseY = p.y; this._mousePressed = false;
-      for (const fn of this.pointerUpFns) fn(p);
+      if (this.dragging && this.dragging.id === p.id) {
+        this.dragging = null;
+        this.canvas.style.cursor = this.handleAt(p.x, p.y) ? "grab" : "";
+        this.queueDraw();
+        return;
+      }
+      run(this.pointerUpFns, p);
     };
     this.canvas.addEventListener("pointerup", onUp);
     this.canvas.addEventListener("pointercancel", onUp);
@@ -451,6 +522,7 @@ export class Sketch2DInstance {
     this.pointerDownFns = [];
     this.pointerMoveFns = [];
     this.pointerUpFns = [];
+    this.handleList = [];
     this._onceSeq = 0;
 
     const usedParams = new Set<string>();
@@ -497,6 +569,69 @@ export class Sketch2DInstance {
       this.drawFn(this.ctx, w, h);
       this.ctx.restore();
     }
+    if (w > 0 && h > 0) this.drawHandles();
+  }
+
+  /** Draw on the next frame, once however often it is asked for. */
+  private queueDraw() {
+    if (this.drawQueued || this.disposed) return;
+    this.drawQueued = requestAnimationFrame(() => {
+      this.drawQueued = 0;
+      if (!this.continuous) { this.redraw(); this.updateLog(); }   // a running animation draws anyway
+    });
+  }
+
+  // ── Drag handles ──
+
+  private viewOf(opts: DragHandle2DOpts): View2D | null {
+    return typeof opts.view === "function" ? opts.view() : opts.view ?? null;
+  }
+  private toScreen(p: Vec2, opts: DragHandle2DOpts): Vec2 {
+    const v = this.viewOf(opts);
+    return v ? new Vec2(v.x + p.x * v.scale, v.y - p.y * v.scale) : p;
+  }
+  private fromScreen(x: number, y: number, opts: DragHandle2DOpts): Vec2 {
+    const v = this.viewOf(opts);
+    const p = v ? new Vec2((x - v.x) / v.scale, (v.y - y) / v.scale) : new Vec2(x, y);
+    if (!opts.constrain) return p;
+    const [cx, cy] = opts.constrain(p.x, p.y);
+    return new Vec2(cx, cy);
+  }
+  /** The topmost handle within reach of a canvas point, or null. */
+  private handleAt(x: number, y: number): { name: string; opts: DragHandle2DOpts } | null {
+    for (let i = this.handleList.length - 1; i >= 0; i--) {
+      const h = this.handleList[i];
+      const st = this.handleState.get(h.name);
+      if (!st) continue;
+      const q = this.toScreen(st.value, h.opts);
+      if (Math.hypot(q.x - x, q.y - y) <= (h.opts.size ?? 6) + 5) return h;
+    }
+    return null;
+  }
+  private drawHandles() {
+    if (!this.handleList.length) return;
+    const ctx = this.ctx;
+    ctx.save();
+    for (const h of this.handleList) {
+      const st = this.handleState.get(h.name);
+      if (!st) continue;
+      const q = this.toScreen(st.value, h.opts);
+      const r = h.opts.size ?? 6;
+      const active = this.dragging?.name === h.name;
+      ctx.beginPath();
+      ctx.arc(q.x, q.y, active ? r + 1.5 : r, 0, Math.PI * 2);
+      ctx.fillStyle = h.opts.color ?? "#ffffff";
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = "#1a1a1a";
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(q.x, q.y, (active ? r + 1.5 : r) + 1.5, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(255,255,255,.85)";               // a light halo: the ring shows on dark drawings too
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
   private scheduleRerun() {
@@ -549,6 +684,23 @@ export class Sketch2DInstance {
       },
 
       draw(fn) { self.drawFn = fn; },
+      redraw() { self.queueDraw(); },
+      dragHandle(x, y, opts = {}) {
+        const name = opts.name ?? `handle:${self.handleList.length}`;
+        if (self.handleList.some((h) => h.name === name)) throw new Error(`lab.dragHandle: two handles named "${name}"; give each its own name`);
+        const declared = new Vec2(x, y);
+        let st = self.handleState.get(name);
+        // It follows its declared place until dragged, and again when that place changes.
+        if (!st || (self.dragging?.name !== name && st.declared.distTo(declared) > 1e-12)) {
+          st = { value: declared, declared };
+          self.handleState.set(name, st);
+        }
+        self.handleList.push({ name, opts });
+        return {
+          get value() { return self.handleState.get(name)?.value ?? declared; },
+          set(v: Vec2) { const cur = self.handleState.get(name); if (cur) { cur.value = new Vec2(v.x, v.y); self.scheduleRerun(); } },
+        };
+      },
       animate(fn) { self.animateFn = fn; self.continuous = true; },
       once(fn) {
         const i = self._onceSeq++;
@@ -647,6 +799,7 @@ export class Sketch2DInstance {
   /** Tear down the sketch */
   dispose() {
     this.disposed = true;
+    if (this.drawQueued) cancelAnimationFrame(this.drawQueued);
     this.bridge?.dispose();
     this.unbindKeys?.();
     this.menus?.dispose();

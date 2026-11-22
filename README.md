@@ -514,6 +514,16 @@ agentDoc(doc, { schema: BUILDING_SCHEMA, check: () => house.issues });
 claude mcp add tekto -- node node_modules/tekto/tools/mcp.mjs     # TEKTO_URL=http://localhost:5174 for another port
 ```
 
+The server can also hold the building itself, so an agent works while nobody has the app open. `--doc house` joins the shared document on the dev server as one more participant (the live model: people with the app open see the edits arrive; needs `tekto/collab-vite`); `--file house.json` works on a file when there is no server. Both offer the document tools, `tekto_snapshot` as floor plans drawn to images, and `tekto_export` (IFC, SVG, DXF). In code this is `BuildingSession`, and `buildingPlan(building)` gives the plans as a `Sheet` (`toSVG`, `toDXF`, `toPNG`).
+
+```sh
+claude mcp add tekto -- node node_modules/tekto/tools/mcp.mjs --doc house          # the shared live document
+claude mcp add tekto -- node node_modules/tekto/tools/mcp.mjs --file house.json    # a file, no server
+claude mcp add tekto -- node node_modules/tekto/tools/mcp.mjs --doc house --propose  # the agent may only propose
+```
+
+**Proposals.** `tekto_propose` stores a patch in the document as an open proposal instead of applying it, and says what the check would say with it applied. A person reviews it in the app (`new ProposalBar(doc, viewEl, { schema })`): what it adds, changes and removes, then Accept (one undo step; undo reopens it) or Reject with a reason the agent reads back. With `--propose` the agent has no `tekto_apply`.
+
 The House page ([playground/pages/house.ts](playground/pages/house.ts)) shares its building this way (`agentDoc(doc, { schema: buildingSchema(), check: () => house.issues })`). To have Claude build a house from a brief:
 
 1. `npm run playground`, open the House page, press **Empty site** (or open it with `&empty`).

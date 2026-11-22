@@ -22,7 +22,7 @@
  *                 have selected, and the agent at work through one of the windows
  */
 import {
-  appShell, Doc, bindBuilding, agentDoc, buildingSchema, Selection, selectOnClick, shareSelection, PresenceBar,
+  appShell, Doc, bindBuilding, agentDoc, buildingSchema, Selection, selectOnClick, shareSelection, PresenceBar, ProposalBar, realizeBuilding,
   localAdapter, devServerAdapter, download, ObjFile, stampName,
   type BuildingData, type BuildingRecords, type BuildingIssue, type DocJSON, type Note,
 } from "../../src";
@@ -125,7 +125,16 @@ export default function (container: HTMLElement) {
   const stopSelecting = selectOnClick(app.renderer, app.scene, selection);
   selection.onChange(status);
   // Agents edit the same records: checked against the schema, one undo step, answered with the issues.
-  const stopAgent = agentDoc(doc, { schema: buildingSchema(), check: () => house.issues });
+  const stopAgent = agentDoc(doc, {
+    schema: buildingSchema(), check: () => house.issues,
+    // What the check would say of a proposal, before anyone accepts it.
+    preview: (c) => realizeBuilding({ storeys: c.storeys, walls: c.walls, openings: c.openings, slabs: c.slabs, spaces: c.spaces, roofs: c.roofs, stairs: c.stairs } as BuildingData).check(),
+  });
+  // What an agent proposes waits here for a person: what it changes, Accept (one undo step) or Reject.
+  const proposals = new ProposalBar(doc, app.renderer.canvasEl.parentElement!, {
+    schema: buildingSchema(),
+    onFocus: (keys) => selection.select(keys.filter((k) => house.objectsOf(k).length)),
+  });
   // Shared (`?shared=1`): each window outlines what the others have selected, and the bar shows
   // who is online — and the agent, beside the person whose window it works through.
   const stopSharing = shared ? shareSelection(selection, doc.store, app.renderer, app.scene) : null;
@@ -227,6 +236,7 @@ export default function (container: HTMLElement) {
       stopSelecting();
       stopSharing?.();
       presence?.destroy();
+      proposals.destroy();
       stopAgent();
       house.dispose();
       doc.dispose();

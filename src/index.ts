@@ -89,6 +89,8 @@ export type { TopBarOptions } from "./sketch/ViewerToolbar";
 
 export { PresenceBar } from "./collab/PresenceBar";
 export type { PresenceBarOptions } from "./collab/PresenceBar";
+export { ProposalBar } from "./collab/ProposalBar";
+export type { ProposalBarOptions } from "./collab/ProposalBar";
 
 // Markup overlay types (the overlay itself is mounted by sketch(); see sketch/Markup.ts)
 export type { MarkupBundle, MarkupCaptureOptions, MarkupObjectRef, MarkKind, MarkupRenderer } from "./sketch/Markup";
@@ -107,7 +109,7 @@ export type { Note, NotesRenderer, NoteReply, NoteInfo } from "./sketch/Notes";
 // Sketch2D API (Level 1 — 2D canvas variant, no Three.js)
 export { sketch2d, Sketch2DInstance } from "./sketch/Sketch2D";
 export type {
-  Lab2D, Sketch2DConfig, Sketch2DFn, DrawFn, AnimateFn, Pointer2D, PointerFn,
+  Lab2D, Sketch2DConfig, Sketch2DFn, DrawFn, AnimateFn, Pointer2D, PointerFn, View2D, DragHandle2DOpts,
 } from "./sketch/Sketch2D";
 
 // React (Level 3 — advanced) lives in its own entry point so the main "tekto"

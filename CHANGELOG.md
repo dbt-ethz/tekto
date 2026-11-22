@@ -106,6 +106,65 @@ before 1.0, breaking changes bump the minor version. See
   the canvas and no longer a box over the drawing; a 2D sketch inside a shell (`<div
   data-shell>`) drops its own title bar, as a 3D sketch does (`showHeader: true` keeps it).
 
+- **Round meshes are closed.** `MeshFactory.sphere`, `torus`, `cylinder` (and a cone, a top
+  or bottom radius of 0) and a full `revolve` no longer repeat the seam, the poles, a cone's tip
+  or a profile point on the axis: each is one vertex, so these meshes have no open edges and
+  subdivision, curvature and booleans work on them without `weldVertices`. They have fewer
+  vertices than before (a torus `segments × sides`, was `(segments + 1) × (sides + 1)`), and
+  vertex normals are now smooth across the seam. Code that counted vertices or read them by
+  index in the old layout needs updating.
+
+- **Contours as polylines.** `MarchingSquares.contours(values, nx, ny, iso, …)` and
+  `contoursFromGrid(grid, iso)` join the iso-lines into `{ points, closed }` polylines: closed
+  loops (counter-clockwise around values above `iso`, clockwise around a hole) and open lines
+  from border to border. The grid layout (`values[x * ny + y]`) is now documented.
+
+- **2D sketches redraw after pointer input, and have drag handles.** After an
+  `onPointerDown/Move/Up` handler runs, the canvas is drawn again, so a drag shows live without
+  `lab.animate(() => {})`. `lab.redraw()` draws once more after other changes.
+  `lab.dragHandle(x, y, { name, view, constrain })` is a point the person drags: drawn over the
+  drawing, found under the pointer, its moves re-run the sketch; with `view` (`{ scale, x, y }`,
+  what `fitSheet` returns) it works in model coordinates, y up.
+
+- **Axonometric views for 2D drawings.** `Axonometric({ azimuth, elevation, up })` (and
+  `Axonometric.isometric()`) projects 3D points for a canvas or a Sheet: `polygons` and
+  `meshFaces` cull the faces turned away, sort the rest far to near and give each a light value;
+  `fit` places them in an area; `sheetProjection()` is a Sheet view's `project`. In
+  `tekto/core` and `tekto/2d`. New playground page: Axonometric.
+- **Proposals: an agent's change waits for a person.** `tekto_propose` (in every mode of the
+  MCP server) stores a patch in the document as an open proposal instead of applying it, with a
+  label and a note saying why, and answers with what the check would say if it were applied:
+  the issues it would cause and the ones it would settle. `ProposalBar` shows each open proposal
+  over the view (who, why, the records added, changed field by field, removed) with Accept and
+  Reject: accepting is one undo step, and undoing it reopens the proposal; a rejection keeps the
+  reason for the agent, which reads it with `tekto_proposals`. `tools/mcp.mjs --propose` offers
+  no `tekto_apply` and no `tekto_undo`: the way to run an agent in the background on a shared
+  model. Proposals are records in the document's `proposals` collection, so they are shared
+  live, saved with a file and kept as history. In code: `propose`, `listProposals`,
+  `acceptProposal`, `rejectProposal`, `patchedCollections`; `BuildingSession.propose`,
+  `.proposals`, `.accept`, `.reject`, `.preview`, and `snapshot({ proposal })`, which draws the
+  plans as the proposal would leave them, its changes in red (`buildingPlan({ highlight })`);
+  `applyPatch(…, { dryRun: true })`; `agentDoc({ preview })`. The House page has the bar.
+
+- **An agent on the live model, with nobody's app open.** `tools/mcp.mjs --doc house` makes the
+  MCP server join a shared document as one more participant instead of reaching into an open
+  tab: people who have the app open see the agent's edits arrive, it sees theirs, and there is
+  one model, not copies of a file. `--file house.json` does the same on a file when there is no
+  server (the document the House app saves and opens, created with the first edit). Both offer
+  `tekto_info`, `tekto_records`, `tekto_apply`, `tekto_check`, `tekto_undo`, `tekto_snapshot`
+  (a floor plan per storey as an image, every part labelled with its record id, the model's
+  coordinates along the edges) and the new `tekto_export` (IFC, or the plans as SVG or DXF).
+  In code: `BuildingSession` (in `tekto/core`, no three.js) holds a `Doc`, saved JSON or plain
+  records and gives `info`, `records`, `apply`, `check`, `undo`, `snapshot`, `toJSON`, `toIfc`.
+  `devServerAdapter({ endpoint, user })` now also runs in Node (a fixed `user`, the event
+  stream read with fetch). The page mode of the server is unchanged.
+
+- **Floor plans of a building, and drawings as PNG.** `buildingPlan(building, { storey })`
+  draws a building's plans as a `Sheet`: walls solid between their openings, windows with their
+  glass line, rooms in their colour with name and area, stairs, each part keyed by its record.
+  `sheet.toPNG({ width })` (and `rasterizeSheet`, `encodePNG`) draws any sheet into pixels with
+  no browser, text in a built-in stroke font, so an agent in Node can look at what it drew.
+
 - **Stairs built as timber, steel or concrete.** `new Stair({ structure })`, and `structure` on
   a building's stair record, choose how the flights are built: `"concrete"` puts the steps on a
   160 mm waist slab, `"timber"` sets 50 mm treads between two 60 × 300 mm stringers with open

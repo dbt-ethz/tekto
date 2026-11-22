@@ -133,6 +133,7 @@ export default defineConfig({
         items: [
           { text: "Sheet", link: "/drawings/sheet" },
           { text: "SheetCanvas", link: "/drawings/sheet-canvas" },
+          { text: "Axonometric", link: "/drawings/axonometric" },
         ],
       },
       {

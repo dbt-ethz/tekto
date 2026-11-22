@@ -115,7 +115,13 @@ export type { DxfLayerDef, Dxf3DContent, Dxf3DPolyline, Dxf3DLine, Dxf3DPoint, D
 export type { Dxf2DContent, Dxf2DPolyline, Dxf2DLine, Dxf2DCircle, Dxf2DArc, Dxf2DText, Dxf2DPoint, Dxf2DSolid, Dxf2DLook } from "./io/DxfWriter";
 // Drawings: views, entities and dimensions on a sheet — one source for screen, SVG and DXF.
 export { Sheet, SheetView, DASH_PATTERNS, DRAWING_PALETTE, pickPrim } from "./core/drawing/Sheet";
+// Axonometric views: 3D geometry projected for a 2D canvas or a Sheet, culled and depth-sorted.
+export { Axonometric } from "./core/drawing/Axonometric";
+export type { AxonometricOptions, AxoPolygon } from "./core/drawing/Axonometric";
 export type { Pt, Dash, LineStyle, DrawOptions, TextOptions, DimOptions, LevelOptions, ViewOptions, SheetOptions, SheetPrim, ResolvedStyle, TitleBlockOptions } from "./core/drawing/Sheet";
+// A sheet as pixels (PNG), drawn without a browser: what an agent in Node looks at.
+export { rasterizeSheet, sheetToPNG, encodePNG } from "./core/drawing/sheetRaster";
+export type { SheetRasterOptions, SheetRaster } from "./core/drawing/sheetRaster";
 export { stampName } from "./io/download";
 export { IfcFile } from "./io/IfcFile";
 export type { IfcParseOptions } from "./io/IfcFile";
@@ -182,6 +188,12 @@ export type {
   BuildingBinding, BindBuildingOptions, BuildingDetail, RealizedStorey,
   StoreyRecord, WallRecord, OpeningRecord, SlabRecord, SlabOpeningRecord, SpaceRecord, RoofRecord, StairRecord, XY,
 } from "./bim/building";
+// The floor plans of a building as a drawing, and a building document worked on without a
+// browser (the MCP server's file mode): read, patch, check, undo, look.
+export { buildingPlan } from "./bim/buildingPlan";
+export type { BuildingPlanOptions } from "./bim/buildingPlan";
+export { BuildingSession } from "./bim/buildingSession";
+export type { BuildingSessionOptions, BuildingSummary } from "./bim/buildingSession";
 
 // Scene
 export { Scene } from "./scene/Scene";
@@ -220,6 +232,9 @@ export type { DocSchema, DocChange, DocChangeSource, DocEditOptions, DocOptions,
 export { StepTrace, describeValue } from "./core/steps/StepTrace";
 export type { StepRecord, StepInput, StepEdge, StepAnalysis, StepTraceJSON } from "./core/steps/StepTrace";
 // Records checked against a JSON Schema: one schema validates, defines an agent's tool input, documents.
+// Proposals: a change that waits in the document for a person to accept or reject it.
+export { PROPOSALS, propose, listProposals, acceptProposal, rejectProposal, patchedCollections, patchChanges } from "./collab/proposals";
+export type { Proposal, ProposalInfo, ProposalChange } from "./collab/proposals";
 export { checkRecord } from "./collab/recordSchema";
 export type { RecordSchema, SchemaIssue } from "./collab/recordSchema";
 export type {

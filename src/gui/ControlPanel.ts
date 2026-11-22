@@ -249,11 +249,13 @@ export class ControlPanel {
     for (const b of buttons) if (inTab(b.tab, b.menu)) groupOf(b.group).buttons.push(b);
     for (const r of customRows) if (inTab(r.tab)) groupOf(r.group).rows.push(r);
 
-    // Nothing but the default group: no heading over it. "Parameters" over the only list of
-    // parameters says nothing (the panel's own top row, or the tab, names it already).
-    const bare = groups.size === 1 && groups.has(DEFAULT_GROUP);
+    // The default group first (the controls in no group, or a group named "Parameters"): no
+    // heading over it. "Parameters" there says nothing — the panel's own top row, or the tab,
+    // names it already. Further down it keeps its heading, or it would read as the group above.
+    let first = true;
     for (const [name, content] of groups) {
-      body.appendChild(this.buildSection(name, content, bare));
+      body.appendChild(this.buildSection(name, content, first && name === DEFAULT_GROUP));
+      first = false;
     }
     if (activeExtra) {
       const host = document.createElement("div");
@@ -646,7 +648,9 @@ export class ControlPanel {
 
     const label = document.createElement("span");
     // As written: "Width m" keeps its unit. Only a bare key is tidied ("floorHeight" → "Floor height").
-    label.style.cssText = `width:var(--tekto-label-w,80px);flex-shrink:0;font-size:11px;color:${t.textDim};`;
+    // The label column gives way to the control (a slider and its value need CONTROL_MIN + the
+    // gap) in a narrow panel, down to 40 % of the row; a longer label wraps.
+    label.style.cssText = `width:min(var(--tekto-label-w,80px),max(40%,100% - ${CONTROL_MIN + 8}px));flex-shrink:0;font-size:11px;color:${t.textDim};`;
     label.textContent = def.label ?? labelFromKey(it.key);
     row.appendChild(label);
 
@@ -665,7 +669,7 @@ export class ControlPanel {
         input.style.cssText = `flex:1;width:0;min-width:40px;--tekto-track:${t.controlBorder};--tekto-thumb:${it.accent || t.accent};`;
 
         const valueSpan = document.createElement("span");
-        valueSpan.style.cssText = `width:42px;text-align:right;font-size:10px;color:${t.accent};`;
+        valueSpan.style.cssText = `width:42px;flex-shrink:0;white-space:nowrap;text-align:right;font-size:10px;color:${t.accent};`;
         const isInt = def.type === "int" || step >= 1;
         const rawDec = isInt ? 0 : Math.max(2, -Math.floor(Math.log10(step) - 0.001));
         const decimals = Math.min(Math.max(0, rawDec), 20);

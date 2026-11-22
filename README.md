@@ -17,6 +17,8 @@ Underneath is a full computational geometry toolkit: meshes, curves & **NURBS** 
 **Mesh** → one class for editing, subdivision, topology queries *and* rendering — typed arrays underneath, connectivity kept by every edit, a million triangles in tens of MB  
 **Sketch API** → one function = a full interactive app with GUI
 
+> **Agents using tekto in another project:** read `node_modules/tekto/llms.txt` first (names, "use Y, not Z", five rules), then `llms-full.txt` for every export, and `CHANGELOG.md` when you upgrade.
+
 > **For students:** if you got this repo to embed in your own project, skip ahead to **[Using tekto in your own project](#using-tekto-in-your-own-project)**. The rest of the README is for people working *on* the library itself.
 
 ## Quick Start
@@ -51,6 +53,10 @@ About 30 names cover most apps. **Apps:** `sketch` (3D, rebuilt each run), `sket
 | measure or smooth a mesh | `mesh.volume()`, `mesh.smooth()` | the older `MeshAnalysis` / `Algo` wrappers |
 | check a mesh | `mesh.validate()` | judging a double-sided render |
 | 2D booleans, with holes | `PolygonBool` | `polygonIntersection` (two simple rings only) |
+| 3D booleans (CSG) of closed solids | `BspTree.fromMesh(a)` → `BspTree.union` / `.subtract` / `.intersect` → `toMesh()` → `Mesh.fromArrays(positions, indices)` | `PolygonBool` (2D only) |
+| contours, isolines of a 2D field | `MarchingSquares.contours(…)` (polylines, closed or open) | tracing grid cells by hand |
+| blobs, distance fields, lattices | `SdfSphere`, `SdfOps.blend` … → `VoxelGrid.fillFromSdf` → `MarchingCubes` (a `Mesh`) | — |
+| hidden-line drawings of meshes | on screen `scene.setRenderMode("hiddenline")`; as lines `DxfExporter`; polylines in front of a mesh `extractVisiblePolylines` | drawing every edge |
 | draw plans, elevations, details — dimensioned, to scale — and export them | `Sheet` (`sheet.toDXF()`, `sheet.toSVG()`) + `download`; on screen `SheetCanvas` (see the Drawing Sheet page) | a second export path that repeats the screen's transforms; a hand-written DXF or Blob |
 | export 3D lines / views of meshes / BIM | `writeDxf3D` / `DxfExporter` / `IfcWriter` | — |
 | set a control from code | `handle.set(value)` on any control | clicking the panel's DOM |

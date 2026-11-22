@@ -74,6 +74,13 @@ export interface Sketch2DConfig {
   style?: UiStyle;
   /** Tabs as a bar on top of the panel (default) or as a list down its left side. */
   tabs?: "top" | "side";
+  /**
+   * Where the app's keys (Undo, Redo, its commands) are heard. "page" (default): anywhere on
+   * the page. "app": only while the app has focus (a click in it gives it) — for several
+   * apps on one page, a book chapter, where one Cmd-Z must not undo them all. false: nowhere
+   * (the menus still run them).
+   */
+  keys?: "page" | "app" | false;
   /** Show the 44 px title bar. Default: yes, except on paper and inside a shell that has its own bar (`<div data-shell>`). */
   showHeader?: boolean;
 }
@@ -373,7 +380,9 @@ export class Sketch2DInstance {
     // Edit ▸ Undo / Redo over the controls, by key in every style; the menu bar in the title
     // bar or a shell's slot (a paper figure has neither).
     this.commands.add(this.history.commands());
-    this.unbindKeys = this.commands.bindKeys();
+    const keys = this.config.keys ?? "page";
+    if (keys === "app") { root.tabIndex = -1; root.style.outline = "none"; }   // a click in the app focuses it
+    if (keys) this.unbindKeys = this.commands.bindKeys(keys === "app" ? root : window);
     const slot = paper ? null : menuSlot(menuHost);
     if (slot) { this.menus = menuBar(this.commands, { theme: t }); slot.appendChild(this.menus.el); }
 
@@ -415,7 +424,7 @@ export class Sketch2DInstance {
     this.logEl.dataset.tektoStatus = "";
     this.logEl.style.cssText = `
       flex:none; display:none; flex-wrap:wrap; column-gap:20px; padding:5px 12px;
-      background:${t.panelBg}; border-top:1px solid ${t.border};
+      background:var(--tekto-status-bg, ${t.panelBg}); border-top:1px solid var(--tekto-panel-border, ${t.border});
       font-size:11px; line-height:1.55; color:${t.text};
     `;
     this.logColors = [t.textFaint, t.text];

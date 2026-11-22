@@ -5,10 +5,10 @@ import {
   sceneSummary,
   slug,
   snapshotWithOverlays
-} from "./chunk-OZQQS4QH.mjs";
+} from "./chunk-BXIU5T7I.mjs";
 import {
   SunPosition
-} from "./chunk-F764YID7.mjs";
+} from "./chunk-PPIR23JZ.mjs";
 
 // src/gui/viewModeIcons.ts
 var A = [3, 7.5];
@@ -68,8 +68,15 @@ function viewModeIconSvg(mode, size = 16) {
 
 // src/sketch/Markup.ts
 var INK = "#ff00d4";
+var TOGGLE_TITLE = "Draw on the view what should change. Each mark is saved with the parts it touches, for Claude (or a colleague) to read.";
 var MarkupOverlay = class {
   constructor(host) {
+    /** Buttons that act on marks: greyed out while there is none. */
+    this.needMarks = [];
+    /** What the last Save or Pin did, shown until the next mark is drawn. */
+    this.message = "";
+    /** The mark whose text is being typed, if any. */
+    this.noting = null;
     this.marks = [];
     this.drawing = null;
     this.active = false;
@@ -86,40 +93,56 @@ var MarkupOverlay = class {
     const btnCss = "font:12px system-ui,sans-serif;padding:5px 10px;border-radius:5px;border:1px solid #d0d0d6;background:#fff;color:#222;cursor:pointer;";
     this.toggleBtn = document.createElement("button");
     this.toggleBtn.textContent = "\u270E Markup";
-    this.toggleBtn.title = "Draw on the view to give instructions (saved as screenshot + JSON)";
+    this.toggleBtn.title = TOGGLE_TITLE;
     this.toggleBtn.style.cssText = host.buttonHost ? `${btnCss}padding:3px 9px;` : `position:absolute;top:10px;right:10px;z-index:22;${btnCss}`;
     this.toggleBtn.addEventListener("click", () => this.setActive(!this.active));
     (host.buttonHost ?? vp).appendChild(this.toggleBtn);
+    const right = host.buttonHost ? 10 : 100;
     this.bar = document.createElement("div");
-    this.bar.style.cssText = `position:absolute;top:${(host.top ?? 0) + 10}px;right:${host.buttonHost ? 10 : 100}px;z-index:22;display:none;gap:6px;align-items:center;background:#fff;border:1px solid #d0d0d6;border-radius:7px;padding:5px;box-shadow:0 2px 8px rgba(0,0,0,.12);`;
+    this.bar.dataset.markupBar = "";
+    this.bar.style.cssText = `position:absolute;top:${(host.top ?? 0) + 10}px;right:${right}px;max-width:calc(100% - ${right + 10}px);box-sizing:border-box;z-index:22;display:none;flex-direction:column;gap:6px;background:#fff;border:1px solid #d0d0d6;border-radius:7px;padding:7px 8px;box-shadow:0 2px 8px rgba(0,0,0,.12);font:12px system-ui,sans-serif;color:#222;`;
+    const lead = document.createElement("div");
+    lead.style.cssText = "width:0;min-width:100%;line-height:1.35;";
+    const name = document.createElement("b");
+    name.textContent = "Markup";
+    this.status = document.createElement("span");
+    this.status.dataset.markupHint = "";
+    this.status.style.cssText = "color:#444;margin-left:8px;";
+    lead.append(name, this.status);
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;align-items:center;";
     this.noteBox = document.createElement("input");
-    this.noteBox.placeholder = "Instruction for the whole view\u2026";
-    this.noteBox.style.cssText = "font:12px system-ui,sans-serif;width:260px;padding:5px 8px;border:1px solid #d0d0d6;border-radius:5px;";
+    this.noteBox.placeholder = "General instruction, not tied to a mark (optional)";
+    this.noteBox.title = "Something to change that no single mark shows, e.g. \u201Cmake the whole roof steeper\u201D. It is saved with the marks; a mark without a text of its own takes it.";
+    this.noteBox.style.cssText = "font:12px system-ui,sans-serif;width:290px;flex:1 1 200px;min-width:0;padding:5px 8px;border:1px solid #d0d0d6;border-radius:5px;";
     this.noteBox.addEventListener("keydown", (e) => {
       e.stopPropagation();
       if (e.key === "Enter") void this.save();
     });
-    const mk = (label, title, fn) => {
+    const mk = (label, title, fn, primary = false) => {
       const b = document.createElement("button");
       b.textContent = label;
       b.title = title;
-      b.style.cssText = btnCss;
+      b.style.cssText = btnCss + (primary ? "background:#222;border-color:#222;color:#fff;" : "");
       b.addEventListener("click", fn);
       return b;
     };
-    this.status = document.createElement("span");
-    this.status.style.cssText = "font:11px system-ui,sans-serif;color:#666;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
-    this.bar.append(
-      this.noteBox,
-      mk("Undo", "Remove last mark (\u2318Z)", () => this.undo()),
-      mk("Clear", "Remove all marks", () => {
-        this.marks = [];
-        this.redraw();
-      }),
-      mk("Save", host.keep ? "Save view.png + markup.json, and keep the marks as notes an agent can answer (\u2318S)" : "Save view.png + markup.json (\u2318S)", () => void this.save()),
-      ...host.keep ? [mk("Keep as notes", "Keep the marks as notes with the model: saved, undoable, shared", () => this.keepNotes())] : [],
-      this.status
+    const undo = mk("Undo mark", "Remove the last mark (\u2318Z)", () => this.undo());
+    const clear = mk("Clear marks", "Remove all marks", () => {
+      this.marks = [];
+      this.message = "";
+      this.redraw();
+    });
+    const pin = host.keep ? mk("Pin notes to the model", "Keep each mark with its text as a note on the model: a numbered pin, saved with the model, undoable, seen by everyone on a shared model. Claude answers open notes.", () => this.keepNotes()) : null;
+    const save = mk(
+      "Save for Claude",
+      "Save the view with the marks and a file naming the parts each mark touches (\u2318S), for Claude to read: in .tekto/markup/, or as downloads without the dev server." + (host.keep ? " The marks are pinned to the model as notes too." : ""),
+      () => void this.save(),
+      true
     );
+    this.needMarks = [undo, clear, ...pin ? [pin] : []];
+    row.append(this.noteBox, undo, clear, ...pin ? [pin] : [], save);
+    this.bar.append(lead, row);
     vp.appendChild(this.bar);
     this.canvas.addEventListener("pointerdown", (e) => this.down(e));
     this.canvas.addEventListener("pointermove", (e) => this.move(e));
@@ -133,10 +156,11 @@ var MarkupOverlay = class {
     this.chips.style.display = on ? "block" : "none";
     this.bar.style.display = on ? "flex" : "none";
     this.toggleBtn.textContent = on ? "Done" : "\u270E Markup";
+    this.toggleBtn.title = on ? "Close Markup (Esc). Marks that were not saved or pinned are dropped." : TOGGLE_TITLE;
+    this.message = "";
     if (on) {
-      this.resize();
       window.addEventListener("keydown", this.onKey, true);
-      this.setStatus("Drag to mark \xB7 Shift adds to the last mark");
+      this.resize();
     } else {
       window.removeEventListener("keydown", this.onKey, true);
       this.marks = [];
@@ -159,6 +183,7 @@ var MarkupOverlay = class {
     if (e.button !== 0) return;
     this.canvas.setPointerCapture(e.pointerId);
     this.drawing = [this.local(e)];
+    this.message = "";
     if (!(e.shiftKey && this.marks.length)) {
       this.marks.push({ n: this.marks.length + 1, strokes: [], note: "" });
     }
@@ -199,6 +224,7 @@ var MarkupOverlay = class {
   }
   undo() {
     this.marks.pop();
+    this.message = "";
     this.redraw();
   }
   /** Each mark as a note: its strokes laid on the model (or the ground), its text, the
@@ -206,18 +232,18 @@ var MarkupOverlay = class {
   keepNotes() {
     if (!this.host.keep) return;
     if (!this.marks.length) {
-      this.setStatus("Draw a mark first");
+      this.setStatus("Draw a mark first.");
       return;
     }
     const kept = this.marksToNotes();
     if (!kept) {
-      this.setStatus("The marks lie on nothing to keep them on");
+      this.setStatus("The marks lie on nothing: draw them on the model or the ground to pin them.");
       return;
     }
     this.marks = [];
     this.noteBox.value = "";
     this.redraw();
-    this.setStatus(`Kept ${kept} note${kept > 1 ? "s" : ""}`);
+    this.setStatus(`${kept} note${kept > 1 ? "s" : ""} pinned to the model. Click a pin to read it.`);
   }
   /** Keep the marks that lie on the model (or the ground) as notes; each remembers its note's key. Returns how many. */
   marksToNotes() {
@@ -256,16 +282,19 @@ var MarkupOverlay = class {
   askNote(mark) {
     const [x, y] = badgeAt(mark);
     const inp = document.createElement("input");
-    inp.placeholder = `note for ${mark.n}\u2026`;
-    inp.style.cssText = `position:absolute;left:${x + 16}px;top:${y - 12}px;z-index:23;font:12px system-ui,sans-serif;width:200px;padding:4px 7px;border:2px solid ${INK};border-radius:5px;background:#fff;`;
+    inp.placeholder = `Mark ${mark.n}: what should change here?`;
+    inp.style.cssText = `position:absolute;left:${x + 16}px;top:${y - 12}px;z-index:23;font:12px system-ui,sans-serif;width:230px;padding:4px 7px;border:2px solid ${INK};border-radius:5px;background:#fff;`;
     let closed = false;
     const done = () => {
       if (closed) return;
       closed = true;
       mark.note = inp.value.trim();
       inp.remove();
+      this.noting = null;
       this.redraw();
     };
+    this.noting = mark.n;
+    this.refresh();
     inp.addEventListener("keydown", (e) => {
       e.stopPropagation();
       if (e.key === "Enter") done();
@@ -343,10 +372,28 @@ var MarkupOverlay = class {
       chip.style.cssText = `position:absolute;left:${x + 16}px;top:${y + 14}px;font:11px system-ui,sans-serif;color:#222;background:rgba(255,255,255,.9);border:1px solid #ddd;border-radius:4px;padding:2px 6px;max-width:320px;`;
       this.chips.appendChild(chip);
     }
+    this.refresh();
   }
   setStatus(s) {
-    this.status.textContent = s;
-    this.status.title = s;
+    this.message = s;
+    this.refresh();
+  }
+  /** What to do next, in a sentence. */
+  hint() {
+    if (this.message) return this.message;
+    if (this.noting !== null) return `Type what should change at mark ${this.noting}, then press Enter.`;
+    const n = this.marks.length;
+    if (!n) return "Draw on the view what should change: circle a part, or click a point.";
+    return `${n} mark${n > 1 ? "s" : ""}. Draw the next one, then ${this.host.keep ? "pin or save" : "save"}. Shift-drag adds a stroke to the last mark.`;
+  }
+  /** The bar's sentence, and the buttons that need a mark. */
+  refresh() {
+    this.status.textContent = this.hint();
+    for (const b of this.needMarks) {
+      b.disabled = !this.marks.length;
+      b.style.opacity = b.disabled ? "0.45" : "1";
+      b.style.cursor = b.disabled ? "default" : "pointer";
+    }
   }
   // ── Capture ──
   async save() {
@@ -358,8 +405,8 @@ var MarkupOverlay = class {
         this.marks = this.marks.filter((m) => !m.noteKey);
         this.redraw();
       }
-      const notes = kept ? ` \xB7 kept ${kept} note${kept > 1 ? "s" : ""}` : "";
-      this.setStatus((b.dir ? `Saved \u2192 ${b.dir}` : "Downloaded (no dev-server plugin)") + notes);
+      const notes = kept ? ` ${kept} note${kept > 1 ? "s" : ""} pinned to the model.` : "";
+      this.setStatus((b.dir ? `Saved to ${b.dir}. Ask Claude to look at the markup.` : "Downloaded two pictures of the view and markup.json (no dev server to save to). Give them to Claude.") + notes);
     } catch (e) {
       this.setStatus(`Save failed: ${e}`);
     }

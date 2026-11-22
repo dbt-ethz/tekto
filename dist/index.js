@@ -33,12 +33,14 @@ __export(index_exports, {
   AABB: () => AABB,
   Algo: () => Algo,
   ArcCurve: () => ArcCurve,
+  Axonometric: () => Axonometric,
   BUILDING_COLLECTIONS: () => BUILDING_COLLECTIONS,
   BUILDING_SCHEMA: () => BUILDING_SCHEMA,
   BalloonFrame: () => BalloonFrame,
   BlobDetect: () => BlobDetect,
   BspTree: () => BspTree,
   Building: () => Building,
+  BuildingSession: () => BuildingSession,
   Callouts: () => Callouts,
   Capsule2D: () => Capsule2D,
   CltConstruction: () => CltConstruction,
@@ -49,6 +51,7 @@ __export(index_exports, {
   CurveUtils: () => CurveUtils,
   DASH_PATTERNS: () => DASH_PATTERNS,
   DEFAULT_BACKGROUND: () => DEFAULT_BACKGROUND,
+  DRAWING_PALETTE: () => DRAWING_PALETTE,
   Delaunay2D: () => Delaunay2D,
   DistanceTransform: () => DistanceTransform,
   Doc: () => Doc,
@@ -90,6 +93,8 @@ __export(index_exports, {
   PGFace: () => PGFace,
   PGHalfEdge: () => PGHalfEdge,
   PGVertex: () => PGVertex,
+  PROPOSALS: () => PROPOSALS,
+  ParamHistory: () => ParamHistory,
   ParamStore: () => ParamStore,
   Particles2D: () => Particles2D,
   PixelView: () => PixelView,
@@ -101,6 +106,7 @@ __export(index_exports, {
   PolygonBool: () => PolygonBool,
   PolylineCurve: () => PolylineCurve,
   PresenceBar: () => PresenceBar,
+  ProposalBar: () => ProposalBar,
   Ray: () => Ray,
   RibbonEndTrim: () => RibbonEndTrim,
   RibbonFrame: () => RibbonFrame,
@@ -109,6 +115,7 @@ __export(index_exports, {
   RibbonSystem: () => RibbonSystem,
   RigidBody2D: () => RigidBody2D,
   Roof: () => Roof,
+  SUN_PLACES: () => SUN_PLACES,
   SVGRenderer: () => SVGRenderer,
   Scene: () => Scene,
   SdfBlend: () => SdfBlend,
@@ -181,6 +188,7 @@ __export(index_exports, {
   WallOpening: () => WallOpening,
   WallSystem: () => WallSystem,
   WallType: () => WallType,
+  acceptProposal: () => acceptProposal,
   aciFromHex: () => aciFromHex,
   activateLayer: () => activateLayer,
   agentDoc: () => agentDoc,
@@ -191,6 +199,7 @@ __export(index_exports, {
   boundingWalls: () => boundingWalls,
   boxOf: () => boxOf,
   buildCutList: () => buildCutList,
+  buildingPlan: () => buildingPlan,
   buildingSchema: () => buildingSchema,
   checkRecord: () => checkRecord,
   chooseJoistDirection: () => chooseJoistDirection,
@@ -212,6 +221,7 @@ __export(index_exports, {
   easeInOut: () => easeInOut,
   edgeOutwardVisibility: () => edgeOutwardVisibility,
   edgeStyle: () => edgeStyle,
+  encodePNG: () => encodePNG,
   extractVisiblePolylines: () => extractVisiblePolylines,
   findAdjacent: () => findAdjacent,
   fitRadius: () => fitRadius,
@@ -221,7 +231,9 @@ __export(index_exports, {
   getTheme: () => getTheme,
   groundAppearance: () => groundAppearance,
   hiddenLineIdBuffer: () => hiddenLineIdBuffer,
+  hiddenLinePage: () => hiddenLinePage,
   holzrahmenbauLayers: () => holzrahmenbauLayers,
+  inkOn: () => inkOn,
   joistDirectionFromBounds: () => joistDirectionFromBounds,
   joistDirectionFromPCA: () => joistDirectionFromPCA,
   joistDirectionFromSupports: () => joistDirectionFromSupports,
@@ -231,9 +243,12 @@ __export(index_exports, {
   layoutLabels: () => layoutLabels,
   lightBalance: () => lightBalance,
   lineClipPolygon: () => lineClipPolygon,
+  listProposals: () => listProposals,
   localAdapter: () => localAdapter,
   markup: () => markup,
   memoryAdapter: () => memoryAdapter,
+  menuBar: () => menuBar,
+  menuSlot: () => menuSlot,
   modeBackground: () => modeBackground,
   nearestAxis: () => nearestAxis,
   neighboursOf: () => neighboursOf,
@@ -242,6 +257,8 @@ __export(index_exports, {
   openingFill: () => openingFill,
   orbitFor: () => orbitFor,
   orthoFrustum: () => orthoFrustum,
+  patchChanges: () => patchChanges,
+  patchedCollections: () => patchedCollections,
   perpVisibility: () => perpVisibility,
   perpVisibilityOfPolys: () => perpVisibilityOfPolys,
   pickPrim: () => pickPrim,
@@ -249,9 +266,12 @@ __export(index_exports, {
   polygonIntersection: () => polygonIntersection,
   polylinesToSVG: () => polylinesToSVG,
   processWorkerRequest: () => processWorkerRequest,
+  propose: () => propose,
+  rasterizeSheet: () => rasterizeSheet,
   realize: () => realize,
   realizeBuilding: () => realizeBuilding,
   realizeSlab: () => realizeSlab,
+  rejectProposal: () => rejectProposal,
   repelBodies: () => repelBodies,
   reverseContact: () => reverse,
   sectionAppearance: () => sectionAppearance,
@@ -260,12 +280,14 @@ __export(index_exports, {
   selectOnClick: () => selectOnClick,
   setClipSnap: () => setClipSnap,
   shareSelection: () => shareSelection,
+  sheetToPNG: () => sheetToPNG,
   shortestTurn: () => shortestTurn,
   sketch: () => sketch,
   sketch2d: () => sketch2d,
   stampName: () => stampName,
   standardOrbit: () => standardOrbit,
   studioLights: () => studioLights,
+  sunFor: () => sunFor,
   supabaseAdapter: () => supabaseAdapter,
   surfaceAppearance: () => surfaceAppearance,
   validateBuilding: () => validateBuilding,
@@ -2904,8 +2926,8 @@ function ringArea(r) {
 }
 function orientRing(r, ccw) {
   const last = r[r.length - 1];
-  const ring = r.length > 1 && r[0].x === last.x && r[0].y === last.y ? r.slice(0, -1) : r.slice();
-  return ringArea(ring) > 0 === ccw ? ring : ring.reverse();
+  const ring2 = r.length > 1 && r[0].x === last.x && r[0].y === last.y ? r.slice(0, -1) : r.slice();
+  return ringArea(ring2) > 0 === ccw ? ring2 : ring2.reverse();
 }
 function bridgeHole(outer, hole) {
   let hi = 0;
@@ -3039,11 +3061,11 @@ function boolPip(pt, poly) {
 }
 function polygonIntersection(subjPoly, clipPoly) {
   const subj = buildBoolList(subjPoly);
-  const clip = buildBoolList(clipPoly);
+  const clip2 = buildBoolList(clipPoly);
   let hasIntersections = false;
   let sNode = subj;
   do {
-    let cNode = clip;
+    let cNode = clip2;
     do {
       const hit = boolSegHit(
         sNode.pos.x,
@@ -3073,8 +3095,8 @@ function polygonIntersection(subjPoly, clipPoly) {
         hasIntersections = true;
       }
       cNode = cNode.next;
-      while (cNode.isIntersection && cNode !== clip) cNode = cNode.next;
-    } while (cNode !== clip);
+      while (cNode.isIntersection && cNode !== clip2) cNode = cNode.next;
+    } while (cNode !== clip2);
     sNode = sNode.next;
     while (sNode.isIntersection && sNode !== subj) sNode = sNode.next;
   } while (sNode !== subj);
@@ -3131,8 +3153,8 @@ function setClipSnap(grid) {
 function snap(n) {
   return SNAP > 0 ? Math.round(n / SNAP) * SNAP : n;
 }
-function ringToPC(ring) {
-  return ring.map((v) => [snap(v.x), snap(v.y)]);
+function ringToPC(ring2) {
+  return ring2.map((v) => [snap(v.x), snap(v.y)]);
 }
 function multiToPC(mp) {
   return mp.map((poly) => poly.map(ringToPC));
@@ -3152,13 +3174,13 @@ function pcToMulti(geom) {
 var PolygonBool = {
   // ── construction / inspection ──
   /** Wrap a single solid ring as a multipolygon. */
-  fromRing(ring) {
-    return [[ring]];
+  fromRing(ring2) {
+    return [[ring2]];
   },
   /** Flatten every ring (outer + holes, all polygons) — handy for drawing. */
   rings(mp) {
     const out = [];
-    for (const poly of mp) for (const ring of poly) out.push(ring);
+    for (const poly of mp) for (const ring2 of poly) out.push(ring2);
     return out;
   },
   /** True when the multipolygon encloses no area. */
@@ -3173,8 +3195,8 @@ var PolygonBool = {
   area(mp) {
     let total = 0;
     for (const poly of mp) {
-      poly.forEach((ring, i) => {
-        const a = Math.abs(Polygon2D.signedArea(ring));
+      poly.forEach((ring2, i) => {
+        const a = Math.abs(Polygon2D.signedArea(ring2));
         total += i === 0 ? a : -a;
       });
     }
@@ -3209,22 +3231,22 @@ var PolygonBool = {
 var import_poly_decomp = require("poly-decomp");
 var NoFitPolygon = {
   /** Reflect a ring through the origin (negate every vertex) — forms −B. */
-  reflect(ring) {
-    return ring.map((v) => new Vec2(-v.x, -v.y));
+  reflect(ring2) {
+    return ring2.map((v) => new Vec2(-v.x, -v.y));
   },
   /**
    * Decompose a simple polygon into convex pieces (poly-decomp quickDecomp).
    * Input may have any winding; pieces come back CCW. Triangles and convex
    * inputs pass through as a single piece.
    */
-  decomposeConvex(ring) {
-    if (ring.length <= 3) return [ring.slice()];
-    const pts2 = ring.map((v) => [v.x, v.y]);
+  decomposeConvex(ring2) {
+    if (ring2.length <= 3) return [ring2.slice()];
+    const pts2 = ring2.map((v) => [v.x, v.y]);
     (0, import_poly_decomp.removeCollinearPoints)(pts2, 0.01);
     if (pts2.length <= 3) return [pts2.map(([x, y]) => new Vec2(x, y))];
     (0, import_poly_decomp.makeCCW)(pts2);
     const pieces = (0, import_poly_decomp.quickDecomp)(pts2);
-    return pieces.map((piece) => piece.map(([x, y]) => new Vec2(x, y)));
+    return pieces.map((piece2) => piece2.map(([x, y]) => new Vec2(x, y)));
   },
   /**
    * Minkowski sum of two *convex* rings = convex hull of all pairwise vertex
@@ -3287,7 +3309,7 @@ function clipSlabY(px, py, qx, qy, top) {
   let t1 = 1;
   const dx = qx - px;
   const dy = qy - py;
-  const clip = (p, q) => {
+  const clip2 = (p, q) => {
     if (Math.abs(p) < 1e-12) return q >= 0;
     const r = q / p;
     if (p < 0) {
@@ -3299,8 +3321,8 @@ function clipSlabY(px, py, qx, qy, top) {
     }
     return true;
   };
-  if (!clip(-dy, py)) return null;
-  if (!clip(dy, top - py)) return null;
+  if (!clip2(-dy, py)) return null;
+  if (!clip2(dy, top - py)) return null;
   if (t1 < t0) return null;
   return [px + t0 * dx, py + t0 * dy, px + t1 * dx, py + t1 * dy];
 }
@@ -3316,9 +3338,9 @@ function perpVisibility(a, b, obstacles, maxDist) {
   const back = (x, y) => new Vec2(a.x + x * ux + y * nx, a.y + x * uy + y * ny);
   const shadows = [];
   for (const [p, q] of obstacles) {
-    const clip = clipSlabY(fwdX(p), fwdY(p), fwdX(q), fwdY(q), maxDist);
-    if (!clip) continue;
-    const [px, py, qx, qy] = clip;
+    const clip2 = clipSlabY(fwdX(p), fwdY(p), fwdX(q), fwdY(q), maxDist);
+    if (!clip2) continue;
+    const [px, py, qx, qy] = clip2;
     if (Math.abs(px - qx) < 1e-9) continue;
     shadows.push(PolygonBool.fromRing([
       new Vec2(px, py),
@@ -3341,20 +3363,20 @@ function perpVisibility(a, b, obstacles, maxDist) {
   }
   const out = [];
   for (const poly of lit) {
-    for (const ring of poly) {
-      if (ring.length >= 3) out.push(ring.map((v) => back(v.x, v.y)));
+    for (const ring2 of poly) {
+      if (ring2.length >= 3) out.push(ring2.map((v) => back(v.x, v.y)));
     }
   }
   return out;
 }
 function perpVisibilityOfPolys(a, b, polygons, maxDist, skipEdge) {
-  const same = (u, v) => Math.abs(u.x - v.x) < 1e-6 && Math.abs(u.y - v.y) < 1e-6;
+  const same3 = (u, v) => Math.abs(u.x - v.x) < 1e-6 && Math.abs(u.y - v.y) < 1e-6;
   const segs = [];
-  for (const ring of polygons) {
-    for (let i = 0; i < ring.length; i++) {
-      const p = ring[i];
-      const q = ring[(i + 1) % ring.length];
-      if (skipEdge && (same(p, skipEdge[0]) && same(q, skipEdge[1]) || same(p, skipEdge[1]) && same(q, skipEdge[0]))) {
+  for (const ring2 of polygons) {
+    for (let i = 0; i < ring2.length; i++) {
+      const p = ring2[i];
+      const q = ring2[(i + 1) % ring2.length];
+      if (skipEdge && (same3(p, skipEdge[0]) && same3(q, skipEdge[1]) || same3(p, skipEdge[1]) && same3(q, skipEdge[0]))) {
         continue;
       }
       segs.push([p, q]);
@@ -3362,10 +3384,10 @@ function perpVisibilityOfPolys(a, b, polygons, maxDist, skipEdge) {
   }
   return perpVisibility(a, b, segs, maxDist);
 }
-function edgeOutwardVisibility(ring, i, obstacles, maxDist) {
-  const p = ring[i];
-  const q = ring[(i + 1) % ring.length];
-  const ccw = Polygon2D.signedArea(ring) > 0;
+function edgeOutwardVisibility(ring2, i, obstacles, maxDist) {
+  const p = ring2[i];
+  const q = ring2[(i + 1) % ring2.length];
+  const ccw = Polygon2D.signedArea(ring2) > 0;
   const a = ccw ? q : p;
   const b = ccw ? p : q;
   return perpVisibilityOfPolys(a, b, obstacles, maxDist, [p, q]);
@@ -5280,6 +5302,8 @@ var MeshFactory = {
     const ids = [];
     const isClosed = Math.abs(angleRange - Math.PI * 2) < 1e-6;
     const slices = isClosed ? segments : segments + 1;
+    const onAxis = profile.map((p) => Math.abs(p.x) < 1e-9);
+    const axisNode = profile.map((p, i) => onAxis[i] ? mesh.addNode(new Vec3(0, p.y, 0)) : -1);
     for (let s = 0; s < slices; s++) {
       ids[s] = [];
       const angle = s / segments * angleRange;
@@ -5287,13 +5311,17 @@ var MeshFactory = {
       const sin = Math.sin(angle);
       for (let i = 0; i < n; i++) {
         const p = profile[i];
-        ids[s][i] = mesh.addNode(new Vec3(p.x * cos, p.y, p.x * sin));
+        ids[s][i] = onAxis[i] ? axisNode[i] : mesh.addNode(new Vec3(p.x * cos, p.y, p.x * sin));
       }
     }
     for (let s = 0; s < segments; s++) {
       const ns = (s + 1) % slices;
       for (let i = 0; i < n - 1; i++) {
-        mesh.addQuad(ids[s][i], ids[s][i + 1], ids[ns][i + 1], ids[ns][i]);
+        const a = ids[s][i], b = ids[s][i + 1], c = ids[ns][i + 1], d = ids[ns][i];
+        if (onAxis[i] && onAxis[i + 1]) continue;
+        if (onAxis[i]) mesh.addTriangle(a, b, c);
+        else if (onAxis[i + 1]) mesh.addTriangle(a, b, d);
+        else mesh.addQuad(a, b, c, d);
       }
     }
     mesh.computeVertexNormals();
@@ -5349,28 +5377,31 @@ var MeshFactory = {
   sphere(radius = 1, segments = 24, rings = 16) {
     need(isCount(segments, 3) && isCount(rings, 2), `sphere: needs whole numbers, segments \u2265 3 and rings \u2265 2, got ${segments} and ${rings}`);
     const mesh = new Mesh();
-    const ids = [];
-    for (let r = 0; r <= rings; r++) {
-      ids[r] = [];
+    const ring2 = [];
+    const north = mesh.addNode(new Vec3(0, radius, 0));
+    for (let r = 1; r < rings; r++) {
+      ring2[r] = [];
       const phi = r / rings * Math.PI;
       const sinPhi = Math.sin(phi);
       const cosPhi = Math.cos(phi);
-      for (let s = 0; s <= segments; s++) {
+      for (let s = 0; s < segments; s++) {
         const theta = s / segments * Math.PI * 2;
-        ids[r][s] = mesh.addNode(new Vec3(
+        ring2[r][s] = mesh.addNode(new Vec3(
           radius * sinPhi * Math.cos(theta),
           radius * cosPhi,
           radius * sinPhi * Math.sin(theta)
         ));
       }
     }
+    const south = mesh.addNode(new Vec3(0, -radius, 0));
+    const id = (r, s) => r === 0 ? north : r === rings ? south : ring2[r][s % segments];
     for (let r = 0; r < rings; r++) {
       for (let s = 0; s < segments; s++) {
         if (r > 0) {
-          mesh.addTriangle(ids[r][s], ids[r][s + 1], ids[r + 1][s + 1]);
+          mesh.addTriangle(id(r, s), id(r, s + 1), id(r + 1, s + 1));
         }
         if (r < rings - 1) {
-          mesh.addTriangle(ids[r][s], ids[r + 1][s + 1], ids[r + 1][s]);
+          mesh.addTriangle(id(r, s), id(r + 1, s + 1), id(r + 1, s));
         }
       }
     }
@@ -5381,24 +5412,36 @@ var MeshFactory = {
     need(isCount(segments, 3), `cylinder: segments must be a whole number \u2265 3, got ${segments}`);
     const mesh = new Mesh();
     const h2 = height / 2;
-    const bottomIds = [];
-    const topIds = [];
-    for (let s = 0; s <= segments; s++) {
-      const angle = s / segments * Math.PI * 2;
-      const cos = Math.cos(angle);
-      const sin = Math.sin(angle);
-      bottomIds.push(mesh.addNode(new Vec3(radiusBottom * cos, -h2, radiusBottom * sin)));
-      topIds.push(mesh.addNode(new Vec3(radiusTop * cos, h2, radiusTop * sin)));
-    }
+    const rim = (r, y) => {
+      if (r === 0) {
+        const tip = mesh.addNode(new Vec3(0, y, 0));
+        return Array(segments).fill(tip);
+      }
+      const out = [];
+      for (let s = 0; s < segments; s++) {
+        const angle = s / segments * Math.PI * 2;
+        out.push(mesh.addNode(new Vec3(r * Math.cos(angle), y, r * Math.sin(angle))));
+      }
+      return out;
+    };
+    const bottomIds = rim(radiusBottom, -h2);
+    const topIds = rim(radiusTop, h2);
+    const next = (s) => (s + 1) % segments;
     for (let s = 0; s < segments; s++) {
-      mesh.addQuad(bottomIds[s], topIds[s], topIds[s + 1], bottomIds[s + 1]);
+      const a = bottomIds[s], b = topIds[s], c = topIds[next(s)], d = bottomIds[next(s)];
+      if (radiusTop === 0 && radiusBottom === 0) continue;
+      if (radiusTop === 0) mesh.addTriangle(a, b, d);
+      else if (radiusBottom === 0) mesh.addTriangle(a, b, c);
+      else mesh.addQuad(a, b, c, d);
     }
     if (cap) {
-      const bottomCenter = mesh.addNode(new Vec3(0, -h2, 0));
-      const topCenter = mesh.addNode(new Vec3(0, h2, 0));
-      for (let s = 0; s < segments; s++) {
-        mesh.addTriangle(bottomCenter, bottomIds[s], bottomIds[s + 1]);
-        mesh.addTriangle(topCenter, topIds[s + 1], topIds[s]);
+      if (radiusBottom !== 0) {
+        const bottomCenter = mesh.addNode(new Vec3(0, -h2, 0));
+        for (let s = 0; s < segments; s++) mesh.addTriangle(bottomCenter, bottomIds[s], bottomIds[next(s)]);
+      }
+      if (radiusTop !== 0) {
+        const topCenter = mesh.addNode(new Vec3(0, h2, 0));
+        for (let s = 0; s < segments; s++) mesh.addTriangle(topCenter, topIds[next(s)], topIds[s]);
       }
     }
     mesh.computeVertexNormals();
@@ -5408,12 +5451,12 @@ var MeshFactory = {
     need(isCount(segments, 3) && isCount(sides, 3), `torus: segments and sides must be whole numbers \u2265 3, got ${segments} and ${sides}`);
     const mesh = new Mesh();
     const ids = [];
-    for (let s = 0; s <= segments; s++) {
+    for (let s = 0; s < segments; s++) {
       ids[s] = [];
       const theta = s / segments * Math.PI * 2;
       const cosT = Math.cos(theta);
       const sinT = Math.sin(theta);
-      for (let r = 0; r <= sides; r++) {
+      for (let r = 0; r < sides; r++) {
         const phi = r / sides * Math.PI * 2;
         const x = (majorRadius + minorRadius * Math.cos(phi)) * cosT;
         const y = minorRadius * Math.sin(phi);
@@ -5422,8 +5465,10 @@ var MeshFactory = {
       }
     }
     for (let s = 0; s < segments; s++) {
+      const ns = (s + 1) % segments;
       for (let r = 0; r < sides; r++) {
-        mesh.addQuad(ids[s][r], ids[s][r + 1], ids[s + 1][r + 1], ids[s + 1][r]);
+        const nr = (r + 1) % sides;
+        mesh.addQuad(ids[s][r], ids[s][nr], ids[ns][nr], ids[ns][r]);
       }
     }
     mesh.computeVertexNormals();
@@ -6031,10 +6076,10 @@ var MeshSubdivide = {
 function dooSabinFaceRing(mesh, node, _allFaces, _vertPosInFace, _faceIdToLocalIdx) {
   const facesAround = node.faces;
   if (facesAround.length === 0) return null;
-  const ring = [];
+  const ring2 = [];
   const visited = /* @__PURE__ */ new Set();
   const startFace = facesAround[0];
-  ring.push(startFace);
+  ring2.push(startFace);
   visited.add(startFace);
   const startFaceObj = mesh.face(startFace);
   const posInFace = startFaceObj.nodes.indexOf(node.id);
@@ -6045,7 +6090,7 @@ function dooSabinFaceRing(mesh, node, _allFaces, _vertPosInFace, _faceIdToLocalI
   let currentFace = sharedEdge.faces.find((f2) => f2 !== startFace);
   if (currentFace === void 0) return null;
   while (!visited.has(currentFace)) {
-    ring.push(currentFace);
+    ring2.push(currentFace);
     visited.add(currentFace);
     const cf = mesh.face(currentFace);
     const idx = cf.nodes.indexOf(node.id);
@@ -6061,7 +6106,7 @@ function dooSabinFaceRing(mesh, node, _allFaces, _vertPosInFace, _faceIdToLocalI
     crossVert = otherVert;
     currentFace = nextFace;
   }
-  return ring.length === facesAround.length ? ring : null;
+  return ring2.length === facesAround.length ? ring2 : null;
 }
 function findSharedEdge(mesh, nodeA, nodeB) {
   const nA = mesh.node(nodeA);
@@ -8524,7 +8569,7 @@ var Voronoi2D = {
    */
   cells(sites, options = {}) {
     const n = sites.length;
-    const { clip, radii } = options;
+    const { clip: clip2, radii } = options;
     for (let i = 0; i < n; i++) {
       const p = sites[i];
       if (!p || !Number.isFinite(p.x) || !Number.isFinite(p.y))
@@ -8538,9 +8583,9 @@ var Voronoi2D = {
           throw new Error(`Voronoi2D.cells: options.radii[${i}] is ${radii[i]}; a radius must be a finite number >= 0.`);
       }
     }
-    if (clip !== void 0) {
-      for (let k = 0; k < clip.length; k++) {
-        const p = clip[k];
+    if (clip2 !== void 0) {
+      for (let k = 0; k < clip2.length; k++) {
+        const p = clip2[k];
         if (!p || !Number.isFinite(p.x) || !Number.isFinite(p.y))
           throw new Error(`Voronoi2D.cells: options.clip[${k}] is ${p ? `(${p.x}, ${p.y})` : p}; clip points need finite x and y.`);
       }
@@ -8555,8 +8600,8 @@ var Voronoi2D = {
     }
     const sw = sx1 - sx0, sh = sy1 - sy0;
     let rawClip;
-    if (clip !== void 0) {
-      rawClip = clip;
+    if (clip2 !== void 0) {
+      rawClip = clip2;
     } else {
       const pad = Math.max(sw, sh) / 2 || 1;
       rawClip = [
@@ -8576,11 +8621,11 @@ var Voronoi2D = {
     const scale = Math.max(sw, sh, cx1 - cx0, cy1 - cy0) || 1;
     const far = Math.max(Math.abs(sx0), Math.abs(sx1), Math.abs(sy0), Math.abs(sy1), Math.abs(cx0), Math.abs(cx1), Math.abs(cy0), Math.abs(cy1));
     const eps = Math.max(VORONOI_EPS * scale, VORONOI_ULPS * Number.EPSILON * far);
-    const ring = voronoiClipRing(rawClip, eps, clip !== void 0);
-    const convexClip = voronoiIsConvex(ring.x, ring.y);
+    const ring2 = voronoiClipRing(rawClip, eps, clip2 !== void 0);
+    const convexClip = voronoiIsConvex(ring2.x, ring2.y);
     const base = new VPoly();
     if (convexClip) {
-      for (let k = 0; k < ring.x.length; k++) base.push(ring.x[k], ring.y[k], -1);
+      for (let k = 0; k < ring2.x.length; k++) base.push(ring2.x[k], ring2.y[k], -1);
     } else {
       base.push(cx0, cy0, -1);
       base.push(cx1, cy0, -1);
@@ -8680,7 +8725,7 @@ var Voronoi2D = {
       }
       return { site, polygon, neighbors };
     };
-    const ringClip = convexClip ? null : new VoronoiRingClip(ring.x, ring.y, eps);
+    const ringClip = convexClip ? null : new VoronoiRingClip(ring2.x, ring2.y, eps);
     for (let i = 0; i < n; i++) {
       const cell = dead[i] ? null : convexCell(i);
       if (!ringClip || !cell) {
@@ -8717,9 +8762,9 @@ var Voronoi2D = {
     return sets.map((s) => [...s].sort((a, b) => a - b));
   }
 };
-function voronoiClipRing(clip, eps, given) {
+function voronoiClipRing(clip2, eps, given) {
   let x = [], y = [];
-  for (const p of clip) {
+  for (const p of clip2) {
     const m = x.length;
     if (m > 0 && Math.abs(p.x - x[m - 1]) <= eps && Math.abs(p.y - y[m - 1]) <= eps) continue;
     x.push(p.x);
@@ -8749,7 +8794,7 @@ function voronoiClipRing(clip, eps, given) {
     area2 += x[k] * y[b] - x[b] * y[k];
   }
   if (x.length < 3 || Math.abs(area2) <= eps * eps) {
-    if (given) throw new Error(`Voronoi2D.cells: options.clip (${clip.length} points) encloses no area; give a ring of at least 3 points that are not all on one line.`);
+    if (given) throw new Error(`Voronoi2D.cells: options.clip (${clip2.length} points) encloses no area; give a ring of at least 3 points that are not all on one line.`);
     throw new Error("Voronoi2D.cells: the default clip encloses no area.");
   }
   if (area2 < 0) {
@@ -9383,6 +9428,62 @@ var VoxelGrid = class _VoxelGrid {
   }
 };
 var MarchingSquares = {
+  /**
+   * The iso-contours as polylines: each `{ points, closed }`, with the inside (values above
+   * `iso`) on the left. A closed loop does not repeat its first point; an open line starts
+   * and ends on the grid's border.
+   */
+  contours(values, nx, ny, iso = 0, cellSize = 1, originX = 0, originY = 0) {
+    const point = /* @__PURE__ */ new Map();
+    const next = /* @__PURE__ */ new Map();
+    const ends = /* @__PURE__ */ new Set();
+    const n = new Float32Array(4);
+    for (let x = 0; x < nx - 1; x++) {
+      for (let y = 0; y < ny - 1; y++) {
+        n[0] = values[x * ny + y];
+        n[1] = values[(x + 1) * ny + y];
+        n[2] = values[(x + 1) * ny + y + 1];
+        n[3] = values[x * ny + y + 1];
+        let caseNum = 0;
+        for (let i = 3; i >= 0; i--) {
+          if (n[i] > iso) caseNum++;
+          if (i > 0) caseNum <<= 1;
+        }
+        const x1 = originX + x * cellSize, y1 = originY + y * cellSize;
+        const keyOf2 = (edge) => edge === 0 ? 2 * (x * ny + y) : edge === 1 ? 2 * ((x + 1) * ny + y) + 1 : edge === 2 ? 2 * (x * ny + y + 1) : 2 * (x * ny + y) + 1;
+        for (let i = caseNum * 4; i < caseNum * 4 + 4; i += 2) {
+          const e1 = MS_EDGE_TABLE[i], e2 = MS_EDGE_TABLE[i + 1];
+          if (e1 < 0 || e2 < 0) break;
+          const a = keyOf2(e1), b = keyOf2(e2);
+          if (!point.has(a)) point.set(a, msEdgePoint(e1, n, x1, y1, x1 + cellSize, y1 + cellSize, iso, cellSize));
+          if (!point.has(b)) point.set(b, msEdgePoint(e2, n, x1, y1, x1 + cellSize, y1 + cellSize, iso, cellSize));
+          next.set(a, b);
+          ends.add(b);
+        }
+      }
+    }
+    const out = [];
+    const walk = (start) => {
+      const keys = [start];
+      let k = next.get(start);
+      next.delete(start);
+      while (k !== void 0 && k !== start) {
+        keys.push(k);
+        const nk = next.get(k);
+        next.delete(k);
+        k = nk;
+      }
+      return { points: keys.map((key) => point.get(key)), closed: k === start };
+    };
+    for (const start of [...next.keys()]) if (!ends.has(start) && next.has(start)) out.push(walk(start));
+    for (const start of [...next.keys()]) if (next.has(start)) out.push(walk(start));
+    return out;
+  },
+  /** `contours` of a `VoxelGrid2D`. */
+  contoursFromGrid(grid, iso = 0) {
+    return MarchingSquares.contours(grid.values, grid.nx, grid.ny, iso, grid.cellSize, grid.x1, grid.y1);
+  },
+  /** The iso-contour as loose segments, in no order (`contours` joins them). Same layout as `contours`. */
   extract(values, nx, ny, iso = 0, cellSize = 1, originX = 0, originY = 0) {
     const segments = [];
     const n = new Float32Array(4);
@@ -9415,6 +9516,7 @@ var MarchingSquares = {
     }
     return segments;
   },
+  /** `extract` of a `VoxelGrid2D`. */
   extractFromGrid(grid, iso = 0) {
     return MarchingSquares.extract(
       grid.values,
@@ -15217,10 +15319,10 @@ var Particles2D = class _Particles2D {
     return total;
   }
   /** `count` seeded-random points inside a ring (rejection sampling in its bounding box). */
-  static scatter(ring, count, random) {
+  static scatter(ring2, count, random) {
     if (!Number.isInteger(count) || count < 0) fail("scatter", `count must be a whole number \u2265 0, got ${count}`);
-    const poly = Polygon2D.openRing(ring);
-    if (poly.length < 3) fail("scatter", `ring needs at least 3 points, got ${ring.length}`);
+    const poly = Polygon2D.openRing(ring2);
+    if (poly.length < 3) fail("scatter", `ring needs at least 3 points, got ${ring2.length}`);
     const area = Polygon2D.area(poly);
     if (!(area > 0)) fail("scatter", `ring has no area (${area})`);
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -15244,12 +15346,12 @@ var Particles2D = class _Particles2D {
    * `steps` steps (default 200) inside the ring, drop any left outside; returns the centres.
    * The points come from `random`, else from `createRandom(seed)` (default seed 1), so a seed always packs the same.
    */
-  static pack(ring, radius, options = {}) {
+  static pack(ring2, radius, options = {}) {
     if (!Number.isFinite(radius) || radius <= 0) fail("pack", `radius must be a finite number > 0, got ${radius}`);
     const steps = options.steps ?? PACK_STEPS;
     if (!Number.isInteger(steps) || steps < 0) fail("pack", `steps must be a whole number \u2265 0, got ${steps}`);
-    const poly = Polygon2D.openRing(ring);
-    if (poly.length < 3) fail("pack", `ring needs at least 3 points, got ${ring.length}`);
+    const poly = Polygon2D.openRing(ring2);
+    if (poly.length < 3) fail("pack", `ring needs at least 3 points, got ${ring2.length}`);
     const random = options.random ?? createRandom(options.seed ?? PACK_SEED);
     const count = Math.round(Polygon2D.area(poly) / (HEX_AREA * radius * radius));
     const sim = new _Particles2D();
@@ -15341,14 +15443,14 @@ var Particles2D = class _Particles2D {
     }
   }
   prepareBoundary(call, boundary) {
-    const ring = Polygon2D.openRing(boundary);
-    const m = ring.length;
+    const ring2 = Polygon2D.openRing(boundary);
+    const m = ring2.length;
     if (m < 3) fail(call, `boundary needs at least 3 points, got ${boundary.length}`);
-    const area = Polygon2D.signedArea(ring);
+    const area = Polygon2D.signedArea(ring2);
     if (!(Math.abs(area) > 0)) fail(call, `boundary has no area (${area})`);
     const inward = area > 0 ? 1 : -1;
     const e = {
-      ring,
+      ring: ring2,
       ax: new Float64Array(m),
       ay: new Float64Array(m),
       ex: new Float64Array(m),
@@ -15358,7 +15460,7 @@ var Particles2D = class _Particles2D {
       ny: new Float64Array(m)
     };
     for (let k = 0; k < m; k++) {
-      const a = ring[k], b = ring[(k + 1) % m];
+      const a = ring2[k], b = ring2[(k + 1) % m];
       const ex = b.x - a.x, ey = b.y - a.y;
       const len = Math.sqrt(ex * ex + ey * ey);
       e.ax[k] = a.x;
@@ -15893,9 +15995,9 @@ var forPaper = ([r, g, b]) => {
   return [R + m, G + m, B3 + m];
 };
 function writePdf2D(content, opts = {}) {
-  const scale = opts.scale ?? 50, unit = opts.unit ?? 1, margin = opts.margin ?? 10, lw = opts.lineWidth ?? 0.18;
+  const scale = opts.scale ?? 50, unit2 = opts.unit ?? 1, margin = opts.margin ?? 10, lw = opts.lineWidth ?? 0.18;
   if (!(Number.isFinite(scale) && scale > 0)) throw new Error(`writePdf2D: scale must be a positive number, got ${scale}`);
-  if (!(Number.isFinite(unit) && unit > 0)) throw new Error(`writePdf2D: unit must be a positive number, got ${unit}`);
+  if (!(Number.isFinite(unit2) && unit2 > 0)) throw new Error(`writePdf2D: unit must be a positive number, got ${unit2}`);
   const polylines = content.polylines ?? [], lineSegs = content.lines ?? [], circles = content.circles ?? [];
   const arcs = content.arcs ?? [], texts = content.texts ?? [], solids = content.solids ?? [];
   const finite = (p) => Number.isFinite(p.x) && Number.isFinite(p.y);
@@ -15947,7 +16049,7 @@ function writePdf2D(content, opts = {}) {
     x0 = y0 = 0;
     x1 = y1 = 1;
   }
-  const k = unit * 1e3 / scale;
+  const k = unit2 * 1e3 / scale;
   const foot = opts.scaleBar ?? true ? 14 : 0, head = opts.title ? 10 : 0;
   const Wmm = (x1 - x0) * k + 2 * margin, Hmm = (y1 - y0) * k + 2 * margin + foot + head;
   const X = (x) => (margin + (x - x0) * k) * MM, Y = (y) => (margin + foot + (y - y0) * k) * MM;
@@ -16044,8 +16146,8 @@ function writePdf2D(content, opts = {}) {
     text(`${opts.title} \xB7 1:${scale}`, margin * MM, (Hmm - margin - 4) * MM, 3.5 / CAP * MM, 0, "left", "baseline");
   }
   if (foot) {
-    const want = (x1 - x0) * unit / 5, nice = [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1e3].find((v) => v >= want / 4) ?? 1e3;
-    const steps = 4, len = nice * steps, bx = margin, by = margin, bw = len / unit * k, bh = 1.5;
+    const want = (x1 - x0) * unit2 / 5, nice = [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1e3].find((v) => v >= want / 4) ?? 1e3;
+    const steps = 4, len = nice * steps, bx = margin, by = margin, bw = len / unit2 * k, bh = 1.5;
     ops.push("[] 0 d");
     dash = "[] 0 d";
     setStroke([0, 0, 0]);
@@ -16301,6 +16403,357 @@ function parseObjIndex(block, pCount, tCount, nCount) {
   return { p, t, n };
 }
 
+// src/core/drawing/sheetRaster.ts
+var NAMED = { black: "#000000", white: "#ffffff", red: "#ff0000", green: "#008000", blue: "#0000ff", grey: "#808080", gray: "#808080" };
+function parseColor(c) {
+  let s = (NAMED[c.toLowerCase()] ?? c).trim();
+  if (/^#[0-9a-f]{3}$/i.test(s)) s = `#${s[1]}${s[1]}${s[2]}${s[2]}${s[3]}${s[3]}`;
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i.exec(s);
+  return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [0, 0, 0];
+}
+var GLYPHS = {
+  A: "0,0 2,6 4,0;0.67,2 3.33,2",
+  B: "0,0 0,6 3,6 4,5 4,4 3,3 0,3;3,3 4,2 4,1 3,0 0,0",
+  C: "4,5 3,6 1,6 0,5 0,1 1,0 3,0 4,1",
+  D: "0,0 0,6 2.5,6 4,4.5 4,1.5 2.5,0 0,0",
+  E: "4,6 0,6 0,0 4,0;0,3 3,3",
+  F: "4,6 0,6 0,0;0,3 3,3",
+  G: "4,5 3,6 1,6 0,5 0,1 1,0 3,0 4,1 4,3 2,3",
+  H: "0,0 0,6;4,0 4,6;0,3 4,3",
+  I: "2,0 2,6;1,0 3,0;1,6 3,6",
+  J: "0,1 1,0 2.5,0 3.5,1 3.5,6",
+  K: "0,0 0,6;4,6 0,2.5;1.3,3.6 4,0",
+  L: "0,6 0,0 4,0",
+  M: "0,0 0,6 2,2.5 4,6 4,0",
+  N: "0,0 0,6 4,0 4,6",
+  O: "1,0 0,1 0,5 1,6 3,6 4,5 4,1 3,0 1,0",
+  P: "0,0 0,6 3,6 4,5 4,4 3,3 0,3",
+  Q: "1,0 0,1 0,5 1,6 3,6 4,5 4,1 3,0 1,0;2.5,1.5 4,0",
+  R: "0,0 0,6 3,6 4,5 4,4 3,3 0,3;2,3 4,0",
+  S: "4,5 3,6 1,6 0,5 0,4 1,3 3,3 4,2 4,1 3,0 1,0 0,1",
+  T: "0,6 4,6;2,6 2,0",
+  U: "0,6 0,1 1,0 3,0 4,1 4,6",
+  V: "0,6 2,0 4,6",
+  W: "0,6 1,0 2,4 3,0 4,6",
+  X: "0,0 4,6;0,6 4,0",
+  Y: "0,6 2,3 4,6;2,3 2,0",
+  Z: "0,6 4,6 0,0 4,0",
+  "0": "1.5,0 0.5,1.5 0.5,4.5 1.5,6 2.5,6 3.5,4.5 3.5,1.5 2.5,0 1.5,0",
+  "1": "1,4.5 2.5,6 2.5,0",
+  "2": "0,5 1,6 3,6 4,5 4,3.8 0,0 4,0",
+  "3": "0,5 1,6 3,6 4,5 4,4 3,3 1.5,3;3,3 4,2 4,1 3,0 1,0 0,1",
+  "4": "3,0 3,6 0,2 4,2",
+  "5": "4,6 0,6 0,3.5 3,3.5 4,2.5 4,1 3,0 1,0 0,1",
+  "6": "3.5,6 1.5,6 0,4 0,1 1,0 3,0 4,1 4,2.5 3,3.5 1,3.5 0,2.5",
+  "7": "0,6 4,6 1.5,0",
+  "8": "1,3 0,4 0,5 1,6 3,6 4,5 4,4 3,3 1,3 0,2 0,1 1,0 3,0 4,1 4,2 3,3",
+  "9": "0.5,0 2.5,0 4,2 4,5 3,6 1,6 0,5 0,3.5 1,2.5 3,2.5 4,3.5",
+  a: "4,4 4,0;4,3 3,4 1,4 0,3 0,1 1,0 3,0 4,1",
+  b: "0,6 0,0;0,3 1,4 3,4 4,3 4,1 3,0 1,0 0,1",
+  c: "4,3 3,4 1,4 0,3 0,1 1,0 3,0 4,1",
+  d: "4,6 4,0;4,3 3,4 1,4 0,3 0,1 1,0 3,0 4,1",
+  e: "0,2 4,2 4,3 3,4 1,4 0,3 0,1 1,0 3,0 4,0.8",
+  f: "3.5,6 2.5,6 1.5,5 1.5,0;0.5,4 3,4",
+  g: "4,4 4,-1 3,-2 1,-2 0,-1.2;4,3 3,4 1,4 0,3 0,1 1,0 3,0 4,1",
+  h: "0,6 0,0;0,3 1,4 3,4 4,3 4,0",
+  i: "2,4 2,0;2,5.5",
+  j: "2.5,4 2.5,-1 1.5,-2 0.5,-2;2.5,5.5",
+  k: "0,6 0,0;3.5,4 0,1.5;1.2,2.4 3.8,0",
+  l: "2,6 2,0",
+  m: "0,4 0,0;0,3 1,4 1.5,4 2,3 2,0;2,3 3,4 3.5,4 4,3 4,0",
+  n: "0,4 0,0;0,3 1,4 3,4 4,3 4,0",
+  o: "1,0 0,1 0,3 1,4 3,4 4,3 4,1 3,0 1,0",
+  p: "0,4 0,-2;0,3 1,4 3,4 4,3 4,1 3,0 1,0 0,1",
+  q: "4,4 4,-2;4,3 3,4 1,4 0,3 0,1 1,0 3,0 4,1",
+  r: "0.5,4 0.5,0;0.5,3 1.5,4 3,4 3.5,3.5",
+  s: "4,3.2 3,4 1,4 0,3.2 0,2.6 1,2 3,2 4,1.4 4,0.8 3,0 1,0 0,0.8",
+  t: "1.5,6 1.5,1 2.5,0 3.5,0;0.5,4 3,4",
+  u: "0,4 0,1 1,0 3,0 4,1;4,4 4,0",
+  v: "0,4 2,0 4,4",
+  w: "0,4 1,0 2,3 3,0 4,4",
+  x: "0,0 4,4;0,4 4,0",
+  y: "0,4 2,0;4,4 1,-2 0,-2",
+  z: "0,4 4,4 0,0 4,0",
+  ".": "2,0.1",
+  ",": "2,0.3 2,0 1.4,-0.9",
+  ":": "2,0.1;2,3.2",
+  ";": "2,0.3 2,0 1.4,-0.9;2,3.2",
+  "-": "0.8,2.5 3.2,2.5",
+  "\u2013": "0,2.5 4,2.5",
+  "\u2014": "0,2.5 4,2.5",
+  "+": "0.5,2.5 3.5,2.5;2,1 2,4",
+  "/": "0.5,0 3.5,6",
+  "\\": "0.5,6 3.5,0",
+  "(": "2.8,6.5 1.5,5 1.5,1 2.8,-0.5",
+  ")": "1.2,6.5 2.5,5 2.5,1 1.2,-0.5",
+  "[": "3,6.5 1.5,6.5 1.5,-0.5 3,-0.5",
+  "]": "1,6.5 2.5,6.5 2.5,-0.5 1,-0.5",
+  "'": "2,6 2,4.8",
+  '"': "1.3,6 1.3,4.8;2.7,6 2.7,4.8",
+  "=": "0.5,3.3 3.5,3.3;0.5,1.7 3.5,1.7",
+  "_": "0,-0.6 4,-0.6",
+  "*": "2,2 2,5;0.7,2.75 3.3,4.25;0.7,4.25 3.3,2.75",
+  "#": "1.2,0.5 1.8,5.5;2.6,0.5 3.2,5.5;0.3,2 3.8,2;0.4,4 3.9,4",
+  "%": "0.5,0 3.5,6;0.3,5.9 1.3,5.9 1.3,4.6 0.3,4.6 0.3,5.9;2.7,1.4 3.7,1.4 3.7,0.1 2.7,0.1 2.7,1.4",
+  "\xB0": "1.3,6 2.7,6 2.7,4.6 1.3,4.6 1.3,6",
+  "\xB2": "0.8,5.6 1.3,6 2.4,6 2.9,5.6 2.9,5 0.8,3.4 3,3.4",
+  "<": "3.5,4.5 0.5,2.5 3.5,0.5",
+  ">": "0.5,4.5 3.5,2.5 0.5,0.5",
+  "!": "2,6 2,1.6;2,0.1",
+  "?": "0.3,5 1.2,6 2.8,6 3.7,5 3.7,4 2,2.6 2,1.6;2,0.1",
+  "&": "4,0 1,4.5 1,5.4 1.8,6 2.6,5.4 2.6,4.6 0,2 0,1 1,0 2.2,0 4,2.2",
+  "\xD7": "0.7,1 3.3,4;0.7,4 3.3,1",
+  "\u2192": "0,2.5 4,2.5;2.8,3.7 4,2.5 2.8,1.3",
+  "\xB7": "2,2.6",
+  "\xDF": "0,0 0,5 1,6 2.5,6 3.3,5 3.3,4 2,3 3.5,2.4 3.8,1.2 3,0 1.6,0",
+  " ": ""
+};
+var UNKNOWN = "0.5,0 3.5,0 3.5,5 0.5,5 0.5,0";
+var DOTS_LOW = "1,5.5;3,5.5";
+var DOTS_HIGH = "1,7.1;3,7.1";
+var NARROW = "iIljt.,:;'!|()[]";
+var parsed = /* @__PURE__ */ new Map();
+function strokesOf(def) {
+  let s = parsed.get(def);
+  if (!s) {
+    s = def ? def.split(";").map((line) => line.trim().split(/[ ,]+/).map(Number)) : [];
+    parsed.set(def, s);
+  }
+  return s;
+}
+function textStrokes(text) {
+  const u = 0.72 / 6, glyphW = 0.8, adv = 0.6, inset = (adv - 4 * glyphW * u) / 2;
+  const strokes = [];
+  let x = 0, last = "", lastW = adv;
+  for (const ch of text.normalize("NFD")) {
+    const code = ch.codePointAt(0);
+    if (code >= 768 && code <= 879) {
+      if (code === 776) for (const s of strokesOf(last === last.toUpperCase() && last !== last.toLowerCase() ? DOTS_HIGH : DOTS_LOW)) {
+        strokes.push(s.map((v, i) => i % 2 === 0 ? x - (adv + lastW) / 2 + inset + v * glyphW * u : v * u));
+      }
+      continue;
+    }
+    const w = NARROW.includes(ch) ? 0.36 : ch === " " ? 0.45 : adv;
+    for (const s of strokesOf(GLYPHS[ch] ?? UNKNOWN)) strokes.push(s.map((v, i) => i % 2 === 0 ? x + inset - (adv - w) / 2 + v * glyphW * u : v * u));
+    x += w;
+    lastW = w;
+    last = ch;
+  }
+  return { strokes, advance: x };
+}
+function rasterizeSheet(sheet, opts = {}) {
+  const prims = sheet.explode();
+  const b = boundsOf(prims) ?? { min: { x: 0, y: 0 }, max: { x: 1, y: 1 } };
+  const mmPerUnit = 1e3 / sheet.scale;
+  const margin = opts.margin ?? 8;
+  const wMm = Math.max(1e-6, (b.max.x - b.min.x) * mmPerUnit) + 2 * margin;
+  const hMm = Math.max(1e-6, (b.max.y - b.min.y) * mmPerUnit) + 2 * margin;
+  const wantW = Math.max(16, Math.round(opts.width ?? 1600));
+  const pxPerMm = Math.min(wantW / wMm, (opts.maxHeight ?? 2400) / hMm);
+  const width = Math.max(1, Math.round(wMm * pxPerMm)), height = Math.max(1, Math.round(hMm * pxPerMm));
+  const ss = width * height * 9 <= 24e6 ? 3 : 2;
+  const W2 = width * ss, H2 = height * ss;
+  const k = mmPerUnit * pxPerMm * ss;
+  const X = (p) => (p.x - b.min.x) * k + margin * pxPerMm * ss;
+  const Y = (p) => (b.max.y - p.y) * k + margin * pxPerMm * ss;
+  const mm = (v) => v * pxPerMm * ss;
+  const buf = new Uint8Array(W2 * H2 * 3);
+  const bg = parseColor(opts.background ?? "#ffffff");
+  for (let i = 0; i < buf.length; i += 3) {
+    buf[i] = bg[0];
+    buf[i + 1] = bg[1];
+    buf[i + 2] = bg[2];
+  }
+  const fill = (rings, c) => {
+    let y0 = Infinity, y1 = -Infinity;
+    for (const r of rings) for (let i = 1; i < r.length; i += 2) {
+      y0 = Math.min(y0, r[i]);
+      y1 = Math.max(y1, r[i]);
+    }
+    const ya = Math.max(0, Math.floor(y0)), yb = Math.min(H2 - 1, Math.ceil(y1));
+    const xs = [];
+    for (let y = ya; y <= yb; y++) {
+      const sy = y + 0.5;
+      xs.length = 0;
+      for (const r of rings) {
+        const n2 = r.length / 2;
+        for (let i = 0, j = n2 - 1; i < n2; j = i++) {
+          const ay = r[j * 2 + 1], by = r[i * 2 + 1];
+          if (ay <= sy === by <= sy) continue;
+          xs.push(r[j * 2] + (sy - ay) / (by - ay) * (r[i * 2] - r[j * 2]));
+        }
+      }
+      xs.sort((p, q) => p - q);
+      for (let e = 0; e + 1 < xs.length; e += 2) {
+        const xa = Math.max(0, Math.ceil(xs[e] - 0.5)), xb = Math.min(W2 - 1, Math.floor(xs[e + 1] - 0.5));
+        for (let x = xa, o = (y * W2 + xa) * 3; x <= xb; x++, o += 3) {
+          buf[o] = c[0];
+          buf[o + 1] = c[1];
+          buf[o + 2] = c[2];
+        }
+      }
+    }
+  };
+  const segment = (ax, ay, bx, by, w, c, flat = false) => {
+    let dx = bx - ax, dy = by - ay;
+    const len = Math.hypot(dx, dy);
+    const h = w / 2;
+    if (len < 1e-9) {
+      fill([[ax - h, ay - h, ax + h, ay - h, ax + h, ay + h, ax - h, ay + h]], c);
+      return;
+    }
+    dx = dx / len * h;
+    dy = dy / len * h;
+    const ex = flat ? 0 : dx, ey = flat ? 0 : dy;
+    fill([[ax - ex + dy, ay - ey - dx, bx + ex + dy, by + ey - dx, bx + ex - dy, by + ey + dx, ax - ex - dy, ay - ey + dx]], c);
+  };
+  const stroke = (pts2, w, c, pattern) => {
+    if (pts2.length === 2) {
+      segment(pts2[0], pts2[1], pts2[0], pts2[1], w, c);
+      return;
+    }
+    let phase = 0, idx = 0;
+    for (let i = 0; i + 3 < pts2.length; i += 2) {
+      const ax = pts2[i], ay = pts2[i + 1], bx = pts2[i + 2], by = pts2[i + 3];
+      if (!pattern) {
+        segment(ax, ay, bx, by, w, c);
+        continue;
+      }
+      const len = Math.hypot(bx - ax, by - ay);
+      let t = 0;
+      while (t < len - 1e-9) {
+        const step = Math.min(pattern[idx] - phase, len - t);
+        if (idx % 2 === 0) segment(ax + (bx - ax) * t / len, ay + (by - ay) * t / len, ax + (bx - ax) * (t + step) / len, ay + (by - ay) * (t + step) / len, w, c, true);
+        t += step;
+        phase += step;
+        if (phase >= pattern[idx] - 1e-9) {
+          phase = 0;
+          idx = (idx + 1) % pattern.length;
+        }
+      }
+    }
+  };
+  const penOf = (weightMm) => Math.max(ss * 0.8, mm(weightMm));
+  const dashOf = (dash) => dash === "solid" ? void 0 : DASH_PATTERNS[dash].map((d) => Math.max(1, mm(d)));
+  const arcPoints = (center, radius, startDeg, sweepDeg) => {
+    const steps = Math.max(8, Math.ceil(Math.abs(sweepDeg) / 360 * Math.max(24, radius * k * 0.5)));
+    const out = [];
+    for (let i = 0; i <= steps; i++) {
+      const a = (startDeg + sweepDeg * i / steps) * Math.PI / 180;
+      const p = { x: center.x + radius * Math.cos(a), y: center.y + radius * Math.sin(a) };
+      out.push(X(p), Y(p));
+    }
+    return out;
+  };
+  for (const p of prims) {
+    if (p.kind === "fill") {
+      fill(p.rings.map((r) => r.flatMap((q) => [X(q), Y(q)])), parseColor(p.color));
+    } else if (p.kind === "polyline") {
+      const pts2 = p.points.flatMap((q) => [X(q), Y(q)]);
+      if (p.closed && p.points.length > 2) pts2.push(pts2[0], pts2[1]);
+      stroke(pts2, penOf(p.style.weight), parseColor(p.style.color), dashOf(p.style.dash));
+    } else if (p.kind === "circle") {
+      stroke(arcPoints(p.center, p.radius, 0, 360), penOf(p.style.weight), parseColor(p.style.color), dashOf(p.style.dash));
+    } else if (p.kind === "arc") {
+      let sweep = (p.endDeg - p.startDeg) % 360;
+      if (sweep <= 0) sweep += 360;
+      stroke(arcPoints(p.center, p.radius, p.startDeg, sweep), penOf(p.style.weight), parseColor(p.style.color), dashOf(p.style.dash));
+    } else {
+      const { strokes, advance } = textStrokes(p.text);
+      const size = p.height * k;
+      const ox = p.align === "left" ? 0 : p.align === "center" ? -advance / 2 : -advance;
+      const oy = p.baseline === "bottom" ? 0 : p.baseline === "middle" ? -0.36 : -0.72;
+      const r = p.rotation * Math.PI / 180, cos = Math.cos(r), sin = Math.sin(r);
+      const ax = X(p.at), ay = Y(p.at);
+      const pen = Math.max(ss * 0.9, size * 0.085);
+      const c = parseColor(p.style.color);
+      for (const s of strokes) {
+        const pts2 = [];
+        for (let i = 0; i < s.length; i += 2) {
+          const x = (s[i] + ox) * size, y = (s[i + 1] + oy) * size;
+          pts2.push(ax + x * cos - y * sin, ay - (x * sin + y * cos));
+        }
+        stroke(pts2, pen, c);
+      }
+    }
+  }
+  const data = new Uint8ClampedArray(width * height * 4);
+  const n = ss * ss;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let r = 0, g = 0, bl = 0;
+      for (let j = 0; j < ss; j++) {
+        let o2 = ((y * ss + j) * W2 + x * ss) * 3;
+        for (let i = 0; i < ss; i++, o2 += 3) {
+          r += buf[o2];
+          g += buf[o2 + 1];
+          bl += buf[o2 + 2];
+        }
+      }
+      const o = (y * width + x) * 4;
+      data[o] = r / n;
+      data[o + 1] = g / n;
+      data[o + 2] = bl / n;
+      data[o + 3] = 255;
+    }
+  }
+  return { width, height, data, toPixel: (p) => ({ x: X(p) / ss, y: Y(p) / ss }) };
+}
+var crcTable = null;
+function crc32(bytes) {
+  if (!crcTable) {
+    crcTable = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c2 = n;
+      for (let i = 0; i < 8; i++) c2 = c2 & 1 ? 3988292384 ^ c2 >>> 1 : c2 >>> 1;
+      crcTable[n] = c2 >>> 0;
+    }
+  }
+  let c = 4294967295;
+  for (let i = 0; i < bytes.length; i++) c = crcTable[(c ^ bytes[i]) & 255] ^ c >>> 8;
+  return (c ^ 4294967295) >>> 0;
+}
+async function encodePNG(image) {
+  const { width, height, data } = image;
+  const raw = new Uint8Array(height * (1 + width * 3));
+  for (let y = 0, o2 = 0; y < height; y++) {
+    raw[o2++] = 0;
+    for (let x = 0, i = y * width * 4; x < width; x++, i += 4) {
+      raw[o2++] = data[i];
+      raw[o2++] = data[i + 1];
+      raw[o2++] = data[i + 2];
+    }
+  }
+  if (typeof CompressionStream === "undefined") throw new Error("encodePNG needs CompressionStream (a browser, or Node 18 or later)");
+  const packed = new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new CompressionStream("deflate"))).arrayBuffer());
+  const chunk = (type, body) => {
+    const out2 = new Uint8Array(12 + body.length);
+    const view = new DataView(out2.buffer);
+    view.setUint32(0, body.length);
+    for (let i = 0; i < 4; i++) out2[4 + i] = type.charCodeAt(i);
+    out2.set(body, 8);
+    view.setUint32(8 + body.length, crc32(out2.subarray(4, 8 + body.length)));
+    return out2;
+  };
+  const head = new Uint8Array(13);
+  const hv = new DataView(head.buffer);
+  hv.setUint32(0, width);
+  hv.setUint32(4, height);
+  head[8] = 8;
+  head[9] = 2;
+  const parts = [new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]), chunk("IHDR", head), chunk("IDAT", packed), chunk("IEND", new Uint8Array(0))];
+  const out = new Uint8Array(parts.reduce((sum, p) => sum + p.length, 0));
+  let o = 0;
+  for (const p of parts) {
+    out.set(p, o);
+    o += p.length;
+  }
+  return out;
+}
+async function sheetToPNG(sheet, opts = {}) {
+  return encodePNG(rasterizeSheet(sheet, opts));
+}
+
 // src/core/drawing/Sheet.ts
 var DASH_PATTERNS = {
   dashed: [3, 1.5],
@@ -16309,6 +16762,29 @@ var DASH_PATTERNS = {
   center: [6, 1.2, 1, 1.2]
 };
 var DEFAULT_STYLE = { color: "#000000", weight: 0.25, dash: "solid" };
+var TEXT_MM = 2;
+var NOTE_MM = 1.8;
+var TITLE_MM = 3.5;
+var DRAWING_PALETTE = {
+  /** Lines and text. */
+  ink: "#1a1a1a",
+  /** Dimensions, levels, leaders, secondary text. */
+  annotation: "#6b6b6b",
+  /** Hidden and overhead lines, axes. */
+  faint: "#a6a6a6",
+  /** What is cut, in general (pale blue). */
+  cut: "#cfe2f2",
+  /** Cut steel or metal. */
+  steel: "#9fb4c7",
+  /** Cut concrete or masonry (pale green). */
+  concrete: "#dbe9d2",
+  /** Cut timber. */
+  timber: "#ead9bd",
+  /** Poché in greyscale. */
+  poche: "#d4d4d4",
+  /** The one strong colour: loads, forces, what changed. */
+  accent: "#d0453b"
+};
 var SheetView = class {
   /** @internal — views come from `sheet.view(name)`. */
   constructor(sheet, name, opts) {
@@ -16366,14 +16842,15 @@ var SheetView = class {
     return this;
   }
   /** A leader: an arrow at `points[0]` (what it points at), lines through the rest, and the
-   *  text beside the last point. */
+   *  text beside the last point, level with it. A leader that does not end level gets a short
+   *  level shoulder (3 mm), so its text always continues a level line. */
   leader(points, text, opts = {}) {
     const pts2 = points.map((p) => this.local(p));
     if (pts2.length >= 2) this.entities.push({ t: "leader", points: pts2, text, o: opts });
     return this;
   }
-  /** A level mark: a triangle standing on the level at `at`, and the level in metres with
-   *  its sign ("+2.450", "±0.000"). */
+  /** A level mark: a triangle with its tip on the level at `at`, a level line under it, and on
+   *  that line the level in metres with its sign ("+2.450", "±0.000"). */
   level(at, opts = {}) {
     this.entities.push({ t: "level", at: this.local(at), o: opts });
     return this;
@@ -16406,6 +16883,7 @@ var Sheet = class {
   constructor(opts = {}) {
     this.layerStyles = /* @__PURE__ */ new Map();
     this.views = /* @__PURE__ */ new Map();
+    this.block = null;
     this.scale = opts.scale ?? 1;
     if (!(this.scale > 0)) throw new Error(`Sheet: scale must be positive (50 = 1:50), got ${opts.scale}`);
     for (const [name, style] of Object.entries(opts.layers ?? {})) this.layerStyles.set(name, style);
@@ -16426,6 +16904,11 @@ var Sheet = class {
       this.views.set(name, v);
     }
     return v;
+  }
+  /** The sheet's title block (Plankopf): drawn left of the views, level with their top, unless `at` places it. */
+  titleBlock(opts) {
+    this.block = opts;
+    return this;
   }
   /** The default view at the origin (`sheet.main.polyline(…)`). */
   get main() {
@@ -16452,14 +16935,86 @@ var Sheet = class {
       for (const e of view.entities) this.explodeEntity(e, P2, local);
       if (vo.title) {
         const b = boundsOf(local);
-        if (b) local.push(textPrim(vo.title, { x: (b.min.x + b.max.x) / 2, y: b.min.y - P2(8) }, P2(3.5), 0, "center", "top", this.style({})));
+        const scaleText = vo.titleScale === false || /\b1\s*:\s*\d/.test(vo.title) ? "" : ` ${this.ratio(k)}`;
+        if (b) local.push(textPrim(vo.title + scaleText, { x: b.min.x, y: b.max.y + P2(5) }, P2(TITLE_MM), 0, "left", "bottom", this.style({})));
       }
       for (const p of local) {
         const q = transformPrim(p, T, k, vo.rotation ?? 0);
         (q.kind === "fill" ? fills : rest).push(q);
       }
     }
+    if (this.block) rest.push(...this.explodeTitleBlock(this.block, boundsOf([...fills, ...rest])));
     return [...fills, ...rest];
+  }
+  /** "1:20" for a view enlarged `k` times on this sheet. */
+  ratio(k) {
+    const r = this.scale / k;
+    return `1:${Number.isInteger(r) ? r : r.toFixed(1)}`;
+  }
+  /** The title block's lines and text, in sheet units, top-left at `at` (or left of `drawing`). */
+  explodeTitleBlock(o, drawing) {
+    const P2 = (mm) => this.paper(mm);
+    const W2 = o.width ?? 150;
+    const top = o.at ? toPt(o.at) : { x: (drawing?.min.x ?? 0) - P2(W2 + 20), y: drawing?.max.y ?? 0 };
+    const at = (x, y2) => ({ x: top.x + P2(x), y: top.y - P2(y2) });
+    const ink = this.style({ color: DRAWING_PALETTE.ink, weight: 0.18 });
+    const grey = this.style({ color: DRAWING_PALETTE.annotation, weight: 0.18 });
+    const out = [];
+    const text = (t, x, y2, mm, st = ink) => {
+      out.push(textPrim(t, at(x, y2), P2(mm), 0, "left", "top", st));
+    };
+    const line = (x0, y0, x1, y1) => {
+      out.push({ kind: "polyline", points: [at(x0, y0), at(x1, y1)], closed: false, style: ink });
+    };
+    const ks = [...new Set([...this.views.values()].filter((v) => v.entities.length).map((v) => v.options.scale ?? 1))].sort((a, b) => a - b);
+    const scale = o.scale ?? (ks.length ? ks.map((k) => this.ratio(k)).join(" / ") : this.ratio(1));
+    let y = 0;
+    if (o.office) {
+      text(o.office, 0, y, 1.6, grey);
+      y += 4;
+    }
+    if (o.project) {
+      text(o.project, 0, y, 2);
+      y += 7;
+    }
+    text(`${o.title} ${scale}`, 0, y, 3.5);
+    y += 6;
+    if (o.phase) {
+      text(o.phase, 0, y, 2.2);
+      y += 4;
+    }
+    const facts = [["DATE", o.date], ["DRAWN", o.drawn], ["CHECKED", o.checked], ["SCALE", scale], ["FORMAT", o.format]];
+    const rows = facts.filter((r) => !!r[1]);
+    const box0 = y + 4, rowH = 3.2, boxH = Math.max(16, rows.length * rowH + 3), split2 = W2 * 0.45;
+    line(0, box0, W2, box0);
+    line(0, box0 + boxH, W2, box0 + boxH);
+    line(0, box0, 0, box0 + boxH);
+    line(W2, box0, W2, box0 + boxH);
+    line(split2, box0, split2, box0 + boxH);
+    text("PLAN NO.", 2, box0 + 2, 1.4, grey);
+    if (o.number) text(o.number, 2, box0 + 7, 4.5);
+    rows.forEach(([k, v], i) => {
+      text(k, split2 + 2, box0 + 2 + i * rowH, 1.4, grey);
+      text(v, split2 + 22, box0 + 1.9 + i * rowH, 1.6);
+    });
+    y = box0 + boxH;
+    if (o.revisions?.length) {
+      const cols = [0, 14, 36, 54, W2];
+      const h = 3.6, n = o.revisions.length + 1;
+      for (let r = 0; r <= n; r++) line(0, y + r * h, W2, y + r * h);
+      for (const c of cols) line(c, y, c, y + n * h);
+      ["INDEX", "DATE", "BY", "CHANGE"].forEach((t, i) => text(t, cols[i] + 1.2, y + 1, 1.4, grey));
+      o.revisions.forEach((rv, r) => [rv.index, rv.date ?? "", rv.by ?? "", rv.note ?? ""].forEach((t, i) => {
+        if (t) text(t, cols[i] + 1.2, y + (r + 1) * h + 1, 1.6);
+      }));
+      y += n * h;
+    }
+    y += 8;
+    for (const n of o.notes ?? []) {
+      if (n) text(n, 0, y, 2);
+      y += 3.4;
+    }
+    return out;
   }
   /** Bounds of the exploded drawing (text estimated), or null when empty. */
   bounds() {
@@ -16479,6 +17034,13 @@ var Sheet = class {
   /** The sheet as an SVG document, sized in millimetres on paper (`margin` in mm). */
   toSVG(opts = {}) {
     return sheetToSVG(this, opts);
+  }
+  /**
+   * The sheet as a PNG file, drawn without a browser (so an agent in Node can look at it):
+   * `width` pixels wide (default 1600), text in a built-in stroke font. See `rasterizeSheet`.
+   */
+  toPNG(opts = {}) {
+    return sheetToPNG(this, opts);
   }
   /**
    * The sheet as DXF R12: lines, polylines, arcs, circles, text with its alignment, dashed
@@ -16511,7 +17073,7 @@ var Sheet = class {
       }
       case "text": {
         const o = e.o;
-        out.push({ ...textPrim(e.text, e.at, P2(o.size ?? 2.5), o.rotation ?? 0, o.align ?? "left", o.baseline ?? "bottom", st), ...key ? { key } : {} });
+        out.push({ ...textPrim(e.text, e.at, P2(o.size ?? TEXT_MM), o.rotation ?? 0, o.align ?? "left", o.baseline ?? "bottom", st), ...key ? { key } : {} });
         break;
       }
       case "dim":
@@ -16569,7 +17131,7 @@ function explodeDim(a, b, o, st, P2, out) {
   const text = o.text ?? formatLength(measured, o);
   const ang = upright(ux, uy), r = ang * Math.PI / 180;
   const mid = { x: (da.x + db.x) / 2 - Math.sin(r) * P2(1), y: (da.y + db.y) / 2 + Math.cos(r) * P2(1) };
-  out.push(textPrim(text, mid, P2(o.size ?? 2.5), ang, "center", "bottom", st));
+  out.push(textPrim(text, mid, P2(o.size ?? NOTE_MM), ang, "center", "bottom", st));
 }
 function explodeRadius(c, radius, angle, o, st, P2, out) {
   const ux = Math.cos(angle * Math.PI / 180), uy = Math.sin(angle * Math.PI / 180);
@@ -16581,24 +17143,31 @@ function explodeRadius(c, radius, angle, o, st, P2, out) {
   out.push(arrow(end, ux, uy, P2, st));
   const ang = upright(ux, uy), r = ang * Math.PI / 180;
   const mid = { x: c.x + ux * radius / 2 - Math.sin(r) * P2(1), y: c.y + uy * radius / 2 + Math.cos(r) * P2(1) };
-  out.push(textPrim(o.text ?? `R ${formatLength(radius, o)}`, mid, P2(o.size ?? 2.5), ang, "center", "bottom", st));
+  out.push(textPrim(o.text ?? `R ${formatLength(radius, o)}`, mid, P2(o.size ?? NOTE_MM), ang, "center", "bottom", st));
 }
 function explodeLeader(points, text, o, st, P2, out) {
+  const SHOULDER_MM = 3;
+  const a = points[points.length - 2], end = points[points.length - 1];
+  const right = end.x >= a.x;
+  const level = Math.abs(end.y - a.y) <= 0.02 * Math.abs(end.x - a.x);
+  if (!level) points = [...points, { x: end.x + (right ? 1 : -1) * P2(SHOULDER_MM), y: end.y }];
   out.push({ kind: "polyline", points, closed: false, style: st });
   const [p0, p1] = points, L = Math.hypot(p1.x - p0.x, p1.y - p0.y);
   if (L > 0) out.push(arrow(p0, (p0.x - p1.x) / L, (p0.y - p1.y) / L, P2, st));
-  const a = points[points.length - 2], b = points[points.length - 1];
-  const right = b.x >= a.x;
+  const b = points[points.length - 1];
   const at = { x: b.x + (right ? P2(1) : -P2(1)), y: b.y };
-  out.push(textPrim(text, at, P2(o.size ?? 2.5), 0, o.align ?? (right ? "left" : "right"), o.baseline ?? "middle", st));
+  out.push(textPrim(text, at, P2(o.size ?? NOTE_MM), 0, o.align ?? (right ? "left" : "right"), o.baseline ?? "middle", st));
 }
 function explodeLevel(at, o, st, P2, out) {
-  const h = P2(2.2), w = P2(1.3);
+  const h = P2(2.2), w = P2(1.3), gap = P2(0.8);
   out.push({ kind: "polyline", points: [at, { x: at.x - w, y: at.y + h }, { x: at.x + w, y: at.y + h }], closed: true, style: st });
   const v = o.value ?? at.y;
   const s = v.toFixed(o.decimals ?? 3);
   const text = o.text ?? (Number(s) === 0 ? `\xB1${s.replace("-", "")}` : v > 0 ? `+${s}` : s);
-  out.push(textPrim(text, { x: at.x + w + P2(1), y: at.y + h / 2 }, P2(o.size ?? 2.5), 0, "left", "middle", st));
+  const t = textPrim(text, { x: at.x + w + gap, y: at.y + P2(0.6) }, P2(o.size ?? NOTE_MM), 0, "left", "bottom", st);
+  const right = Math.max(...textCorners(t).map((c) => c.x));
+  out.push({ kind: "polyline", points: [{ x: at.x - w, y: at.y }, { x: right, y: at.y }], closed: false, style: st });
+  out.push(t);
 }
 function arrow(p, ux, uy, P2, st) {
   const L = P2(2.5), c = Math.cos(0.3), s = Math.sin(0.3);
@@ -16611,9 +17180,9 @@ function upright(ux, uy) {
   return (ang % 360 + 360) % 360;
 }
 function formatLength(m, o) {
-  const unit = o.unit ?? "mm";
-  const value = m * (unit === "mm" ? 1e3 : unit === "cm" ? 100 : 1);
-  return value.toFixed(o.decimals ?? (unit === "mm" ? 0 : unit === "cm" ? 1 : 2));
+  const unit2 = o.unit ?? "mm";
+  const value = m * (unit2 === "mm" ? 1e3 : unit2 === "cm" ? 100 : 1);
+  return value.toFixed(o.decimals ?? (unit2 === "mm" ? 0 : unit2 === "cm" ? 1 : 2));
 }
 function toPt(p) {
   return Array.isArray(p) ? { x: p[0], y: p[1] } : p;
@@ -16792,6 +17361,106 @@ function sheetToDXF(sheet, opts) {
 function triangulateRings(rings) {
   const all = rings.flat();
   return Polygon2D.triangulateWithHoles(rings[0], rings.slice(1)).map((t) => t.map((i) => all[i]));
+}
+
+// src/core/drawing/Axonometric.ts
+var ISO_ELEVATION = Math.asin(1 / Math.sqrt(3)) * 180 / Math.PI;
+var Axonometric = class _Axonometric {
+  constructor(opts = {}) {
+    this.azimuth = opts.azimuth ?? 225;
+    this.elevation = opts.elevation ?? 30;
+    this.up = opts.up ?? "z";
+    if (!Number.isFinite(this.azimuth) || !Number.isFinite(this.elevation) || this.elevation < -90 || this.elevation > 90) {
+      throw new Error(`Axonometric: azimuth must be a number and elevation between -90 and 90 degrees, got ${opts.azimuth} and ${opts.elevation}`);
+    }
+    const az = this.azimuth * Math.PI / 180;
+    const el = Math.max(-89.999, Math.min(89.999, this.elevation)) * Math.PI / 180;
+    const h = Math.cos(el), v = Math.sin(el);
+    const yUp = this.up === "y";
+    const eye = yUp ? new Vec3(h * Math.cos(az), v, -h * Math.sin(az)) : new Vec3(h * Math.cos(az), h * Math.sin(az), v);
+    const worldUp = yUp ? new Vec3(0, 1, 0) : new Vec3(0, 0, 1);
+    this.forward = eye.neg();
+    this.right = this.forward.cross(worldUp).normalize();
+    this.upward = this.right.cross(this.forward).normalize();
+    this.light = worldUp.mul(1.4).sub(this.right.mul(0.7)).sub(this.forward.mul(0.5)).normalize();
+  }
+  /** An isometric view: the three axes equally foreshortened (elevation 35.26°), from the front left unless `azimuth` says otherwise. */
+  static isometric(opts = {}) {
+    return new _Axonometric({ azimuth: 225, ...opts, elevation: ISO_ELEVATION });
+  }
+  /** A model point in the view (y up). */
+  project(p) {
+    return new Vec2(p.dot(this.right), p.dot(this.upward));
+  }
+  /** How far a point is from the viewer, along the view: larger is farther. */
+  depth(p) {
+    return p.dot(this.forward);
+  }
+  /** Whether a face with this outward normal is turned towards the viewer. */
+  facing(normal) {
+    return normal.dot(this.forward) < 0;
+  }
+  /** 0 to 1: how much a face with this normal turns to the light (0 when it turns away). */
+  shade(normal) {
+    return Math.max(0, normal.normalize().dot(this.light));
+  }
+  /**
+   * Polygons in painter's order (far first), each projected, with its depth, normal and light.
+   * `cull` (default true) leaves out the faces turned away; a polygon's normal comes from its
+   * corners (counter-clockwise seen from outside), or from `normal` when given.
+   */
+  polygons(list, opts = {}) {
+    const cull = opts.cull ?? true;
+    const out = [];
+    for (const item of list) {
+      const pts2 = item.points;
+      if (pts2.length < 2) continue;
+      const normal = (item.normal ?? newellNormal(pts2)).normalize();
+      if (cull && pts2.length >= 3 && normal.len() > 0 && !this.facing(normal)) continue;
+      let depth = 0;
+      for (const p of pts2) depth += this.depth(p);
+      out.push({ points: pts2.map((p) => this.project(p)), depth: depth / pts2.length, normal, light: this.shade(normal), data: item.data });
+    }
+    return out.sort((a, b) => b.depth - a.depth);
+  }
+  /** A mesh's faces as `polygons`: projected, culled, far first; `data` is the face's id. */
+  meshFaces(mesh, opts = {}) {
+    const list = [];
+    for (const f2 of mesh.faces()) list.push({ points: f2.nodes.map((id) => mesh.getPosition(id)), normal: f2.normal, data: f2.id });
+    return this.polygons(list, opts);
+  }
+  /**
+   * The view that fits points (already projected) into a `width × height` area with `margin`
+   * around them: `{ scale, x, y }`, a point (u, v) drawn at (`x + u * scale`, `y - v * scale`).
+   * `maxScale` caps the scale (a small model is not blown up).
+   */
+  fit(points, width, height, margin = 16, maxScale = Infinity) {
+    if (!points.length) return { scale: 1, x: width / 2, y: height / 2 };
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const p of points) {
+      x0 = Math.min(x0, p.x);
+      x1 = Math.max(x1, p.x);
+      y0 = Math.min(y0, p.y);
+      y1 = Math.max(y1, p.y);
+    }
+    const bw = Math.max(x1 - x0, 1e-9), bh = Math.max(y1 - y0, 1e-9);
+    const scale = Math.min(maxScale, Math.max(1e-9, Math.min((width - 2 * margin) / bw, (height - 2 * margin) / bh)));
+    return { scale, x: width / 2 - (x0 + x1) / 2 * scale, y: height / 2 + (y0 + y1) / 2 * scale };
+  }
+  /** The projection for a Sheet's view (`sheet.view(name, { project: axo.sheetProjection() })`). */
+  sheetProjection() {
+    return { right: this.right, up: this.upward };
+  }
+};
+function newellNormal(pts2) {
+  let x = 0, y = 0, z = 0;
+  for (let i = 0; i < pts2.length; i++) {
+    const a = pts2[i], b = pts2[(i + 1) % pts2.length];
+    x += (a.y - b.y) * (a.z + b.z);
+    y += (a.z - b.z) * (a.x + b.x);
+    z += (a.x - b.x) * (a.y + b.y);
+  }
+  return new Vec3(x, y, z);
 }
 
 // src/io/download.ts
@@ -18156,9 +18825,9 @@ var IfcWriter = class {
    */
   addSlab(slab, opts = {}) {
     const storey = this.resolveStorey(opts.storey);
-    const ring = Polygon2D.openRing(slab.boundary);
+    const ring2 = Polygon2D.openRing(slab.boundary);
     const ptRefs = [];
-    for (const p of ring) {
+    for (const p of ring2) {
       ptRefs.push(this.addEntity(`IFCCARTESIANPOINT((${ifcReal(p.x)},${ifcReal(p.y)}))`));
     }
     const closedPts = [...ptRefs, ptRefs[0]];
@@ -18421,9 +19090,9 @@ var IfcWriter = class {
    */
   addSpace(space, opts = {}) {
     const storey = this.resolveStorey(opts.storey);
-    const ring = Polygon2D.openRing(space.boundary);
+    const ring2 = Polygon2D.openRing(space.boundary);
     const ptRefs = [];
-    for (const p of ring) {
+    for (const p of ring2) {
       ptRefs.push(this.addEntity(`IFCCARTESIANPOINT((${ifcReal(p.x)},${ifcReal(p.y)}))`));
     }
     const closedPts = [...ptRefs, ptRefs[0]];
@@ -20649,11 +21318,11 @@ var Slab = class {
       const label = `Slab "${this.name ?? "slab"}": opening ${o.name ?? i}`;
       if (!(o.width > 0 && o.depth > 0)) throw new Error(`${label} needs a width and depth above 0, got ${o.width} \xD7 ${o.depth}.`);
       const c = new Vec2(o.centerX, o.centerY), a = u.mul(o.width / 2), b = v.mul(o.depth / 2);
-      const ring = [c.sub(a).sub(b), c.add(a).sub(b), c.add(a).add(b), c.sub(a).add(b)];
-      if (!ring.every((p) => Polygon2D.pointInPolygon(p, outer))) {
+      const ring2 = [c.sub(a).sub(b), c.add(a).sub(b), c.add(a).add(b), c.sub(a).add(b)];
+      if (!ring2.every((p) => Polygon2D.pointInPolygon(p, outer))) {
         throw new Error(`${label} at (${o.centerX}, ${o.centerY}) is not inside the slab's boundary.`);
       }
-      return ring;
+      return ring2;
     });
   }
   /**
@@ -20686,11 +21355,11 @@ var Slab = class {
       normals.push(0, 0, -1);
     }
     for (const [a, b2, c] of tris) indices.push(botBase + c, botBase + b2, botBase + a);
-    for (const ring of rings) {
-      const n = ring.length;
+    for (const ring2 of rings) {
+      const n = ring2.length;
       for (let i = 0; i < n; i++) {
-        const p0 = ring[i];
-        const p1 = ring[(i + 1) % n];
+        const p0 = ring2[i];
+        const p1 = ring2[(i + 1) % n];
         const dx = p1.x - p0.x;
         const dy = p1.y - p0.y;
         const len = Math.hypot(dx, dy);
@@ -20793,8 +21462,8 @@ function JoistedSlab(options = {}) {
       return hits.length < 2 ? null : [hits[0], hits[hits.length - 1]];
     };
     const w = opts.profile.w;
-    const wells = slab.openingRings(direction).map((ring) => {
-      const ts = ring.map((q) => q.dot(direction)), ps = ring.map((q) => q.dot(perp));
+    const wells = slab.openingRings(direction).map((ring2) => {
+      const ts = ring2.map((q) => q.dot(direction)), ps = ring2.map((q) => q.dot(perp));
       return { t0: Math.min(...ts), t1: Math.max(...ts), p0: Math.min(...ps), p1: Math.max(...ps) };
     });
     const trimmerPs = wells.flatMap((o) => [o.p0 - w / 2, o.p1 + w / 2]);
@@ -20896,15 +21565,15 @@ var Space = class {
   }
 };
 function boundingWalls(space, walls, tol = 0.35) {
-  const ring = space.boundary;
-  const n = ring.length;
+  const ring2 = space.boundary;
+  const n = ring2.length;
   const out = [];
   for (const wall of walls) {
     const cl = wall.centerline;
     let bounds2 = false;
     for (let e = 0; e < n && !bounds2; e++) {
-      const a = ring[e];
-      const b = ring[(e + 1) % n];
+      const a = ring2[e];
+      const b = ring2[(e + 1) % n];
       for (let s = 0; s < cl.length - 1 && !bounds2; s++) {
         if (segmentAlongEdge(cl[s], cl[s + 1], a, b, tol)) bounds2 = true;
       }
@@ -20933,6 +21602,12 @@ function segmentAlongEdge(c, d, a, b, tol) {
 
 // src/bim/stairs.ts
 var BUILT_SHAPES = ["straight_run", "two_straight_run", "quarter_turn", "half_turn"];
+var STRUCTURES = {
+  solid: { landing: 0.2 },
+  concrete: { landing: 0.2 },
+  timber: { landing: 0.12 },
+  steel: { landing: 0.08 }
+};
 var StairType = class {
   constructor(opts) {
     this.name = opts.name;
@@ -20955,7 +21630,9 @@ var Stair = class {
     this.turn = opts.turn ?? "left";
     this.landingAfter = opts.landingAfter;
     this.landingDepth = opts.landingDepth ?? this.width;
-    this.landingThickness = opts.landingThickness ?? 0.2;
+    this.structure = opts.structure ?? "solid";
+    if (!STRUCTURES[this.structure]) throw new Error(`Stair "${this.name}": structure must be ${Object.keys(STRUCTURES).map((k) => `"${k}"`).join(", ")}, got "${this.structure}".`);
+    this.landingThickness = opts.landingThickness ?? STRUCTURES[this.structure].landing;
     this.gap = opts.gap ?? 0.1;
     this.type = opts.type;
     this.properties = opts.properties ?? {};
@@ -20970,35 +21647,24 @@ var Stair = class {
     return this.totalRise / this.risers;
   }
   /**
-   * Compute the flight geometry: one flight per run, each built as a
-   * stepped solid. Tread i of a flight is a box spanning going
-   * [i·tread, (i+1)·tread] across the full width, from the stair's base
-   * level up to its walking surface, (i+1) risers above the flight's start.
+   * The flights' geometry, one closed solid per flight in world coordinates, built as
+   * `structure` says from the parts `parts()` describes, with the code metrics. Tread i of a
+   * flight spans going [i·tread, (i+1)·tread], (i+1) risers above the flight's start.
    */
   flights() {
     const { runs } = this.plan();
     const riser = this.actualRiser;
     const tread = this.treadDepth;
-    const halfW = this.width * 0.5;
-    const z0 = this.start.z;
     return runs.map((run, k) => {
       const across = run.dir.perp();
       const positions = [];
       const indices = [];
-      const push = (along, side, z) => {
-        const p = run.at.add(run.dir.mul(along)).add(across.mul(side));
-        positions.push(p.x, p.y, z);
-        return positions.length / 3 - 1;
-      };
-      for (let i = 0; i < run.risers - 1; i++) {
-        const a0 = i * tread;
-        const a1 = (i + 1) * tread;
-        const z1 = run.z + (i + 1) * riser;
-        const flb = push(a0, -halfW, z0), frb = push(a1, -halfW, z0);
-        const blb = push(a0, +halfW, z0), brb = push(a1, +halfW, z0);
-        const flt = push(a0, -halfW, z1), frt = push(a1, -halfW, z1);
-        const blt = push(a0, +halfW, z1), brt = push(a1, +halfW, z1);
-        pushBox(indices, flb, frb, brb, blb, flt, frt, brt, blt);
+      for (const part of this.flightParts(run, k)) {
+        prism(part, (along2, side, z) => {
+          const p = run.at.add(run.dir.mul(along2)).add(across.mul(side));
+          positions.push(p.x, p.y, z);
+          return positions.length / 3 - 1;
+        }, indices);
       }
       return {
         name: runs.length === 1 ? `${this.name} flight` : `${this.name} flight ${k + 1}`,
@@ -21010,6 +21676,85 @@ var Stair = class {
         treadDepth: tread
       };
     });
+  }
+  /**
+   * Each flight's parts as side profiles: where the flight starts and runs in plan (`at`, the
+   * centre of its width at its first riser; `dir`, a unit vector) and the parts `structure`
+   * builds it from. Draw `outline`s for a section along a flight or an elevation from its side:
+   * a point (x, y) of an outline is at `at + dir·x`, height y.
+   */
+  parts() {
+    return this.plan().runs.map((run, k) => ({ at: run.at, dir: run.dir, parts: this.flightParts(run, k) }));
+  }
+  /** One flight's parts, as `structure` builds it. */
+  flightParts(run, k) {
+    const WAIST = 0.16;
+    const TIMBER = { stringer: 0.06, depth: 0.3, above: 0.05, tread: 0.05, nosing: 0.03 };
+    const STEEL = { plate: 8e-3, stringer: 0.012, depth: 0.2 };
+    const r = this.actualRiser, g = this.treadDepth, halfW = this.width * 0.5;
+    const n = run.risers, z0 = run.z, top = z0 + n * r, L = (n - 1) * g;
+    const base = k === 0 ? this.start.z : Math.max(this.start.z, z0 - this.landingThickness);
+    const cos = g / Math.hypot(g, r);
+    const corner2 = (a) => z0 + a * r / g;
+    const full = [-halfW, halfW];
+    const out = [];
+    const steps = (dx = 0, dz = 0) => {
+      const pts2 = [];
+      for (let i = 0; i < n; i++) pts2.push(new Vec2(i * g + dx, z0 + i * r + dz), new Vec2(i * g + dx, z0 + (i + 1) * r + dz));
+      return pts2;
+    };
+    const band2 = (from, to, plumbStart = false) => {
+      const X = L + 2 * (top - base) * (g / r) + 1;
+      let ring2 = [new Vec2(-X, corner2(-X) + from), new Vec2(L, corner2(L) + from), new Vec2(L, corner2(L) + to), new Vec2(-X, corner2(-X) + to)];
+      ring2 = clip(ring2, (p) => p.y - base);
+      ring2 = clip(ring2, (p) => top - p.y);
+      if (plumbStart) ring2 = clip(ring2, (p) => p.x);
+      return ring2;
+    };
+    switch (this.structure) {
+      case "solid":
+        for (let i = 0; i < n - 1; i++) {
+          const a0 = i * g, a1 = (i + 1) * g, z1 = z0 + (i + 1) * r;
+          out.push({ name: "step", outline: [new Vec2(a0, this.start.z), new Vec2(a1, this.start.z), new Vec2(a1, z1), new Vec2(a0, z1)], across: full });
+        }
+        break;
+      case "concrete": {
+        const soffit = -WAIST / cos;
+        let ring2 = [...steps(), new Vec2(L, corner2(L) + soffit), new Vec2(-L - 10, corner2(-L - 10) + soffit)];
+        ring2 = clip(clip(clip(ring2, (p) => p.y - base), (p) => p.x), (p) => top - p.y);
+        out.push({ name: "flight", outline: ring2, across: full });
+        break;
+      }
+      case "timber": {
+        const t = TIMBER, depth = t.depth / cos;
+        const upper = r + t.above / cos;
+        for (const side of [-1, 1]) {
+          const s0 = side < 0 ? -halfW : halfW - t.stringer;
+          out.push({ name: "stringer", outline: band2(upper - depth, upper), across: [s0, s0 + t.stringer] });
+        }
+        for (let i = 0; i < n - 1; i++) {
+          const z1 = z0 + (i + 1) * r, a0 = i * g - t.nosing, a1 = (i + 1) * g;
+          out.push({ name: "tread", outline: [new Vec2(a0, z1 - t.tread), new Vec2(a1, z1 - t.tread), new Vec2(a1, z1), new Vec2(a0, z1)], across: [-halfW + t.stringer, halfW - t.stringer] });
+        }
+        break;
+      }
+      case "steel": {
+        const t = STEEL;
+        const outer = steps();
+        const inner2 = [];
+        for (let i = 0; i < n; i++) {
+          inner2.push(new Vec2(i * g + t.plate, z0 + i * r - (i === 0 ? 0 : t.plate)), new Vec2(i * g + t.plate, z0 + (i + 1) * r - (i === n - 1 ? 0 : t.plate)));
+        }
+        out.push({ name: "plate", outline: [...outer, ...inner2.reverse()], across: full });
+        const under = -t.plate / cos;
+        for (const side of [-1, 1]) {
+          const s0 = side < 0 ? -halfW : halfW - t.stringer;
+          out.push({ name: "stringer", outline: band2(under - t.depth / cos, under, true), across: [s0, s0 + t.stringer] });
+        }
+        break;
+      }
+    }
+    return out.map((p) => ({ ...p, outline: tidy(p.outline) })).filter((p) => p.outline.length >= 3);
   }
   /**
    * The landing between the two flights as a `Slab` (written as an `IfcSlab` LANDING): its top
@@ -21099,13 +21844,13 @@ var Stair = class {
     const u = this.direction.normalize();
     const s0 = new Vec2(this.start.x, this.start.y);
     const z0 = this.start.z;
-    const ccw = (ring) => {
-      const clean = Polygon2D.simplify(ring, 1e-9);
+    const ccw = (ring2) => {
+      const clean = Polygon2D.simplify(ring2, 1e-9);
       return Polygon2D.isCCW(clean) ? clean : Polygon2D.reverse(clean);
     };
     if (this.shape === "straight_run") {
       const run = (risers - 1) * tread;
-      const at2 = (along, across) => s0.add(u.mul(along)).add(u.perp().mul(across));
+      const at2 = (along2, across) => s0.add(u.mul(along2)).add(u.perp().mul(across));
       return {
         runs: [{ at: s0, dir: u, z: z0, risers }],
         landing: null,
@@ -21133,7 +21878,7 @@ var Stair = class {
     const run2 = (n2 - 1) * tread;
     const far = run1 + depth;
     const side = this.turn === "left" ? u.perp() : u.perp().neg();
-    const at = (along, across) => s0.add(u.mul(along)).add(side.mul(across));
+    const at = (along2, across) => s0.add(u.mul(along2)).add(side.mul(across));
     const landingTop = z0 + n1 * riser;
     const first = { at: s0, dir: u, z: z0, risers: n1 };
     if (this.shape === "two_straight_run") {
@@ -21174,16 +21919,44 @@ var Stair = class {
     };
   }
 };
-function pushBox(out, flb, frb, brb, blb, flt, frt, brt, blt) {
-  const quad = (a, b, c, d) => {
-    out.push(a, b, c, a, c, d);
-  };
-  quad(flb, blb, brb, frb);
-  quad(flt, frt, brt, blt);
-  quad(flb, frb, frt, flt);
-  quad(brb, blb, blt, brt);
-  quad(frb, brb, brt, frt);
-  quad(blb, flb, flt, blt);
+function clip(ring2, f2) {
+  const out = [];
+  for (let i = 0; i < ring2.length; i++) {
+    const a = ring2[i], b = ring2[(i + 1) % ring2.length], fa = f2(a), fb = f2(b);
+    if (fa >= 0) out.push(a);
+    if (fa >= 0 !== fb >= 0) out.push(a.add(b.sub(a).mul(fa / (fa - fb))));
+  }
+  return out;
+}
+function tidy(ring2) {
+  const EPS3 = 1e-9;
+  let pts2 = ring2.filter((p, i) => p.sub(ring2[(i + 1) % ring2.length]).len() > EPS3);
+  let changed = true;
+  while (changed && pts2.length >= 3) {
+    changed = false;
+    for (let i = 0; i < pts2.length; i++) {
+      const a = pts2[(i - 1 + pts2.length) % pts2.length], b = pts2[i], c = pts2[(i + 1) % pts2.length];
+      if (Math.abs(Polygon2D.cross2D(a, b, c)) < EPS3) {
+        pts2 = pts2.filter((_, j) => j !== i);
+        changed = true;
+        break;
+      }
+    }
+  }
+  return Polygon2D.signedArea(pts2) < 0 ? pts2.reverse() : pts2;
+}
+function prism(part, at, out) {
+  const ring2 = part.outline, [s0, s1] = part.across, n = ring2.length;
+  const near = ring2.map((p) => at(p.x, s0, p.y));
+  const far = ring2.map((p) => at(p.x, s1, p.y));
+  for (const [a, b, c] of Polygon2D.triangulate2D(ring2)) {
+    out.push(near[a], near[b], near[c]);
+    out.push(far[a], far[c], far[b]);
+  }
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    out.push(near[i], far[i], far[j], near[i], far[j], near[j]);
+  }
 }
 
 // src/bim/roofs.ts
@@ -21321,7 +22094,7 @@ var Roof = class {
       const p = at2(s, t);
       return new Vec3(p.x, p.y, z);
     };
-    const along = (d) => new Vec3(f2.u.x * d, f2.u.y * d, 0);
+    const along2 = (d) => new Vec3(f2.u.x * d, f2.u.y * d, 0);
     const out = [];
     const add = (edge, start, end, height, area, mesh) => {
       out.push({ name: `${this.name} gable ${out.length + 1}`, edge: (edge + f2.first) % 4, start, end, thickness: wt, height, area, mesh });
@@ -21334,7 +22107,7 @@ var Roof = class {
         at2(L - wt / 2, W2),
         h2,
         W2 * h2 / 2,
-        MeshFactory.extrude([at(L, 0, e), at(L, W2, e), at(L, W2 / 2, e + h2)], along(-wt))
+        MeshFactory.extrude([at(L, 0, e), at(L, W2, e), at(L, W2 / 2, e + h2)], along2(-wt))
       );
       add(
         3,
@@ -21342,7 +22115,7 @@ var Roof = class {
         at2(wt / 2, 0),
         h2,
         W2 * h2 / 2,
-        MeshFactory.extrude([at(0, W2, e), at(0, 0, e), at(0, W2 / 2, e + h2)], along(wt))
+        MeshFactory.extrude([at(0, W2, e), at(0, 0, e), at(0, W2 / 2, e + h2)], along2(wt))
       );
       return out;
     }
@@ -21353,7 +22126,7 @@ var Roof = class {
       at2(L - wt / 2, W2),
       h,
       W2 * h / 2,
-      MeshFactory.extrude([at(L, 0, e), at(L, W2, e), at(L, W2, e + h)], along(-wt))
+      MeshFactory.extrude([at(L, 0, e), at(L, W2, e), at(L, W2, e + h)], along2(-wt))
     );
     add(
       2,
@@ -21361,7 +22134,7 @@ var Roof = class {
       at2(wt, W2 - wt / 2),
       h,
       (L - 2 * wt) * h,
-      MeshFactory.extrude([at(wt, W2, e), at(wt, W2, e + h), at(wt, W2 - wt, e + (W2 - wt) * tan), at(wt, W2 - wt, e)], along(L - 2 * wt))
+      MeshFactory.extrude([at(wt, W2, e), at(wt, W2, e + h), at(wt, W2 - wt, e + (W2 - wt) * tan), at(wt, W2 - wt, e)], along2(L - 2 * wt))
     );
     add(
       3,
@@ -21369,25 +22142,25 @@ var Roof = class {
       at2(wt / 2, 0),
       h,
       W2 * h / 2,
-      MeshFactory.extrude([at(0, W2, e), at(0, 0, e), at(0, W2, e + h)], along(wt))
+      MeshFactory.extrude([at(0, W2, e), at(0, 0, e), at(0, W2, e + h)], along2(wt))
     );
     return out;
   }
   // ── Internals ──
   checkFootprint(label) {
-    const ring = Polygon2D.openRing(this.footprint);
-    if (ring.length < 3) throw new Error(`${label}: footprint needs at least 3 corners, got ${ring.length}.`);
-    ring.forEach((p, i) => {
+    const ring2 = Polygon2D.openRing(this.footprint);
+    if (ring2.length < 3) throw new Error(`${label}: footprint needs at least 3 corners, got ${ring2.length}.`);
+    ring2.forEach((p, i) => {
       if (!Number.isFinite(p.x) || !Number.isFinite(p.y)) throw new Error(`${label}: footprint corner ${i} is not a finite point, got (${p.x}, ${p.y}).`);
-      if (p.distTo(ring[(i + 1) % ring.length]) < 1e-9) throw new Error(`${label}: footprint edge ${i} has no length (corners ${i} and ${(i + 1) % ring.length} coincide).`);
+      if (p.distTo(ring2[(i + 1) % ring2.length]) < 1e-9) throw new Error(`${label}: footprint edge ${i} has no length (corners ${i} and ${(i + 1) % ring2.length} coincide).`);
     });
-    if (!(Polygon2D.area(ring) > 1e-9)) throw new Error(`${label}: footprint encloses no area.`);
+    if (!(Polygon2D.area(ring2) > 1e-9)) throw new Error(`${label}: footprint encloses no area.`);
     if (this.kind === "flat") return;
-    if (ring.length !== 4) {
-      throw new Error(`${label}: a ${this.kind} roof needs a rectangular footprint of 4 corners, got ${ring.length} corners (any polygon takes kind "flat").`);
+    if (ring2.length !== 4) {
+      throw new Error(`${label}: a ${this.kind} roof needs a rectangular footprint of 4 corners, got ${ring2.length} corners (any polygon takes kind "flat").`);
     }
     for (let i = 0; i < 4; i++) {
-      const a = ring[i].sub(ring[(i + 3) % 4]).normalize(), b = ring[(i + 1) % 4].sub(ring[i]).normalize();
+      const a = ring2[i].sub(ring2[(i + 3) % 4]).normalize(), b = ring2[(i + 1) % 4].sub(ring2[i]).normalize();
       const cos = a.dot(b);
       if (Math.abs(cos) > RIGHT_ANGLE_TOL) {
         const deg = 180 - Math.acos(Math.max(-1, Math.min(1, cos))) * 180 / Math.PI;
@@ -21396,15 +22169,15 @@ var Roof = class {
     }
   }
   frame() {
-    const ring = Polygon2D.openRing(this.footprint);
-    const first = this.kind === "hip" && ring[0].distTo(ring[1]) < ring[1].distTo(ring[2]) ? 1 : 0;
-    const q = [0, 1, 2, 3].map((i) => ring[(i + first) % 4]);
+    const ring2 = Polygon2D.openRing(this.footprint);
+    const first = this.kind === "hip" && ring2[0].distTo(ring2[1]) < ring2[1].distTo(ring2[2]) ? 1 : 0;
+    const q = [0, 1, 2, 3].map((i) => ring2[(i + first) % 4]);
     const length = q[0].distTo(q[1]), span = q[0].distTo(q[3]);
     return { o: q[0], u: q[1].sub(q[0]).div(length), v: q[3].sub(q[0]).div(span), length, span, first };
   }
   flatPlane() {
-    const ring = Polygon2D.openRing(this.footprint);
-    const grown = this.overhang > 0 ? Polygon2D.offset(ring, this.overhang) : ring;
+    const ring2 = Polygon2D.openRing(this.footprint);
+    const grown = this.overhang > 0 ? Polygon2D.offset(ring2, this.overhang) : ring2;
     const outer = Polygon2D.signedArea(grown) > 0 ? grown : grown.slice().reverse();
     const z0 = this.eavesElevation, z1 = z0 + this.thickness, n = outer.length;
     const positions = [...outer.map((p) => new Vec3(p.x, p.y, z0)), ...outer.map((p) => new Vec3(p.x, p.y, z1))];
@@ -21516,6 +22289,12 @@ function checkRecord(value, schema, path = "") {
 }
 
 // src/bim/building.ts
+var STAIR_MATERIAL = {
+  solid: { colour: "#c9a27a" },
+  concrete: { name: "Concrete", colour: "#c4c2bc" },
+  timber: { name: "Timber", colour: "#c9a27a" },
+  steel: { name: "Steel", colour: "#5d6166" }
+};
 var BUILDING_COLLECTIONS = ["storeys", "walls", "openings", "slabs", "spaces", "roofs", "stairs"];
 var POINT = { type: "array", items: { type: "number" }, minItems: 2, maxItems: 2, description: "[x, y] in metres" };
 var LENGTH = (description) => ({ type: "number", exclusiveMinimum: 0, description });
@@ -21641,6 +22420,7 @@ var BUILDING_SCHEMA = {
       landingDepth: LENGTH("Landing depth (m), default the width"),
       gap: { type: "number", minimum: 0, description: "Gap between the flights of a U (m), default 0.1" },
       well: { type: "boolean", description: "Cut the well in the floor above, default true" },
+      structure: { type: "string", enum: ["solid", "concrete", "timber", "steel"], description: "How it is built: solid (default: blocks down to the floor, a massing), concrete (the steps on a 160 mm waist slab), timber (50 mm treads between two stringers, open risers), steel (an 8 mm folded plate on two flat stringers)" },
       name: { type: "string" }
     }
   }
@@ -21826,10 +22606,10 @@ var Building = class {
       const slab = s && build(keyOf("slabs", id), () => {
         const boundary = Polygon2D.closeRing(r.boundary.map(([x, y]) => new Vec2(x, y)));
         const top = (r.level ?? "floor") === "top" ? s.record.elevation + s.record.height : s.record.elevation;
-        const along = joistDirectionFromBounds(boundary);
-        const alongX = Math.abs(along.x) >= Math.abs(along.y);
+        const along2 = joistDirectionFromBounds(boundary);
+        const alongX = Math.abs(along2.x) >= Math.abs(along2.y);
         const openings = (r.openings ?? []).map((o, i) => new SlabOpening(o.x, o.y, alongX ? o.width : o.depth, alongX ? o.depth : o.width, o.name ?? `opening ${i + 1}`));
-        const made = new Slab({ boundary, thickness: r.thickness ?? t.thickness, elevation: top, name: r.name ?? id, type: t.type, openings, joistDirection: along });
+        const made = new Slab({ boundary, thickness: r.thickness ?? t.thickness, elevation: top, name: r.name ?? id, type: t.type, openings, joistDirection: along2 });
         made.openingRings();
         return made;
       });
@@ -21907,7 +22687,8 @@ var Building = class {
           turn: r.turn,
           landingDepth: r.landingDepth,
           gap: r.gap,
-          type: new StairType({ name: shape.replace(/_/g, " "), shape })
+          structure: r.structure,
+          type: new StairType({ name: shape.replace(/_/g, " "), shape, material: STAIR_MATERIAL[r.structure ?? "solid"].name })
         });
         made.flights();
         return made;
@@ -22229,9 +23010,10 @@ function bindBuilding(doc, scene, opts = {}) {
         for (const g of roof.gables(building.gableThickness(s))) add(keyOf("roofs", id), g.mesh, { color: wallColour, layer: "walls" });
       }
       for (const [id, st] of s.stairs) {
-        for (const f2 of st.flights()) add(keyOf("stairs", id), new Mesh(f2.positions, f2.indices), { color: "#c9a27a", flatShading: true, layer: "stairs" });
+        const color = STAIR_MATERIAL[st.structure].colour;
+        for (const f2 of st.flights()) add(keyOf("stairs", id), new Mesh(f2.positions, f2.indices), { color, flatShading: true, layer: "stairs" });
         const landing = st.landing();
-        if (landing) add(keyOf("stairs", id), landing.toMesh(), { color: "#c9a27a", layer: "stairs" });
+        if (landing) add(keyOf("stairs", id), landing.toMesh(), { color, layer: "stairs" });
       }
       for (const [id, slab] of s.slabs) {
         const rec = building.data.slabs?.[id];
@@ -22301,680 +23083,221 @@ function bindBuilding(doc, scene, opts = {}) {
   };
 }
 
-// src/scene/Scene.ts
-var DEFAULT_STYLE2 = {
-  color: "#6ee7b7",
-  opacity: 1,
-  wireframe: false,
-  lineWidth: 2,
-  pointSize: 0.1,
-  doubleSided: true,
-  visible: true
+// src/bim/buildingPlan.ts
+var WALL = "#2b2b2b";
+var SCALES = [20, 50, 100, 200, 500, 1e3];
+function pale(hex, amount) {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  if (!m) return "#f1f1f1";
+  const c = (s) => Math.round(parseInt(s, 16) + (255 - parseInt(s, 16)) * amount).toString(16).padStart(2, "0");
+  return `#${c(m[1])}${c(m[2])}${c(m[3])}`;
+}
+function distanceToSegment(p, a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const len2 = dx * dx + dy * dy;
+  const t = len2 > 0 ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2)) : 0;
+  return Math.hypot(p.x - (a.x + dx * t), p.y - (a.y + dy * t));
+}
+var distanceToLine = (p, line) => {
+  let d = Infinity;
+  for (let i = 0; i + 1 < line.length; i++) d = Math.min(d, distanceToSegment(p, line[i], line[i + 1]));
+  return d;
 };
-var Scene = class _Scene {
-  constructor() {
-    this.objects = /* @__PURE__ */ new Map();
-    /** Per-scene, reset by clear(): see genId. */
-    this.idCounter = 0;
-    this.listeners = /* @__PURE__ */ new Set();
-    this.selectedIds = /* @__PURE__ */ new Set();
-    this.hoveredId = null;
-    this.suspendDepth = 0;
-    this.renderMode = "solid";
-    this.lightingMode = "flat";
-    this.environmentEnabled = false;
-  }
-  setRenderMode(mode) {
-    if (this.renderMode === mode) return;
-    this.renderMode = mode;
-    this.emit({ type: "scene:renderMode", mode });
-  }
-  setLightingMode(mode) {
-    if (this.lightingMode === mode) return;
-    this.lightingMode = mode;
-    this.emit({ type: "scene:lightingMode", mode });
-  }
-  setEnvironment(enabled) {
-    if (this.environmentEnabled === enabled) return;
-    this.environmentEnabled = enabled;
-    this.emit({ type: "scene:environment", enabled });
-  }
-  // ── Subscription ──
-  on(listener) {
-    this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
-  }
-  emit(event) {
-    if (this.suspendDepth > 0) return;
-    for (const l of this.listeners) l(event);
-  }
-  /**
-   * Run a block of mutations without emitting events.
-   * Use this from sync/CRDT consumers to apply remote mutations
-   * without echoing them back into the broadcast layer.
-   * Nested calls are allowed; events resume when the outermost block ends.
-   */
-  withSuspendedEvents(fn) {
-    this.suspendDepth++;
-    try {
-      return fn();
-    } finally {
-      this.suspendDepth--;
+function along(line, s) {
+  let rest = s;
+  for (let i = 0; i + 1 < line.length; i++) {
+    const a = line[i], b = line[i + 1];
+    const len = a.distTo(b);
+    if (rest <= len || i === line.length - 2) {
+      const dir = len > 0 ? new Vec2((b.x - a.x) / len, (b.y - a.y) / len) : new Vec2(1, 0);
+      return { p: new Vec2(a.x + dir.x * rest, a.y + dir.y * rest), dir };
     }
+    rest -= len;
   }
-  // ── Object Management ──
-  add(obj) {
-    if (this.currentKey !== void 0 && obj.key === void 0) obj.key = this.currentKey;
-    this.objects.set(obj.id, obj);
-    this.emit({ type: "object:add", id: obj.id });
-    return obj;
-  }
-  /**
-   * Run `fn`; every object it adds carries `key` (the record it shows) from creation, so
-   * listeners — renderer, Markup, snapshots — see it with the add. Nested calls use the
-   * innermost key. `bindScene` does this for each record.
-   */
-  withKey(key, fn) {
-    const outer = this.currentKey;
-    this.currentKey = key;
-    try {
-      return fn();
-    } finally {
-      this.currentKey = outer;
-    }
-  }
-  /** The objects showing one record (see `withKey`). */
-  byKey(key) {
-    const out = [];
-    for (const o of this.objects.values()) if (o.key === key) out.push(o);
-    return out;
-  }
-  get(id) {
-    return this.objects.get(id);
-  }
-  has(id) {
-    return this.objects.has(id);
-  }
-  all() {
-    return [...this.objects.values()];
-  }
-  count() {
-    return this.objects.size;
-  }
-  update(id, changes) {
-    const obj = this.objects.get(id);
-    if (!obj) return;
-    Object.assign(obj, changes);
-    this.emit({ type: "object:update", id, changes });
-  }
-  setStyle(id, style) {
-    const obj = this.objects.get(id);
-    if (!obj) return;
-    Object.assign(obj.style, style);
-    this.emit({ type: "object:style", id, style });
-  }
-  remove(id) {
-    this.objects.delete(id);
-    this.selectedIds.delete(id);
-    this.emit({ type: "object:remove", id });
-  }
-  clear() {
-    this.objects.clear();
-    this.selectedIds.clear();
-    this.hoveredId = null;
-    this.idCounter = 0;
-    this.emit({ type: "scene:clear" });
-  }
-  /**
-   * Ids are per-scene and restart at clear(), so a sketch that declares the
-   * same objects in the same order gets the SAME ids on every run. That is what
-   * lets a selection (highlight + transform gizmo) survive a re-run.
-   *
-   * The stability is POSITIONAL: ids follow declaration order, so a run that
-   * adds, removes or reorders an object shifts every id after it — a selection
-   * can then land on the neighbour. Sketches that need a selection to hold
-   * across such a change should declare their objects unconditionally (and
-   * vary style instead), or track their own keys.
-   *
-   * Ids stay unique within a scene; they are NOT unique across scenes or across
-   * clears, so don't store them outside the scene's lifetime.
-   */
-  genId(prefix) {
-    return `${prefix}_${++this.idCounter}`;
-  }
-  // ── Builder Methods ──
-  addPoint(position, style, data) {
-    return this.add({
-      id: this.genId("pt"),
-      type: "point",
-      position,
-      style: { ...DEFAULT_STYLE2, color: "#ff6b6b", pointSize: 0.1, ...style },
-      interactive: true,
-      data: data ?? {}
-    });
-  }
-  addPoints(positions, style) {
-    return positions.map((p) => this.addPoint(p, style));
-  }
-  addSegment(start, end, style) {
-    return this.add({
-      id: this.genId("seg"),
-      type: "segment",
-      start,
-      end,
-      style: { ...DEFAULT_STYLE2, color: "#4dabf7", ...style },
-      interactive: true,
-      data: {}
-    });
-  }
-  addPolygon(vertices, style) {
-    return this.add({
-      id: this.genId("poly"),
-      type: "polygon",
-      vertices,
-      style: { ...DEFAULT_STYLE2, color: "#51cf66", opacity: 0.6, ...style },
-      interactive: true,
-      data: {}
-    });
-  }
-  /** Batched polyline — renders as a single buffered Three.js Line, not one
-   *  object per segment. Use for streamlines, hatches, sketched curves, etc.
-   *  where N can be in the thousands. */
-  addPolyline(vertices, style) {
-    return this.add({
-      id: this.genId("pline"),
-      type: "polyline",
-      vertices,
-      style: { ...DEFAULT_STYLE2, color: "#4dabf7", ...style },
-      interactive: false,
-      data: {}
-    });
-  }
-  addMesh(mesh, style) {
-    return this.add({
-      id: this.genId("mesh"),
-      type: "mesh",
-      mesh,
-      style: { ...DEFAULT_STYLE2, color: "#845ef7", ...style },
-      interactive: true,
-      data: {}
-    });
-  }
-  addFlatMesh(data, style) {
-    return this.add({
-      id: this.genId("mesh"),
-      type: "mesh",
-      flatMeshData: data,
-      style: { ...DEFAULT_STYLE2, color: "#845ef7", ...style },
-      interactive: true,
-      data: {}
-    });
-  }
-  addCircle(center, radius, style) {
-    return this.add({
-      id: this.genId("cir"),
-      type: "circle",
-      center,
-      radius,
-      style: { ...DEFAULT_STYLE2, color: "#ffd43b", ...style },
-      interactive: true,
-      data: {}
-    });
-  }
-  /**
-   * A light in the model, at `position`: a point light, or a spot aimed at `spec.target`.
-   * Like any object it is keyed, re-made by a sketch re-run and hidden by `style.visible`;
-   * the renderer lights the scene with it in both lighting modes, without shadows (a point
-   * light's shadow is six renders, per light). Its colour is `style.color` (default white).
-   *
-   *   scene.addLight(new Vec3(2, 3, 2.4), { intensity: 6 });
-   *   scene.addLight(new Vec3(0, 0, 3), { kind: "spot", target: new Vec3(0, 2, 0), angle: 25 }, { color: "#ffd2a0" });
-   */
-  addLight(position, spec = {}, style) {
-    const kind2 = spec.kind ?? "point";
-    const fail2 = (why) => {
-      throw new Error(`addLight: ${why}`);
-    };
-    if (![position.x, position.y, position.z].every(Number.isFinite)) fail2(`a non-finite position (${position.x}, ${position.y}, ${position.z})`);
-    const intensity = spec.intensity ?? 4, range = spec.range ?? 8, angle = spec.angle ?? 30;
-    if (!(intensity >= 0)) fail2(`intensity must be 0 or more, got ${spec.intensity}`);
-    if (!(range >= 0)) fail2(`range must be 0 or more (0: without limit), got ${spec.range}`);
-    if (kind2 === "spot" && !spec.target) fail2(`a spot needs a target to aim at`);
-    if (kind2 === "spot" && !(angle > 0 && angle < 90)) fail2(`a spot's angle is a half angle between 0 and 90 degrees, got ${spec.angle}`);
-    return this.add({
-      id: this.genId("light"),
-      type: "light",
-      position,
-      light: { kind: kind2, intensity, range, angle, ...spec.target ? { target: spec.target } : {} },
-      style: { ...DEFAULT_STYLE2, color: "#ffffff", ...style },
-      interactive: false,
-      data: {}
-    });
-  }
-  addPlane(normal, distance, style) {
-    return this.add({
-      id: this.genId("plane"),
-      type: "plane",
-      normal,
-      distance,
-      style: { ...DEFAULT_STYLE2, color: "#aaaaaa", opacity: 0.3, ...style },
-      interactive: false,
-      data: {}
-    });
-  }
-  // ── Selection ──
-  select(id) {
-    this.selectedIds.add(id);
-    this.emit({ type: "selection:change", ids: this.getSelection() });
-  }
-  deselect(id) {
-    this.selectedIds.delete(id);
-    this.emit({ type: "selection:change", ids: this.getSelection() });
-  }
-  toggleSelect(id) {
-    if (this.selectedIds.has(id)) this.deselect(id);
-    else this.select(id);
-  }
-  clearSelection() {
-    this.selectedIds.clear();
-    this.emit({ type: "selection:change", ids: [] });
-  }
-  getSelection() {
-    return [...this.selectedIds];
-  }
-  isSelected(id) {
-    return this.selectedIds.has(id);
-  }
-  // ── Hover ──
-  setHover(id) {
-    if (this.hoveredId === id) return;
-    this.hoveredId = id;
-    this.emit({ type: "hover:change", id });
-  }
-  getHover() {
-    return this.hoveredId;
-  }
-  // ── Queries ──
-  byType(type) {
-    return this.all().filter((o) => o.type === type);
-  }
-  // ── Export ──
-  /**
-   * The visible mesh geometry (meshes, flat meshes, segments with a `tubeRadius`; not
-   * `noExport`) merged into one `ObjMeshData` for `ObjFile.serialize`. Without options the
-   * faces come in object order, ungrouped.
-   *
-   * `groupBy` keeps the objects apart in the OBJ as `g` groups, for Rhino or Cinema 4D:
-   * - `"object"`: one group per object, named by its `key` (the record it shows; objects of
-   *   one record share the name) or else its id (`"mesh_3"`);
-   * - `"layer"`: one group per `style.layer` (`"default"` without one), each layer's faces one
-   *   contiguous block, layers in the order they first appear.
-   *
-   * Each group's `material` is named by its colour, `c_rrggbb` (`_a45` appended below full
-   * opacity), and `materials` lists them for `ObjFile.serializeMtl`. A layer whose objects
-   * differ in colour is split into consecutive runs of the same name, one per material — what
-   * `usemtl` does within an OBJ group.
-   *
-   *   const data = scene.toMeshData({ groupBy: "layer" });
-   *   download(ObjFile.serializeMtl(data.materials!), "model.mtl");
-   *   download(ObjFile.serialize(data, { mtllib: "model.mtl" }), "model.obj");
-   */
-  toMeshData(options = {}) {
-    const positions = [];
-    const normals = [];
-    const parts = [];
-    for (const obj of this.objects.values()) {
-      if (!obj.style.visible) continue;
-      if (obj.style.noExport) continue;
-      const faces2 = [];
-      if (obj.mesh) {
-        const nodeMap = /* @__PURE__ */ new Map();
-        const offset = positions.length;
-        for (const node of obj.mesh.nodesArray()) {
-          nodeMap.set(node.id, offset + nodeMap.size);
-          positions.push(node.position);
-          normals.push(node.normal ?? Vec3.unitY());
-        }
-        for (const face of obj.mesh.facesArray()) {
-          faces2.push(face.nodes.map((n) => nodeMap.get(n)));
-        }
-      } else if (obj.flatMeshData) {
-        const fd = obj.flatMeshData;
-        const offset = positions.length;
-        const vertCount = fd.positions.length / 3;
-        for (let i = 0; i < vertCount; i++) {
-          positions.push(new Vec3(fd.positions[i * 3], fd.positions[i * 3 + 1], fd.positions[i * 3 + 2]));
-          normals.push(new Vec3(fd.normals[i * 3], fd.normals[i * 3 + 1], fd.normals[i * 3 + 2]));
-        }
-        for (let i = 0; i < fd.indices.length; i += 3) {
-          faces2.push([fd.indices[i] + offset, fd.indices[i + 1] + offset, fd.indices[i + 2] + offset]);
-        }
-      } else if (obj.type === "segment" && obj.start && obj.end && obj.style.tubeRadius) {
-        _Scene._addTubeMesh(positions, normals, faces2, obj.start, obj.end, obj.style.tubeRadius, 6);
-      }
-      if (faces2.length > 0) parts.push({ obj, faces: faces2 });
-    }
-    const { groupBy } = options;
-    if (!groupBy) return { positions, normals, uvs: [], faces: parts.flatMap((p) => p.faces) };
-    let runs = parts.map(({ obj, faces: faces2 }) => ({
-      name: groupBy === "layer" ? obj.style.layer || "default" : obj.key ?? obj.id,
-      material: colorMaterial(obj.style.color, obj.style.opacity),
-      faces: faces2
-    }));
-    if (groupBy === "layer") {
-      const layers = /* @__PURE__ */ new Map();
-      for (const run of runs) {
-        const layer = layers.get(run.name) ?? /* @__PURE__ */ new Map();
-        layers.set(run.name, layer);
-        const same = layer.get(run.material.name);
-        if (same) for (const face of run.faces) same.faces.push(face);
-        else layer.set(run.material.name, { ...run, faces: [...run.faces] });
-      }
-      runs = [...layers.values()].flatMap((layer) => [...layer.values()]);
-    }
-    const faces = [];
-    const groups = [];
-    const materials = /* @__PURE__ */ new Map();
-    for (const run of runs) {
-      groups.push({ name: run.name, faceStart: faces.length, faceCount: run.faces.length, material: run.material.name });
-      for (const face of run.faces) faces.push(face);
-      if (!materials.has(run.material.name)) materials.set(run.material.name, run.material);
-    }
-    return { positions, normals, uvs: [], faces, groups, materials: [...materials.values()] };
-  }
-  /** Generate a cylinder tube mesh between two points. */
-  static _addTubeMesh(positions, normals, faces, a, b, radius, segs) {
-    const dir = b.sub(a);
-    const len = dir.len();
-    if (len < 1e-8) return;
-    const axZ = dir.mul(1 / len);
-    const tmp = Math.abs(axZ.x) < 0.9 ? new Vec3(1, 0, 0) : new Vec3(0, 1, 0);
-    const axX = axZ.cross(tmp).normalize();
-    const axY = axZ.cross(axX);
-    const offset = positions.length;
-    for (let ring = 0; ring < 2; ring++) {
-      const center = ring === 0 ? a : b;
-      for (let i = 0; i < segs; i++) {
-        const angle = i / segs * Math.PI * 2;
-        const cos = Math.cos(angle), sin = Math.sin(angle);
-        const nx = axX.x * cos + axY.x * sin;
-        const ny = axX.y * cos + axY.y * sin;
-        const nz = axX.z * cos + axY.z * sin;
-        positions.push(new Vec3(center.x + nx * radius, center.y + ny * radius, center.z + nz * radius));
-        normals.push(new Vec3(nx, ny, nz));
-      }
-    }
-    for (let i = 0; i < segs; i++) {
-      const i0 = offset + i;
-      const i1 = offset + (i + 1) % segs;
-      const i2 = offset + segs + (i + 1) % segs;
-      const i3 = offset + segs + i;
-      faces.push([i0, i1, i2, i3]);
-    }
-  }
-  // ── Serialization ──
-  toJSON() {
-    return {
-      objects: this.all().map((obj) => ({
-        ...obj,
-        position: obj.position?.toJSON(),
-        start: obj.start?.toJSON(),
-        end: obj.end?.toJSON(),
-        vertices: obj.vertices?.map((v) => v.toJSON()),
-        center: obj.center?.toJSON(),
-        normal: obj.normal?.toJSON(),
-        mesh: obj.mesh?.toJSON()
-      }))
-    };
-  }
-  static fromJSON(json) {
-    const scene = new _Scene();
-    for (const obj of json.objects) {
-      const sceneObj = {
-        ...obj,
-        position: obj.position ? Vec3.fromJSON(obj.position) : void 0,
-        start: obj.start ? Vec3.fromJSON(obj.start) : void 0,
-        end: obj.end ? Vec3.fromJSON(obj.end) : void 0,
-        vertices: obj.vertices?.map((v) => Vec3.fromJSON(v)),
-        center: obj.center ? Vec3.fromJSON(obj.center) : void 0,
-        normal: obj.normal ? Vec3.fromJSON(obj.normal) : void 0,
-        mesh: obj.mesh ? Mesh.fromJSON(obj.mesh) : void 0
-      };
-      scene.objects.set(sceneObj.id, sceneObj);
-      const match = sceneObj.id.match(/_(\d+)$/);
-      if (match) {
-        const num2 = parseInt(match[1]);
-        if (num2 > scene.idCounter) scene.idCounter = num2;
-      }
-    }
-    return scene;
-  }
-};
-
-// src/gui/Params.ts
-var ParamStore = class {
-  constructor(schema) {
-    this.values = {};
-    this.listeners = /* @__PURE__ */ new Set();
-    this.keyListeners = /* @__PURE__ */ new Map();
-    this.schema = schema;
-    for (const [key, def] of Object.entries(schema)) {
-      if (def.type !== "button") {
-        this.values[key] = def.default;
-      }
-    }
-  }
-  get(key) {
-    return this.values[key];
-  }
-  set(key, value) {
-    const def = this.schema[key];
-    if (!def || def.type === "button") return;
-    if (def.type === "float" || def.type === "int") {
-      value = Math.max(def.min, Math.min(def.max, value));
-      if (def.type === "int") value = Math.round(value);
-    }
-    if (def.type === "vec3" && Array.isArray(value)) {
-      const lo = def.min, hi = def.max;
-      value = value.map((v, i) => Math.max(lo?.[i] ?? -Infinity, Math.min(hi?.[i] ?? Infinity, v)));
-    }
-    if (def.type === "select" && !def.options.includes(value)) return;
-    this.values[key] = value;
-    for (const l of this.listeners) l(key, value, this.values);
-    const kl = this.keyListeners.get(key);
-    if (kl) for (const l of kl) l(value);
-  }
-  /**
-   * Dynamically add (or refresh) a parameter definition. Used by the sketch
-   * APIs, whose immediate-mode `lab.slider(...)` calls declare params during
-   * the sketch run. Initializes the value from `default` the first time;
-   * an existing value is preserved so re-defining across re-runs is cheap.
-   * Does NOT notify listeners (definition is structure, not a value change).
-   */
-  define(key, def) {
-    const existed = key in this.schema;
-    this.schema[key] = def;
-    if (!existed && def.type !== "button") {
-      this.values[key] = def.default;
-    }
-  }
-  /** Remove a parameter (and its value). Does not notify listeners. */
-  remove(key) {
-    delete this.schema[key];
-    delete this.values[key];
-    this.keyListeners.delete(key);
-  }
-  has(key) {
-    return key in this.schema;
-  }
-  keys() {
-    return Object.keys(this.schema);
-  }
-  /** Get all current values */
-  getAll() {
-    return { ...this.values };
-  }
-  /** Get the schema for a specific key */
-  getDef(key) {
-    return this.schema[key];
-  }
-  /** Get entire schema */
-  getSchema() {
-    return this.schema;
-  }
-  /** Listen to all changes */
-  onChange(listener) {
-    this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
-  }
-  /** Listen to a specific key */
-  onKey(key, listener) {
-    if (!this.keyListeners.has(key)) this.keyListeners.set(key, /* @__PURE__ */ new Set());
-    this.keyListeners.get(key).add(listener);
-    return () => this.keyListeners.get(key)?.delete(listener);
-  }
-  /** Reset all to defaults */
-  reset() {
-    for (const [key, def] of Object.entries(this.schema)) {
-      if (def.type !== "button") {
-        this.set(key, def.default);
-      }
-    }
-  }
-  /** Serialization */
-  toJSON() {
-    return { ...this.values };
-  }
-  loadJSON(json) {
-    for (const [key, value] of Object.entries(json)) {
-      if (key in this.schema) {
-        this.set(key, value);
-      }
-    }
-  }
-  /**
-   * The keys a person or an agent means by `name`, most specific first: the exact key;
-   * else the control's label, ignoring case ("Radius"); else "Group:Label" for sketch
-   * keys, which read `type:group:label`. One key when the name is unambiguous.
-   */
-  findKeys(name) {
-    if (name in this.schema) return [name];
-    const n = name.trim().toLowerCase();
-    const keys = Object.keys(this.schema);
-    const byLabel = keys.filter((k) => (this.schema[k].label ?? k).toLowerCase() === n);
-    if (byLabel.length) return byLabel;
-    return keys.filter((k) => {
-      const parts = k.split(":");
-      return parts.length >= 3 && `${parts[1]}:${parts.slice(2).join(":")}`.toLowerCase() === n;
-    });
-  }
-  /**
-   * Set params by key or label (see `findKeys`) and say what could not be applied,
-   * instead of dropping it the way `loadJSON` does. For tools and agents.
-   */
-  setByName(values) {
-    const applied = [], unknown = [];
-    const ambiguous = [];
-    for (const [name, value] of Object.entries(values)) {
-      const keys = this.findKeys(name);
-      if (keys.length === 0) unknown.push(name);
-      else if (keys.length > 1) ambiguous.push({ name, keys });
-      else {
-        this.set(keys[0], value);
-        applied.push(keys[0]);
-      }
-    }
-    return { applied, unknown, ambiguous };
-  }
-  /** Every param as the name to use with `setByName`: its label, or "Group:Label" when two share a label. */
-  names() {
-    const keys = Object.keys(this.schema);
-    const label = (k) => this.schema[k].label ?? k;
-    return keys.map((k) => {
-      if (keys.filter((o) => label(o).toLowerCase() === label(k).toLowerCase()).length === 1) return label(k);
-      const parts = k.split(":");
-      return parts.length >= 3 && parts[1] ? `${parts[1]}:${parts.slice(2).join(":")}` : k;
-    });
-  }
-};
-function createParams(schema) {
-  return new ParamStore(schema);
+  return { p: line[0], dir: new Vec2(1, 0) };
 }
-function createLayout(folders) {
-  return { folders };
-}
-
-// src/bim/adjacency.ts
-function boxOf(positions) {
-  if (!positions.length) return null;
-  const min = [Infinity, Infinity, Infinity];
-  const max = [-Infinity, -Infinity, -Infinity];
-  for (let i = 0; i + 2 < positions.length; i += 3) {
-    for (let k = 0; k < 3; k++) {
-      const v = positions[i + k];
-      if (v < min[k]) min[k] = v;
-      if (v > max[k]) max[k] = v;
-    }
+function piece(line, a, b) {
+  const out = [along(line, a).p];
+  let s = 0;
+  for (let i = 0; i + 1 < line.length; i++) {
+    s += line[i].distTo(line[i + 1]);
+    if (s > a + 1e-9 && s < b - 1e-9) out.push(line[i + 1]);
   }
-  return { min, max };
-}
-function share(aMin, aMax, bMin, bMax) {
-  return Math.min(aMax, bMax) - Math.max(aMin, bMin);
-}
-function contactBetween(a, b, opts = {}) {
-  const tol = opts.tolerance ?? 0.05;
-  const up = opts.up ?? 2;
-  const gaps = [0, 1, 2].map((k) => share(a.min[k], a.max[k], b.min[k], b.max[k]));
-  if (gaps.some((g) => g < -tol)) return null;
-  const flat = [0, 1, 2].filter((k) => k !== up);
-  const area = flat.reduce((p, k) => p * Math.max(0, gaps[k]), 1);
-  const footprint = (box) => flat.reduce((p, k) => p * (box.max[k] - box.min[k]), 1);
-  const smaller = Math.min(footprint(a), footprint(b));
-  const overlap = smaller > 0 ? Math.min(1, area / smaller) : 0;
-  const verticalTouch = gaps[up] <= tol;
-  if (verticalTouch) {
-    if (overlap < (opts.minOverlap ?? 0.02)) return null;
-    const aAbove = a.min[up] >= b.max[up] - tol;
-    const bAbove = b.min[up] >= a.max[up] - tol;
-    if (aAbove) return { contact: "supportedBy", overlap };
-    if (bAbove) return { contact: "supports", overlap };
-  }
-  if (flat.some((k) => gaps[k] <= tol)) return { contact: "abuts", overlap };
-  return { contact: "overlaps", overlap };
-}
-function reverse(contact) {
-  return contact === "supports" ? "supportedBy" : contact === "supportedBy" ? "supports" : contact;
-}
-function findAdjacent(elements, opts = {}) {
-  const tol = opts.tolerance ?? 0.05;
-  const up = opts.up ?? 2;
-  const sorted = [...elements].sort((p, q) => p.box.min[up] - q.box.min[up]);
-  const out = [];
-  for (let i = 0; i < sorted.length; i++) {
-    const a = sorted[i];
-    for (let j = i + 1; j < sorted.length; j++) {
-      const b = sorted[j];
-      if (b.box.min[up] > a.box.max[up] + tol) break;
-      const met = contactBetween(a.box, b.box, opts);
-      if (!met) continue;
-      out.push({
-        a: a.id,
-        b: b.id,
-        contact: met.contact,
-        tolerance: tol,
-        overlap: met.overlap
-      });
-    }
-  }
+  out.push(along(line, b).p);
   return out;
 }
-function neighboursOf(id, all) {
-  const out = [];
-  for (const r of all) {
-    if (r.a === id) out.push({ id: r.b, contact: r.contact, overlap: r.overlap, tolerance: r.tolerance });
-    else if (r.b === id) out.push({ id: r.a, contact: reverse(r.contact), overlap: r.overlap, tolerance: r.tolerance });
+var unit = (a, b) => {
+  const l = a.distTo(b) || 1;
+  return new Vec2((b.x - a.x) / l, (b.y - a.y) / l);
+};
+function corner(p, a, b, h) {
+  let nx = -(a.y + b.y), ny = a.x + b.x;
+  const l = Math.hypot(nx, ny);
+  if (l < 1e-9) return new Vec2(p.x - a.y * h, p.y + a.x * h);
+  nx /= l;
+  ny /= l;
+  const k = h / Math.max(0.3, nx * -a.y + ny * a.x);
+  return new Vec2(p.x + nx * k, p.y + ny * k);
+}
+function band(line, t, extendStart, extendEnd) {
+  const pts2 = line.map((p) => new Vec2(p.x, p.y));
+  const n = pts2.length;
+  const d0 = unit(pts2[0], pts2[1]), d1 = unit(pts2[n - 2], pts2[n - 1]);
+  pts2[0] = new Vec2(pts2[0].x - d0.x * extendStart, pts2[0].y - d0.y * extendStart);
+  pts2[n - 1] = new Vec2(pts2[n - 1].x + d1.x * extendEnd, pts2[n - 1].y + d1.y * extendEnd);
+  const left = [], right = [];
+  for (let i = 0; i < n; i++) {
+    const a = unit(pts2[Math.max(0, i - 1)], pts2[Math.max(1, i)]), b = unit(pts2[Math.min(n - 2, i)], pts2[Math.min(n - 1, i + 1)]);
+    left.push(corner(pts2[i], a, b, t / 2));
+    right.push(corner(pts2[i], a, b, -t / 2));
   }
-  return out;
+  return [...left, ...right.reverse()];
+}
+function ring(pts2, h) {
+  const n = pts2.length;
+  return pts2.map((p, i) => corner(p, unit(pts2[(i + n - 1) % n], p), unit(p, pts2[(i + 1) % n]), h));
+}
+function tickStep(length) {
+  for (const s of [1, 2, 5, 10, 20, 50, 100, 200, 500]) if (length / s <= 12) return s;
+  return 1e3;
+}
+function storeyBox(s) {
+  const b = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+  const add = (p, pad = 0) => {
+    b.x0 = Math.min(b.x0, p.x - pad);
+    b.y0 = Math.min(b.y0, p.y - pad);
+    b.x1 = Math.max(b.x1, p.x + pad);
+    b.y1 = Math.max(b.y1, p.y + pad);
+  };
+  for (const w of s.walls.values()) for (const p of w.ribbon.centerline) add(p, w.ribbon.width / 2);
+  for (const sl of s.slabs.values()) sl.boundary.forEach((p) => add(p));
+  for (const sp of s.spaces.values()) sp.boundary.forEach((p) => add(p));
+  for (const st of s.stairs.values()) st.footprint().forEach((p) => add(p));
+  return b.x0 === Infinity ? null : b;
+}
+function buildingPlan(building, opts = {}) {
+  const storeys = opts.storey === void 0 ? building.storeys : building.storeys.filter((s) => s.id === opts.storey);
+  if (opts.storey !== void 0 && !storeys.length) {
+    throw new Error(`buildingPlan: no storey "${opts.storey}" (storeys: ${building.storeys.map((s) => s.id).join(", ") || "none"})`);
+  }
+  const boxes = storeys.map((s) => storeyBox(s) ?? { x0: 0, y0: 0, x1: 4, y1: 3 });
+  const extent = Math.max(1, ...boxes.map((b) => Math.max(b.x1 - b.x0, b.y1 - b.y0)));
+  const scale = opts.scale ?? SCALES.find((s) => extent * 1e3 / s <= 200) ?? 1e3;
+  const keys = opts.keys ?? true, coordinates = opts.coordinates ?? true;
+  const marked = new Set(opts.highlight ?? []);
+  const HOT = DRAWING_PALETTE.accent;
+  const sheet = new Sheet({
+    scale,
+    layers: {
+      slab: { color: DRAWING_PALETTE.faint, weight: 0.13 },
+      room: { color: DRAWING_PALETTE.ink },
+      stair: { color: DRAWING_PALETTE.annotation, weight: 0.18 },
+      wall: { color: WALL, weight: 0.25 },
+      opening: { color: WALL, weight: 0.13 },
+      key: { color: DRAWING_PALETTE.accent },
+      grid: { color: DRAWING_PALETTE.faint, weight: 0.13 }
+    }
+  });
+  const mm = (v) => sheet.paper(v);
+  const data = building.data;
+  let shift = 0;
+  storeys.forEach((s, index) => {
+    const box = boxes[index];
+    if (index > 0) shift += boxes[index - 1].x1 - box.x0 + mm(34);
+    const view = sheet.view(s.id, { at: [shift, 0], title: `${s.record.name} \xB7 storeys/${s.id}` });
+    for (const [id, slab] of s.slabs) {
+      if ((data.slabs?.[id]?.level ?? "floor") !== "floor") continue;
+      view.polyline(slab.boundary, { closed: true, layer: "slab", key: `slabs/${id}` });
+      for (const o of data.slabs?.[id]?.openings ?? []) {
+        view.rect(o.x - o.width / 2, o.y - o.depth / 2, o.width, o.depth, { layer: "slab", dash: "dashed", key: `slabs/${id}` });
+      }
+    }
+    for (const [id, space] of s.spaces) {
+      const colour = building.types.spaces?.[(data.spaces?.[id]?.use ?? "").toLowerCase()]?.colour;
+      view.fill(space.boundary, { color: colour ? pale(colour, 0.55) : "#f1f1f1", layer: "room", key: `spaces/${id}` });
+      if (marked.has(`spaces/${id}`)) view.polyline(space.boundary, { closed: true, color: HOT, weight: 0.5, dash: "dashed", key: `spaces/${id}` });
+    }
+    for (const [id, stair] of s.stairs) {
+      const outline = stair.footprint();
+      view.polyline(outline, { closed: true, layer: "stair", key: `stairs/${id}`, ...marked.has(`stairs/${id}`) ? { color: HOT, weight: 0.5 } : {} });
+      if (keys) view.text(id, Polygon2D.centroid2D(outline), { size: 1.6, layer: "key", align: "center", baseline: "middle", key: `stairs/${id}` });
+    }
+    const walls = [...s.walls];
+    for (const [id, wall] of walls) {
+      const line = wall.ribbon.centerline, t = wall.ribbon.width, length = wall.ribbon.length;
+      const closed = wall.ribbon.isClosedPolyline;
+      const meets = (end) => walls.some(([oid, other]) => oid !== id && distanceToLine(end, other.ribbon.centerline) <= (other.ribbon.width + t) / 2 + 0.05);
+      const holes = Object.entries(data.openings ?? {}).filter(([oid, o]) => o.wall === id && s.openings.has(oid)).map(([oid, o]) => ({ id: oid, kind: o.kind, a: Math.max(0, o.at - o.width / 2), b: Math.min(length, o.at + o.width / 2) })).filter((h) => h.b > h.a).sort((p, q) => p.a - q.a);
+      if (closed && !holes.length) {
+        const loop = line.slice(0, -1);
+        view.fill([ring(loop, t / 2), ring(loop, -t / 2)], { color: marked.has(`walls/${id}`) ? HOT : WALL, layer: "wall", key: `walls/${id}` });
+      } else {
+        let run = line, gaps = holes.map((h) => ({ a: h.a, b: h.b }));
+        if (closed) {
+          const start = (holes[0].a + holes[0].b) / 2;
+          run = [...piece(line, start, length), ...piece(line, 0, start).slice(1)];
+          gaps = [{ a: 0, b: holes[0].b - start }, ...holes.slice(1).map((h) => ({ a: h.a - start, b: h.b - start })), { a: length - (start - holes[0].a), b: length }];
+        }
+        let from = 0;
+        for (const gap of [...gaps, { a: length, b: length }]) {
+          if (gap.a - from > 1e-6) {
+            const outline = band(piece(run, from, gap.a), t, from === 0 && !closed && meets(line[0]) ? t / 2 : 0, gap.a === length && !closed && meets(line[line.length - 1]) ? t / 2 : 0);
+            view.fill(outline, { color: marked.has(`walls/${id}`) ? HOT : WALL, layer: "wall", key: `walls/${id}` });
+          }
+          from = Math.max(from, gap.b);
+        }
+      }
+      for (const hole of holes) {
+        const a = along(line, hole.a), b = along(line, hole.b);
+        const n = new Vec2(-a.dir.y, a.dir.x);
+        const key = `openings/${hole.id}`;
+        const h = t / 2;
+        view.fill([[a.p.x + n.x * h, a.p.y + n.y * h], [b.p.x + n.x * h, b.p.y + n.y * h], [b.p.x - n.x * h, b.p.y - n.y * h], [a.p.x - n.x * h, a.p.y - n.y * h]], { color: marked.has(key) ? pale(HOT, 0.6) : "#ffffff", layer: "opening", key });
+        for (const side of hole.kind === "window" ? [-1, 0, 1] : [-1, 1]) {
+          const o = side * t / 2;
+          view.polyline([[a.p.x + n.x * o, a.p.y + n.y * o], [b.p.x + n.x * o, b.p.y + n.y * o]], { layer: "opening", weight: marked.has(key) ? 0.5 : side === 0 ? 0.25 : 0.13, key, ...marked.has(key) ? { color: HOT } : {} });
+        }
+        if (keys) {
+          const m = along(line, (hole.a + hole.b) / 2);
+          const off = t / 2 + mm(2.2);
+          view.text(hole.id, [m.p.x + n.x * off, m.p.y + n.y * off], { size: 1.5, layer: "key", align: "center", baseline: "middle", key });
+        }
+      }
+      if (keys) {
+        const m = along(line, length * (holes.length ? 0.12 : 0.5));
+        const n = new Vec2(-m.dir.y, m.dir.x);
+        const off = -(t / 2 + mm(2.2));
+        view.text(id, [m.p.x + n.x * off, m.p.y + n.y * off], { size: 1.5, layer: "key", align: "center", baseline: "middle", key: `walls/${id}` });
+      }
+    }
+    for (const [id, space] of s.spaces) {
+      const c = Polygon2D.centroid2D(space.boundary);
+      const key = `spaces/${id}`;
+      view.text(space.name, [c.x, c.y + mm(2.6)], { size: 2.4, layer: "room", align: "center", baseline: "middle", key });
+      view.text(`${space.area().toFixed(1)} m\xB2`, [c.x, c.y - mm(0.6)], { size: 1.8, color: DRAWING_PALETTE.annotation, align: "center", baseline: "middle", key });
+      if (keys) view.text(id, [c.x, c.y - mm(3.4)], { size: 1.5, layer: "key", align: "center", baseline: "middle", key });
+    }
+    if (coordinates) {
+      const gap = mm(5), tick = mm(1.2);
+      const y = box.y0 - gap, x = box.x0 - gap;
+      const stepX = tickStep(box.x1 - box.x0), stepY = tickStep(box.y1 - box.y0);
+      view.polyline([[box.x0, y], [box.x1, y]], { layer: "grid" });
+      view.polyline([[x, box.y0], [x, box.y1]], { layer: "grid" });
+      for (let v = Math.ceil(box.x0 - 1e-9); v <= box.x1 + 1e-9; v++) {
+        const major = v % stepX === 0;
+        view.polyline([[v, y], [v, y - (major ? tick : tick / 2)]], { layer: "grid" });
+        if (major) view.text(String(v), [v, y - tick - mm(0.6)], { size: 1.6, layer: "grid", align: "center", baseline: "top" });
+      }
+      for (let v = Math.ceil(box.y0 - 1e-9); v <= box.y1 + 1e-9; v++) {
+        const major = v % stepY === 0;
+        view.polyline([[x, v], [x - (major ? tick : tick / 2), v]], { layer: "grid" });
+        if (major) view.text(String(v), [x - tick - mm(0.6), v], { size: 1.6, layer: "grid", align: "right", baseline: "middle" });
+      }
+      view.text("x (m)", [box.x1 + mm(2), y], { size: 1.6, layer: "grid", align: "left", baseline: "middle" });
+      view.text("y (m)", [x, box.y1 + mm(2.5)], { size: 1.6, layer: "grid", align: "center", baseline: "bottom" });
+    }
+  });
+  return sheet;
 }
 
 // src/collab/SharedStore.ts
@@ -23253,6 +23576,7 @@ function devServerAdapter(opts = {}) {
     }
   };
   const currentUser = () => {
+    if (opts.user) return opts.user;
     const name = store(DEV_NAME_KEY);
     if (!name) return null;
     const id = store(DEV_ID_KEY) ?? store(DEV_ID_KEY, `dev-${randomId()}`);
@@ -23275,6 +23599,55 @@ function devServerAdapter(opts = {}) {
     subscribe(doc, session, on) {
       let es = null;
       let closed = false;
+      const handle = (event, data) => {
+        if (event === "record") on.record(JSON.parse(data));
+        else if (event === "presence") on.presence(JSON.parse(data));
+        else if (event === "broadcast") {
+          const m = JSON.parse(data);
+          on.broadcast(m.event, m.payload, m.from);
+        }
+      };
+      if (typeof EventSource === "undefined") {
+        const abort = new AbortController();
+        void (async () => {
+          while (!closed) {
+            on.status("connecting");
+            try {
+              const r = await fetch(`${base}/events?doc=${encodeURIComponent(doc)}&session=${session}`, { signal: abort.signal, headers: { accept: "text/event-stream" } });
+              if (!r.ok || !r.body) throw new Error(`${r.status}`);
+              on.status("online");
+              const reader = r.body.getReader();
+              const decoder = new TextDecoder();
+              let buf = "";
+              for (; ; ) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buf += decoder.decode(value, { stream: true });
+                let i;
+                while ((i = buf.indexOf("\n\n")) >= 0) {
+                  let event = "message", data = "";
+                  for (const line of buf.slice(0, i).split("\n")) {
+                    if (line.startsWith("event:")) event = line.slice(6).trim();
+                    else if (line.startsWith("data:")) data += line.slice(5).trim();
+                  }
+                  buf = buf.slice(i + 2);
+                  if (data) handle(event, data);
+                }
+              }
+            } catch {
+            }
+            if (!closed) {
+              on.status("connecting", "reconnecting");
+              await new Promise((r) => setTimeout(r, 1e3));
+            }
+          }
+        })();
+        return () => {
+          closed = true;
+          abort.abort();
+          on.status("offline");
+        };
+      }
       const open = () => {
         on.status("connecting");
         es = new EventSource(`${base}/events?doc=${encodeURIComponent(doc)}&session=${session}`);
@@ -23646,7 +24019,7 @@ function localAdapter(opts = {}) {
   const docs = /* @__PURE__ */ new Map();
   let clock = 0;
   const tick = () => clock = Math.max(clock + 1, Date.now());
-  const read = (doc) => {
+  const read2 = (doc) => {
     let m = docs.get(doc);
     if (m) return m;
     m = /* @__PURE__ */ new Map();
@@ -23660,7 +24033,7 @@ function localAdapter(opts = {}) {
   };
   const save = (doc) => {
     try {
-      storage?.setItem(prefix + doc, JSON.stringify([...read(doc).values()].filter((r) => r.value !== null)));
+      storage?.setItem(prefix + doc, JSON.stringify([...read2(doc).values()].filter((r) => r.value !== null)));
     } catch (e) {
       console.warn(`localAdapter: could not save "${doc}" (${String(e)})`);
     }
@@ -23668,11 +24041,11 @@ function localAdapter(opts = {}) {
   const user = { id: "local", name: "You" };
   return {
     async load(doc) {
-      return [...read(doc).values()].map((r) => ({ ...r }));
+      return [...read2(doc).values()].map((r) => ({ ...r }));
     },
     async put(doc, key, value) {
       const rec = { key, value: value ?? null, by: user.id, at: tick() };
-      read(doc).set(key, rec);
+      read2(doc).set(key, rec);
       save(doc);
       return { ...rec };
     },
@@ -23692,7 +24065,7 @@ function localAdapter(opts = {}) {
 function applyPatch(doc, patch, opts = {}) {
   const rejected = [];
   const changed = { set: [], updated: [], removed: [] };
-  const split = (key) => {
+  const split2 = (key) => {
     const at = key.indexOf(SEP);
     if (at <= 0 || at === key.length - 1) {
       rejected.push({ key, message: `a record is named "collection${SEP}id", got "${key}"` });
@@ -23716,7 +24089,7 @@ function applyPatch(doc, patch, opts = {}) {
   const plan = [];
   const get = (c, id) => doc.get(c, id);
   for (const [key, value] of Object.entries(patch.set ?? {})) {
-    const k = split(key);
+    const k = split2(key);
     if (!k) continue;
     checkValue(key, k[0], value);
     plan.push(() => {
@@ -23727,7 +24100,7 @@ function applyPatch(doc, patch, opts = {}) {
     });
   }
   for (const [key, change] of Object.entries(patch.update ?? {})) {
-    const k = split(key);
+    const k = split2(key);
     if (!k) continue;
     const cur = get(k[0], k[1]);
     if (cur === void 0) {
@@ -23745,7 +24118,7 @@ function applyPatch(doc, patch, opts = {}) {
     });
   }
   for (const key of patch.remove ?? []) {
-    const k = split(key);
+    const k = split2(key);
     if (!k) continue;
     if (get(k[0], k[1]) === void 0) {
       rejected.push({ key, message: "does not exist" });
@@ -23757,6 +24130,9 @@ function applyPatch(doc, patch, opts = {}) {
     });
   }
   if (rejected.length) return { ok: false, rejected, changed };
+  if (opts.dryRun) {
+    return { ok: true, rejected, changed: { set: Object.keys(patch.set ?? {}), updated: Object.keys(patch.update ?? {}), removed: [...patch.remove ?? []] } };
+  }
   if (!plan.length) return { ok: true, rejected, changed };
   const n = plan.length;
   doc.transact(opts.label ?? `Apply ${n} change${n === 1 ? "" : "s"}`, () => {
@@ -23918,7 +24294,7 @@ function shareSelection(selection, store, view, scene) {
     offSel();
     store.setPresence({ selection: [] });
   };
-  const show2 = () => {
+  const show3 = () => {
     const entries = store.others.map((p) => {
       const keys = Array.isArray(p.state.selection) ? p.state.selection : [];
       const want = new Set(keys);
@@ -23933,11 +24309,11 @@ function shareSelection(selection, store, view, scene) {
     queued = true;
     queueMicrotask(() => {
       queued = false;
-      show2();
+      show3();
     });
   });
-  const offPresence = store.onPresence(show2);
-  show2();
+  const offPresence = store.onPresence(show3);
+  show3();
   return () => {
     offSel();
     offPresence();
@@ -23945,6 +24321,956 @@ function shareSelection(selection, store, view, scene) {
     view.setPresenceHighlight([]);
     store.setPresence({ selection: [] });
   };
+}
+
+// src/collab/proposals.ts
+var PROPOSALS = "proposals";
+var same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+var split = (key) => {
+  const i = key.indexOf("/");
+  return [key.slice(0, i), key.slice(i + 1)];
+};
+var touched = (patch) => [.../* @__PURE__ */ new Set([...Object.keys(patch.set ?? {}), ...Object.keys(patch.update ?? {}), ...patch.remove ?? []])];
+var recordOf = (doc, key) => {
+  const [c, id] = split(key);
+  return doc.get(c, id) ?? null;
+};
+function patchedCollections(collections, patch) {
+  const out = {};
+  for (const [c, rows] of Object.entries(collections)) out[c] = { ...rows };
+  for (const [key, value] of Object.entries(patch.set ?? {})) {
+    const [c, id] = split(key);
+    (out[c] ?? (out[c] = {}))[id] = value;
+  }
+  for (const [key, change] of Object.entries(patch.update ?? {})) {
+    const [c, id] = split(key);
+    if (out[c]?.[id]) out[c][id] = { ...out[c][id], ...change };
+  }
+  for (const key of patch.remove ?? []) {
+    const [c, id] = split(key);
+    if (out[c]) delete out[c][id];
+  }
+  return out;
+}
+function patchChanges(patch, base) {
+  const out = [];
+  const diff = (key, before, after) => {
+    const fields = [.../* @__PURE__ */ new Set([...Object.keys(before), ...Object.keys(after)])].filter((name) => !same(before[name], after[name])).map((name) => ({ name, from: before[name], to: after[name] }));
+    return { key, kind: "change", fields };
+  };
+  for (const [key, value] of Object.entries(patch.set ?? {})) {
+    const before = base[key];
+    out.push(before ? diff(key, before, value) : { key, kind: "add" });
+  }
+  for (const [key, change] of Object.entries(patch.update ?? {})) {
+    const before = base[key] ?? {};
+    out.push(diff(key, before, { ...before, ...change }));
+  }
+  for (const key of patch.remove ?? []) out.push({ key, kind: "remove" });
+  return out;
+}
+function propose(doc, patch, opts) {
+  const check = applyPatch(doc, patch, { schema: opts.schema, dryRun: true });
+  const keys = touched(patch);
+  if (check.ok && !keys.length) check.rejected.push({ key: "", message: "the patch changes nothing" });
+  if (!check.ok || check.rejected.length) return { ok: false, rejected: check.rejected };
+  const base = {};
+  for (const key of keys) base[key] = recordOf(doc, key);
+  const record = { label: opts.label, by: opts.by, at: Date.now(), ...opts.note ? { note: opts.note } : {}, patch, status: "open", base };
+  const id = doc.add(PROPOSALS, record, { label: `Propose: ${opts.label}`, undoable: false });
+  return { ok: true, id, rejected: [] };
+}
+function listProposals(doc, status = "open") {
+  const rows = doc.toJSON().collections[PROPOSALS] ?? {};
+  return Object.entries(rows).filter(([, p]) => p && (status === "all" || p.status === "open")).sort((a, b) => a[1].at - b[1].at).map(([id, p]) => ({
+    ...p,
+    id,
+    changes: patchChanges(p.patch, p.base ?? {}),
+    stale: p.status === "open" ? touched(p.patch).filter((key) => !same(recordOf(doc, key), p.base?.[key] ?? null)) : []
+  }));
+}
+function acceptProposal(doc, id, opts = {}) {
+  const p = doc.get(PROPOSALS, id);
+  const none = { set: [], updated: [], removed: [] };
+  if (!p) return { ok: false, rejected: [{ key: `${PROPOSALS}/${id}`, message: "no such proposal" }], changed: none };
+  if (p.status !== "open") return { ok: false, rejected: [{ key: `${PROPOSALS}/${id}`, message: `already ${p.status}` }], changed: none };
+  const check = applyPatch(doc, p.patch, { schema: opts.schema, dryRun: true });
+  if (!check.ok) return check;
+  let result = check;
+  doc.transact(`Accept: ${p.label}`, () => {
+    result = applyPatch(doc, p.patch, { schema: opts.schema });
+    doc.update(PROPOSALS, id, { status: "accepted", decidedAt: Date.now(), ...opts.by ? { decidedBy: opts.by } : {} });
+  });
+  return { ...result, undo: doc.undoLabel() };
+}
+function rejectProposal(doc, id, opts = {}) {
+  const p = doc.get(PROPOSALS, id);
+  if (!p || p.status !== "open") return false;
+  doc.update(PROPOSALS, id, { status: "rejected", decidedAt: Date.now(), ...opts.by ? { decidedBy: opts.by } : {}, ...opts.reason ? { reason: opts.reason } : {} }, { label: `Reject: ${p.label}` });
+  return true;
+}
+
+// src/bim/buildingSession.ts
+var round = (v, digits = 2) => Math.round(v * 10 ** digits) / 10 ** digits;
+var BuildingSession = class {
+  /**
+   * `source` is a document (a `Doc`: with a shared adapter the session works on the live
+   * model, and its edits reach everyone who has it open), a saved document (`doc.toJSON()`,
+   * what the House app's Save writes), plain building records (`{ storeys, walls, … }`), or
+   * nothing for an empty building.
+   */
+  constructor(source, opts = {}) {
+    this.built = null;
+    this.types = opts.types ?? defaultBuildingTypes();
+    if (source instanceof Doc) {
+      this.doc = source;
+      this.doc.onChange(() => {
+        this.built = null;
+      });
+      return;
+    }
+    const saved = source && source.format !== void 0 ? source : null;
+    if (saved && saved.format !== "tekto-doc/1") throw new Error(`BuildingSession: not a tekto document (format ${String(saved.format)})`);
+    this.doc = new Doc({ name: saved?.name ?? opts.name ?? "building" });
+    const collections = saved ? saved.collections : source ?? {};
+    this.doc.load({ format: "tekto-doc/1", name: this.doc.name, collections: collections ?? {} });
+    this.doc.onChange(() => {
+      this.built = null;
+    });
+  }
+  /** The building's records alone (a document may hold more, e.g. notes). */
+  data() {
+    const all = this.doc.toJSON().collections;
+    const out = {};
+    for (const c of BUILDING_COLLECTIONS) if (all[c]) out[c] = all[c];
+    return out;
+  }
+  /** The building as built from the records now (built once per change). */
+  get building() {
+    return this.built ?? (this.built = realizeBuilding(this.data(), this.types));
+  }
+  /** Each collection's JSON Schema: what `apply` checks a record against. */
+  schema() {
+    return buildingSchema(this.types);
+  }
+  /** What the document is: its name, how many records each collection holds, their schema, and the building in numbers. */
+  info() {
+    const all = this.doc.toJSON().collections;
+    const collections = {};
+    for (const c of BUILDING_COLLECTIONS) collections[c] = Object.keys(all[c] ?? {}).length;
+    for (const [c, rows] of Object.entries(all)) collections[c] ?? (collections[c] = Object.keys(rows).length);
+    return { name: this.doc.name, collections, schema: this.schema(), summary: this.summary() };
+  }
+  /** Collection → id → record; one collection, or all. */
+  records(collection) {
+    const all = this.doc.toJSON().collections;
+    return collection ? { [collection]: all[collection] ?? {} } : all;
+  }
+  /**
+   * Apply a patch (`{ set, update, remove }` by `"collection/id"`) as one undo step. A record
+   * that breaks the schema rejects the whole patch (`ok: false`, `rejected` says why); else
+   * `issues` is what the check says about the building as it is now.
+   */
+  apply(patch, label) {
+    const result = applyPatch(this.doc, patch, { schema: this.schema(), label: label ?? "Agent edit" });
+    return { ...result, issues: this.check() };
+  }
+  /** What is wrong with the building now: `building.check()`, errors and warnings by record. */
+  check() {
+    return this.building.check();
+  }
+  undo() {
+    return this.doc.undo();
+  }
+  redo() {
+    return this.doc.redo();
+  }
+  // ── Proposals: changes that wait for a person ──
+  /** The building as a patch would leave it. Nothing is changed. */
+  preview(patch) {
+    const all = patchedCollections(this.doc.toJSON().collections, patch);
+    const data = {};
+    for (const c of BUILDING_COLLECTIONS) if (all[c]) data[c] = all[c];
+    return realizeBuilding(data, this.types);
+  }
+  /**
+   * Propose a patch instead of applying it: stored in the document as an open proposal for a
+   * person to accept or reject (`proposals.ts`). The answer says what the check would say
+   * with it applied: `issues`, and of those the ones it would newly cause (`added`) and the
+   * current ones it would settle (`resolved`).
+   */
+  propose(patch, label, opts = {}) {
+    const r = propose(this.doc, patch, { label, by: opts.by ?? "Agent", note: opts.note, schema: this.schema() });
+    if (!r.ok) return { ...r, issues: [], added: [], resolved: [] };
+    const now3 = this.check(), then = this.preview(patch).check();
+    const sig = (i) => `${i.code}|${i.keys.join(",")}|${i.message}`;
+    const before = new Set(now3.map(sig)), after = new Set(then.map(sig));
+    return { ...r, issues: then, added: then.filter((i) => !before.has(sig(i))), resolved: now3.filter((i) => !after.has(sig(i))) };
+  }
+  /** The proposals in the document: the open ones, or all with what became of them. */
+  proposals(status = "open") {
+    return listProposals(this.doc, status);
+  }
+  /** Accept an open proposal: its patch as one undo step, then the check's issues. For the person who reviews, not for the agent that proposed. */
+  accept(id, by) {
+    const r = acceptProposal(this.doc, id, { schema: this.schema(), by });
+    return { ...r, issues: this.check() };
+  }
+  /** Reject an open proposal, with the reason for whoever proposed it. */
+  reject(id, opts = {}) {
+    return rejectProposal(this.doc, id, opts);
+  }
+  /** The building in numbers: per storey its parts, its rooms with their areas, its extent. */
+  summary() {
+    const b = this.building;
+    const data = b.data;
+    const issues = this.check();
+    const storeys = b.storeys.map((s) => {
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (const w of s.walls.values()) for (const p of w.ribbon.centerline) {
+        x0 = Math.min(x0, p.x);
+        y0 = Math.min(y0, p.y);
+        x1 = Math.max(x1, p.x);
+        y1 = Math.max(y1, p.y);
+      }
+      const rooms = [...s.spaces].map(([id, sp]) => {
+        const use = data.spaces?.[id]?.use;
+        return { key: `spaces/${id}`, name: sp.name, ...use ? { use } : {}, area: round(sp.area()) };
+      });
+      return {
+        id: s.id,
+        name: s.record.name,
+        elevation: s.record.elevation,
+        height: s.record.height,
+        walls: s.walls.size,
+        openings: s.openings.size,
+        slabs: s.slabs.size,
+        stairs: s.stairs.size,
+        roofs: s.roofs.size,
+        rooms,
+        area: round(rooms.reduce((sum, r) => sum + r.area, 0)),
+        bounds: x0 === Infinity ? null : { min: [round(x0), round(y0)], max: [round(x1), round(y1)] }
+      };
+    });
+    return {
+      storeys,
+      area: round(storeys.reduce((sum, s) => sum + s.area, 0)),
+      issues: { errors: issues.filter((i) => i.severity === "error").length, warnings: issues.filter((i) => i.severity === "warning").length }
+    };
+  }
+  /** The floor plans as a drawing (`buildingPlan`): `toSVG()`, `toDXF()`, `toPNG()`. */
+  plan(opts = {}) {
+    return buildingPlan(this.building, opts);
+  }
+  /**
+   * Look at the building: a floor plan per storey as a PNG image (one storey with `storey`),
+   * each part named by its record, with the summary and the check's issues. A check that
+   * passes is not the same as a plan that looks right. With `proposal` (an id) the plans and
+   * the issues are of the building as that proposal would leave it, its changes in red.
+   */
+  async snapshot(opts = {}) {
+    const { storey, proposal, ...raster } = opts;
+    if (proposal !== void 0) {
+      const p = this.doc.get(PROPOSALS, proposal);
+      if (!p) throw new Error(`no proposal "${proposal}" (open: ${this.proposals().map((x) => x.id).join(", ") || "none"})`);
+      const b2 = this.preview(p.patch);
+      const highlight = [...Object.keys(p.patch.set ?? {}), ...Object.keys(p.patch.update ?? {})];
+      const wanted2 = storey === void 0 ? b2.storeys : b2.storeys.filter((s) => s.id === storey);
+      const plans2 = [];
+      for (const s of wanted2) plans2.push({ storey: s.id, name: s.record.name, png: await buildingPlan(b2, { storey: s.id, highlight }).toPNG({ width: 1400, ...raster }) });
+      return { plans: plans2, summary: this.summary(), issues: b2.check() };
+    }
+    const b = this.building;
+    const wanted = storey === void 0 ? b.storeys : b.storeys.filter((s) => s.id === storey);
+    if (storey !== void 0 && !wanted.length) throw new Error(`no storey "${storey}" (storeys: ${b.storeys.map((s) => s.id).join(", ") || "none"})`);
+    const plans = [];
+    for (const s of wanted) plans.push({ storey: s.id, name: s.record.name, png: await buildingPlan(b, { storey: s.id }).toPNG({ width: 1400, ...raster }) });
+    return { plans, summary: this.summary(), issues: this.check() };
+  }
+  /** The document as the House app saves and opens it. */
+  toJSON() {
+    return this.doc.toJSON();
+  }
+  /** The building as an IFC file (`building.toIfc`). */
+  toIfc(opts = {}) {
+    return this.building.toIfc({ projectName: this.doc.name, ...opts });
+  }
+};
+
+// src/scene/Scene.ts
+var DEFAULT_STYLE2 = {
+  color: "#6ee7b7",
+  opacity: 1,
+  wireframe: false,
+  lineWidth: 2,
+  pointSize: 0.1,
+  doubleSided: true,
+  visible: true
+};
+var Scene = class _Scene {
+  constructor() {
+    this.objects = /* @__PURE__ */ new Map();
+    /** Per-scene, reset by clear(): see genId. */
+    this.idCounter = 0;
+    this.listeners = /* @__PURE__ */ new Set();
+    this.selectedIds = /* @__PURE__ */ new Set();
+    this.hoveredId = null;
+    this.suspendDepth = 0;
+    this.renderMode = "solid";
+    this.lightingMode = "flat";
+    this.environmentEnabled = false;
+  }
+  setRenderMode(mode) {
+    if (this.renderMode === mode) return;
+    this.renderMode = mode;
+    this.emit({ type: "scene:renderMode", mode });
+  }
+  setLightingMode(mode) {
+    if (this.lightingMode === mode) return;
+    this.lightingMode = mode;
+    this.emit({ type: "scene:lightingMode", mode });
+  }
+  setEnvironment(enabled) {
+    if (this.environmentEnabled === enabled) return;
+    this.environmentEnabled = enabled;
+    this.emit({ type: "scene:environment", enabled });
+  }
+  // ── Subscription ──
+  on(listener) {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+  emit(event) {
+    if (this.suspendDepth > 0) return;
+    for (const l of this.listeners) l(event);
+  }
+  /**
+   * Run a block of mutations without emitting events.
+   * Use this from sync/CRDT consumers to apply remote mutations
+   * without echoing them back into the broadcast layer.
+   * Nested calls are allowed; events resume when the outermost block ends.
+   */
+  withSuspendedEvents(fn) {
+    this.suspendDepth++;
+    try {
+      return fn();
+    } finally {
+      this.suspendDepth--;
+    }
+  }
+  // ── Object Management ──
+  add(obj) {
+    if (this.currentKey !== void 0 && obj.key === void 0) obj.key = this.currentKey;
+    this.objects.set(obj.id, obj);
+    this.emit({ type: "object:add", id: obj.id });
+    return obj;
+  }
+  /**
+   * Run `fn`; every object it adds carries `key` (the record it shows) from creation, so
+   * listeners — renderer, Markup, snapshots — see it with the add. Nested calls use the
+   * innermost key. `bindScene` does this for each record.
+   */
+  withKey(key, fn) {
+    const outer = this.currentKey;
+    this.currentKey = key;
+    try {
+      return fn();
+    } finally {
+      this.currentKey = outer;
+    }
+  }
+  /** The objects showing one record (see `withKey`). */
+  byKey(key) {
+    const out = [];
+    for (const o of this.objects.values()) if (o.key === key) out.push(o);
+    return out;
+  }
+  get(id) {
+    return this.objects.get(id);
+  }
+  has(id) {
+    return this.objects.has(id);
+  }
+  all() {
+    return [...this.objects.values()];
+  }
+  count() {
+    return this.objects.size;
+  }
+  update(id, changes) {
+    const obj = this.objects.get(id);
+    if (!obj) return;
+    Object.assign(obj, changes);
+    this.emit({ type: "object:update", id, changes });
+  }
+  setStyle(id, style) {
+    const obj = this.objects.get(id);
+    if (!obj) return;
+    Object.assign(obj.style, style);
+    this.emit({ type: "object:style", id, style });
+  }
+  remove(id) {
+    this.objects.delete(id);
+    this.selectedIds.delete(id);
+    this.emit({ type: "object:remove", id });
+  }
+  clear() {
+    this.objects.clear();
+    this.selectedIds.clear();
+    this.hoveredId = null;
+    this.idCounter = 0;
+    this.emit({ type: "scene:clear" });
+  }
+  /**
+   * Ids are per-scene and restart at clear(), so a sketch that declares the
+   * same objects in the same order gets the SAME ids on every run. That is what
+   * lets a selection (highlight + transform gizmo) survive a re-run.
+   *
+   * The stability is POSITIONAL: ids follow declaration order, so a run that
+   * adds, removes or reorders an object shifts every id after it — a selection
+   * can then land on the neighbour. Sketches that need a selection to hold
+   * across such a change should declare their objects unconditionally (and
+   * vary style instead), or track their own keys.
+   *
+   * Ids stay unique within a scene; they are NOT unique across scenes or across
+   * clears, so don't store them outside the scene's lifetime.
+   */
+  genId(prefix) {
+    return `${prefix}_${++this.idCounter}`;
+  }
+  // ── Builder Methods ──
+  addPoint(position, style, data) {
+    return this.add({
+      id: this.genId("pt"),
+      type: "point",
+      position,
+      style: { ...DEFAULT_STYLE2, color: "#ff6b6b", pointSize: 0.1, ...style },
+      interactive: true,
+      data: data ?? {}
+    });
+  }
+  addPoints(positions, style) {
+    return positions.map((p) => this.addPoint(p, style));
+  }
+  addSegment(start, end, style) {
+    return this.add({
+      id: this.genId("seg"),
+      type: "segment",
+      start,
+      end,
+      style: { ...DEFAULT_STYLE2, color: "#4dabf7", ...style },
+      interactive: true,
+      data: {}
+    });
+  }
+  addPolygon(vertices, style) {
+    return this.add({
+      id: this.genId("poly"),
+      type: "polygon",
+      vertices,
+      style: { ...DEFAULT_STYLE2, color: "#51cf66", opacity: 0.6, ...style },
+      interactive: true,
+      data: {}
+    });
+  }
+  /** Batched polyline — renders as a single buffered Three.js Line, not one
+   *  object per segment. Use for streamlines, hatches, sketched curves, etc.
+   *  where N can be in the thousands. */
+  addPolyline(vertices, style) {
+    return this.add({
+      id: this.genId("pline"),
+      type: "polyline",
+      vertices,
+      style: { ...DEFAULT_STYLE2, color: "#4dabf7", ...style },
+      interactive: false,
+      data: {}
+    });
+  }
+  addMesh(mesh, style) {
+    return this.add({
+      id: this.genId("mesh"),
+      type: "mesh",
+      mesh,
+      style: { ...DEFAULT_STYLE2, color: "#845ef7", ...style },
+      interactive: true,
+      data: {}
+    });
+  }
+  addFlatMesh(data, style) {
+    return this.add({
+      id: this.genId("mesh"),
+      type: "mesh",
+      flatMeshData: data,
+      style: { ...DEFAULT_STYLE2, color: "#845ef7", ...style },
+      interactive: true,
+      data: {}
+    });
+  }
+  addCircle(center, radius, style) {
+    return this.add({
+      id: this.genId("cir"),
+      type: "circle",
+      center,
+      radius,
+      style: { ...DEFAULT_STYLE2, color: "#ffd43b", ...style },
+      interactive: true,
+      data: {}
+    });
+  }
+  /**
+   * A light in the model, at `position`: a point light, or a spot aimed at `spec.target`.
+   * Like any object it is keyed, re-made by a sketch re-run and hidden by `style.visible`;
+   * the renderer lights the scene with it in both lighting modes, without shadows (a point
+   * light's shadow is six renders, per light). Its colour is `style.color` (default white).
+   *
+   *   scene.addLight(new Vec3(2, 3, 2.4), { intensity: 6 });
+   *   scene.addLight(new Vec3(0, 0, 3), { kind: "spot", target: new Vec3(0, 2, 0), angle: 25 }, { color: "#ffd2a0" });
+   */
+  addLight(position, spec = {}, style) {
+    const kind2 = spec.kind ?? "point";
+    const fail2 = (why) => {
+      throw new Error(`addLight: ${why}`);
+    };
+    if (![position.x, position.y, position.z].every(Number.isFinite)) fail2(`a non-finite position (${position.x}, ${position.y}, ${position.z})`);
+    const intensity = spec.intensity ?? 4, range = spec.range ?? 8, angle = spec.angle ?? 30;
+    if (!(intensity >= 0)) fail2(`intensity must be 0 or more, got ${spec.intensity}`);
+    if (!(range >= 0)) fail2(`range must be 0 or more (0: without limit), got ${spec.range}`);
+    if (kind2 === "spot" && !spec.target) fail2(`a spot needs a target to aim at`);
+    if (kind2 === "spot" && !(angle > 0 && angle < 90)) fail2(`a spot's angle is a half angle between 0 and 90 degrees, got ${spec.angle}`);
+    return this.add({
+      id: this.genId("light"),
+      type: "light",
+      position,
+      light: { kind: kind2, intensity, range, angle, ...spec.target ? { target: spec.target } : {} },
+      style: { ...DEFAULT_STYLE2, color: "#ffffff", ...style },
+      interactive: false,
+      data: {}
+    });
+  }
+  addPlane(normal, distance, style) {
+    return this.add({
+      id: this.genId("plane"),
+      type: "plane",
+      normal,
+      distance,
+      style: { ...DEFAULT_STYLE2, color: "#aaaaaa", opacity: 0.3, ...style },
+      interactive: false,
+      data: {}
+    });
+  }
+  // ── Selection ──
+  select(id) {
+    this.selectedIds.add(id);
+    this.emit({ type: "selection:change", ids: this.getSelection() });
+  }
+  deselect(id) {
+    this.selectedIds.delete(id);
+    this.emit({ type: "selection:change", ids: this.getSelection() });
+  }
+  toggleSelect(id) {
+    if (this.selectedIds.has(id)) this.deselect(id);
+    else this.select(id);
+  }
+  clearSelection() {
+    this.selectedIds.clear();
+    this.emit({ type: "selection:change", ids: [] });
+  }
+  getSelection() {
+    return [...this.selectedIds];
+  }
+  isSelected(id) {
+    return this.selectedIds.has(id);
+  }
+  // ── Hover ──
+  setHover(id) {
+    if (this.hoveredId === id) return;
+    this.hoveredId = id;
+    this.emit({ type: "hover:change", id });
+  }
+  getHover() {
+    return this.hoveredId;
+  }
+  // ── Queries ──
+  byType(type) {
+    return this.all().filter((o) => o.type === type);
+  }
+  // ── Export ──
+  /**
+   * The visible mesh geometry (meshes, flat meshes, segments with a `tubeRadius`; not
+   * `noExport`) merged into one `ObjMeshData` for `ObjFile.serialize`. Without options the
+   * faces come in object order, ungrouped.
+   *
+   * `groupBy` keeps the objects apart in the OBJ as `g` groups, for Rhino or Cinema 4D:
+   * - `"object"`: one group per object, named by its `key` (the record it shows; objects of
+   *   one record share the name) or else its id (`"mesh_3"`);
+   * - `"layer"`: one group per `style.layer` (`"default"` without one), each layer's faces one
+   *   contiguous block, layers in the order they first appear.
+   *
+   * Each group's `material` is named by its colour, `c_rrggbb` (`_a45` appended below full
+   * opacity), and `materials` lists them for `ObjFile.serializeMtl`. A layer whose objects
+   * differ in colour is split into consecutive runs of the same name, one per material — what
+   * `usemtl` does within an OBJ group.
+   *
+   *   const data = scene.toMeshData({ groupBy: "layer" });
+   *   download(ObjFile.serializeMtl(data.materials!), "model.mtl");
+   *   download(ObjFile.serialize(data, { mtllib: "model.mtl" }), "model.obj");
+   */
+  toMeshData(options = {}) {
+    const positions = [];
+    const normals = [];
+    const parts = [];
+    for (const obj of this.objects.values()) {
+      if (!obj.style.visible) continue;
+      if (obj.style.noExport) continue;
+      const faces2 = [];
+      if (obj.mesh) {
+        const nodeMap = /* @__PURE__ */ new Map();
+        const offset = positions.length;
+        for (const node of obj.mesh.nodesArray()) {
+          nodeMap.set(node.id, offset + nodeMap.size);
+          positions.push(node.position);
+          normals.push(node.normal ?? Vec3.unitY());
+        }
+        for (const face of obj.mesh.facesArray()) {
+          faces2.push(face.nodes.map((n) => nodeMap.get(n)));
+        }
+      } else if (obj.flatMeshData) {
+        const fd = obj.flatMeshData;
+        const offset = positions.length;
+        const vertCount = fd.positions.length / 3;
+        for (let i = 0; i < vertCount; i++) {
+          positions.push(new Vec3(fd.positions[i * 3], fd.positions[i * 3 + 1], fd.positions[i * 3 + 2]));
+          normals.push(new Vec3(fd.normals[i * 3], fd.normals[i * 3 + 1], fd.normals[i * 3 + 2]));
+        }
+        for (let i = 0; i < fd.indices.length; i += 3) {
+          faces2.push([fd.indices[i] + offset, fd.indices[i + 1] + offset, fd.indices[i + 2] + offset]);
+        }
+      } else if (obj.type === "segment" && obj.start && obj.end && obj.style.tubeRadius) {
+        _Scene._addTubeMesh(positions, normals, faces2, obj.start, obj.end, obj.style.tubeRadius, 6);
+      }
+      if (faces2.length > 0) parts.push({ obj, faces: faces2 });
+    }
+    const { groupBy } = options;
+    if (!groupBy) return { positions, normals, uvs: [], faces: parts.flatMap((p) => p.faces) };
+    let runs = parts.map(({ obj, faces: faces2 }) => ({
+      name: groupBy === "layer" ? obj.style.layer || "default" : obj.key ?? obj.id,
+      material: colorMaterial(obj.style.color, obj.style.opacity),
+      faces: faces2
+    }));
+    if (groupBy === "layer") {
+      const layers = /* @__PURE__ */ new Map();
+      for (const run of runs) {
+        const layer = layers.get(run.name) ?? /* @__PURE__ */ new Map();
+        layers.set(run.name, layer);
+        const same3 = layer.get(run.material.name);
+        if (same3) for (const face of run.faces) same3.faces.push(face);
+        else layer.set(run.material.name, { ...run, faces: [...run.faces] });
+      }
+      runs = [...layers.values()].flatMap((layer) => [...layer.values()]);
+    }
+    const faces = [];
+    const groups = [];
+    const materials = /* @__PURE__ */ new Map();
+    for (const run of runs) {
+      groups.push({ name: run.name, faceStart: faces.length, faceCount: run.faces.length, material: run.material.name });
+      for (const face of run.faces) faces.push(face);
+      if (!materials.has(run.material.name)) materials.set(run.material.name, run.material);
+    }
+    return { positions, normals, uvs: [], faces, groups, materials: [...materials.values()] };
+  }
+  /** Generate a cylinder tube mesh between two points. */
+  static _addTubeMesh(positions, normals, faces, a, b, radius, segs) {
+    const dir = b.sub(a);
+    const len = dir.len();
+    if (len < 1e-8) return;
+    const axZ = dir.mul(1 / len);
+    const tmp = Math.abs(axZ.x) < 0.9 ? new Vec3(1, 0, 0) : new Vec3(0, 1, 0);
+    const axX = axZ.cross(tmp).normalize();
+    const axY = axZ.cross(axX);
+    const offset = positions.length;
+    for (let ring2 = 0; ring2 < 2; ring2++) {
+      const center = ring2 === 0 ? a : b;
+      for (let i = 0; i < segs; i++) {
+        const angle = i / segs * Math.PI * 2;
+        const cos = Math.cos(angle), sin = Math.sin(angle);
+        const nx = axX.x * cos + axY.x * sin;
+        const ny = axX.y * cos + axY.y * sin;
+        const nz = axX.z * cos + axY.z * sin;
+        positions.push(new Vec3(center.x + nx * radius, center.y + ny * radius, center.z + nz * radius));
+        normals.push(new Vec3(nx, ny, nz));
+      }
+    }
+    for (let i = 0; i < segs; i++) {
+      const i0 = offset + i;
+      const i1 = offset + (i + 1) % segs;
+      const i2 = offset + segs + (i + 1) % segs;
+      const i3 = offset + segs + i;
+      faces.push([i0, i1, i2, i3]);
+    }
+  }
+  // ── Serialization ──
+  toJSON() {
+    return {
+      objects: this.all().map((obj) => ({
+        ...obj,
+        position: obj.position?.toJSON(),
+        start: obj.start?.toJSON(),
+        end: obj.end?.toJSON(),
+        vertices: obj.vertices?.map((v) => v.toJSON()),
+        center: obj.center?.toJSON(),
+        normal: obj.normal?.toJSON(),
+        mesh: obj.mesh?.toJSON()
+      }))
+    };
+  }
+  static fromJSON(json) {
+    const scene = new _Scene();
+    for (const obj of json.objects) {
+      const sceneObj = {
+        ...obj,
+        position: obj.position ? Vec3.fromJSON(obj.position) : void 0,
+        start: obj.start ? Vec3.fromJSON(obj.start) : void 0,
+        end: obj.end ? Vec3.fromJSON(obj.end) : void 0,
+        vertices: obj.vertices?.map((v) => Vec3.fromJSON(v)),
+        center: obj.center ? Vec3.fromJSON(obj.center) : void 0,
+        normal: obj.normal ? Vec3.fromJSON(obj.normal) : void 0,
+        mesh: obj.mesh ? Mesh.fromJSON(obj.mesh) : void 0
+      };
+      scene.objects.set(sceneObj.id, sceneObj);
+      const match = sceneObj.id.match(/_(\d+)$/);
+      if (match) {
+        const num2 = parseInt(match[1]);
+        if (num2 > scene.idCounter) scene.idCounter = num2;
+      }
+    }
+    return scene;
+  }
+};
+
+// src/gui/Params.ts
+var ParamStore = class {
+  constructor(schema) {
+    this.values = {};
+    this.listeners = /* @__PURE__ */ new Set();
+    this.keyListeners = /* @__PURE__ */ new Map();
+    this.schema = schema;
+    for (const [key, def] of Object.entries(schema)) {
+      if (def.type !== "button") {
+        this.values[key] = def.default;
+      }
+    }
+  }
+  get(key) {
+    return this.values[key];
+  }
+  set(key, value) {
+    const def = this.schema[key];
+    if (!def || def.type === "button") return;
+    if (def.type === "float" || def.type === "int") {
+      value = Math.max(def.min, Math.min(def.max, value));
+      if (def.type === "int") value = Math.round(value);
+    }
+    if (def.type === "vec3" && Array.isArray(value)) {
+      const lo = def.min, hi = def.max;
+      value = value.map((v, i) => Math.max(lo?.[i] ?? -Infinity, Math.min(hi?.[i] ?? Infinity, v)));
+    }
+    if (def.type === "select" && !def.options.includes(value)) return;
+    this.values[key] = value;
+    for (const l of this.listeners) l(key, value, this.values);
+    const kl = this.keyListeners.get(key);
+    if (kl) for (const l of kl) l(value);
+  }
+  /**
+   * Dynamically add (or refresh) a parameter definition. Used by the sketch
+   * APIs, whose immediate-mode `lab.slider(...)` calls declare params during
+   * the sketch run. Initializes the value from `default` the first time;
+   * an existing value is preserved so re-defining across re-runs is cheap.
+   * Does NOT notify listeners (definition is structure, not a value change).
+   */
+  define(key, def) {
+    const existed = key in this.schema;
+    this.schema[key] = def;
+    if (!existed && def.type !== "button") {
+      this.values[key] = def.default;
+    }
+  }
+  /** Remove a parameter (and its value). Does not notify listeners. */
+  remove(key) {
+    delete this.schema[key];
+    delete this.values[key];
+    this.keyListeners.delete(key);
+  }
+  has(key) {
+    return key in this.schema;
+  }
+  keys() {
+    return Object.keys(this.schema);
+  }
+  /** Get all current values */
+  getAll() {
+    return { ...this.values };
+  }
+  /** Get the schema for a specific key */
+  getDef(key) {
+    return this.schema[key];
+  }
+  /** Get entire schema */
+  getSchema() {
+    return this.schema;
+  }
+  /** Listen to all changes */
+  onChange(listener) {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+  /** Listen to a specific key */
+  onKey(key, listener) {
+    if (!this.keyListeners.has(key)) this.keyListeners.set(key, /* @__PURE__ */ new Set());
+    this.keyListeners.get(key).add(listener);
+    return () => this.keyListeners.get(key)?.delete(listener);
+  }
+  /** Reset all to defaults */
+  reset() {
+    for (const [key, def] of Object.entries(this.schema)) {
+      if (def.type !== "button") {
+        this.set(key, def.default);
+      }
+    }
+  }
+  /** Serialization */
+  toJSON() {
+    return { ...this.values };
+  }
+  loadJSON(json) {
+    for (const [key, value] of Object.entries(json)) {
+      if (key in this.schema) {
+        this.set(key, value);
+      }
+    }
+  }
+  /**
+   * The keys a person or an agent means by `name`, most specific first: the exact key;
+   * else the control's label, ignoring case ("Radius"); else "Group:Label" for sketch
+   * keys, which read `type:group:label`. One key when the name is unambiguous.
+   */
+  findKeys(name) {
+    if (name in this.schema) return [name];
+    const n = name.trim().toLowerCase();
+    const keys = Object.keys(this.schema);
+    const byLabel = keys.filter((k) => (this.schema[k].label ?? k).toLowerCase() === n);
+    if (byLabel.length) return byLabel;
+    return keys.filter((k) => {
+      const parts = k.split(":");
+      return parts.length >= 3 && `${parts[1]}:${parts.slice(2).join(":")}`.toLowerCase() === n;
+    });
+  }
+  /**
+   * Set params by key or label (see `findKeys`) and say what could not be applied,
+   * instead of dropping it the way `loadJSON` does. For tools and agents.
+   */
+  setByName(values) {
+    const applied = [], unknown = [];
+    const ambiguous = [];
+    for (const [name, value] of Object.entries(values)) {
+      const keys = this.findKeys(name);
+      if (keys.length === 0) unknown.push(name);
+      else if (keys.length > 1) ambiguous.push({ name, keys });
+      else {
+        this.set(keys[0], value);
+        applied.push(keys[0]);
+      }
+    }
+    return { applied, unknown, ambiguous };
+  }
+  /** Every param as the name to use with `setByName`: its label, or "Group:Label" when two share a label. */
+  names() {
+    const keys = Object.keys(this.schema);
+    const label = (k) => this.schema[k].label ?? k;
+    return keys.map((k) => {
+      if (keys.filter((o) => label(o).toLowerCase() === label(k).toLowerCase()).length === 1) return label(k);
+      const parts = k.split(":");
+      return parts.length >= 3 && parts[1] ? `${parts[1]}:${parts.slice(2).join(":")}` : k;
+    });
+  }
+};
+function createParams(schema) {
+  return new ParamStore(schema);
+}
+function createLayout(folders) {
+  return { folders };
+}
+
+// src/bim/adjacency.ts
+function boxOf(positions) {
+  if (!positions.length) return null;
+  const min = [Infinity, Infinity, Infinity];
+  const max = [-Infinity, -Infinity, -Infinity];
+  for (let i = 0; i + 2 < positions.length; i += 3) {
+    for (let k = 0; k < 3; k++) {
+      const v = positions[i + k];
+      if (v < min[k]) min[k] = v;
+      if (v > max[k]) max[k] = v;
+    }
+  }
+  return { min, max };
+}
+function share(aMin, aMax, bMin, bMax) {
+  return Math.min(aMax, bMax) - Math.max(aMin, bMin);
+}
+function contactBetween(a, b, opts = {}) {
+  const tol = opts.tolerance ?? 0.05;
+  const up = opts.up ?? 2;
+  const gaps = [0, 1, 2].map((k) => share(a.min[k], a.max[k], b.min[k], b.max[k]));
+  if (gaps.some((g) => g < -tol)) return null;
+  const flat = [0, 1, 2].filter((k) => k !== up);
+  const area = flat.reduce((p, k) => p * Math.max(0, gaps[k]), 1);
+  const footprint = (box) => flat.reduce((p, k) => p * (box.max[k] - box.min[k]), 1);
+  const smaller = Math.min(footprint(a), footprint(b));
+  const overlap = smaller > 0 ? Math.min(1, area / smaller) : 0;
+  const verticalTouch = gaps[up] <= tol;
+  if (verticalTouch) {
+    if (overlap < (opts.minOverlap ?? 0.02)) return null;
+    const aAbove = a.min[up] >= b.max[up] - tol;
+    const bAbove = b.min[up] >= a.max[up] - tol;
+    if (aAbove) return { contact: "supportedBy", overlap };
+    if (bAbove) return { contact: "supports", overlap };
+  }
+  if (flat.some((k) => gaps[k] <= tol)) return { contact: "abuts", overlap };
+  return { contact: "overlaps", overlap };
+}
+function reverse(contact) {
+  return contact === "supports" ? "supportedBy" : contact === "supportedBy" ? "supports" : contact;
+}
+function findAdjacent(elements, opts = {}) {
+  const tol = opts.tolerance ?? 0.05;
+  const up = opts.up ?? 2;
+  const sorted = [...elements].sort((p, q) => p.box.min[up] - q.box.min[up]);
+  const out = [];
+  for (let i = 0; i < sorted.length; i++) {
+    const a = sorted[i];
+    for (let j = i + 1; j < sorted.length; j++) {
+      const b = sorted[j];
+      if (b.box.min[up] > a.box.max[up] + tol) break;
+      const met = contactBetween(a.box, b.box, opts);
+      if (!met) continue;
+      out.push({
+        a: a.id,
+        b: b.id,
+        contact: met.contact,
+        tolerance: tol,
+        overlap: met.overlap
+      });
+    }
+  }
+  return out;
+}
+function neighboursOf(id, all) {
+  const out = [];
+  for (const r of all) {
+    if (r.a === id) out.push({ id: r.b, contact: r.contact, overlap: r.overlap, tolerance: r.tolerance });
+    else if (r.b === id) out.push({ id: r.a, contact: reverse(r.contact), overlap: r.overlap, tolerance: r.tolerance });
+  }
+  return out;
 }
 
 // src/core/steps/StepTrace.ts
@@ -24016,7 +25342,7 @@ var StepTrace = class {
     for (const s of this.steps) if (s.parent) childMs.set(s.parent, (childMs.get(s.parent) ?? 0) + s.ms);
     const own = (s) => Math.max(0, s.ms - (childMs.get(s.id) ?? 0));
     const totalMs = this.steps.filter((s) => !s.parent).reduce((t, s) => t + s.ms, 0);
-    const slowest = [...this.steps].sort((a, b) => own(b) - own(a)).slice(0, 3).map((s) => ({ id: s.id, ms: round(own(s)), share: totalMs > 0 ? round(own(s) / totalMs) : 0 }));
+    const slowest = [...this.steps].sort((a, b) => own(b) - own(a)).slice(0, 3).map((s) => ({ id: s.id, ms: round2(own(s)), share: totalMs > 0 ? round2(own(s) / totalMs) : 0 }));
     const best = /* @__PURE__ */ new Map();
     for (const s of this.steps) {
       let base = { ms: 0 };
@@ -24035,15 +25361,15 @@ var StepTrace = class {
     const drew = (s) => s.objects.length > 0 || this.steps.some((c) => c.parent === s.id && drew(c));
     const unused = this.steps.filter((s) => this.followed.has(s.id) && !s.error && !used.has(s.id) && !drew(s) && byId.get(s.id) !== this.steps[this.steps.length - 1] && !(s.parent && used.has(s.parent))).map((s) => s.id);
     return {
-      totalMs: round(totalMs),
+      totalMs: round2(totalMs),
       slowest,
-      slowestChain: { ids: chain, ms: round(end ? best.get(end).ms : 0) },
+      slowestChain: { ids: chain, ms: round2(end ? best.get(end).ms : 0) },
       unused,
       errors: this.steps.filter((s) => s.error).map((s) => ({ id: s.id, error: s.error }))
     };
   }
   toJSON() {
-    return { steps: this.steps.map((s) => ({ ...s, ms: round(s.ms) })), edges: this.edges(), analysis: this.analyse() };
+    return { steps: this.steps.map((s) => ({ ...s, ms: round2(s.ms) })), edges: this.edges(), analysis: this.analyse() };
   }
   /**
    * Remember an output (and the objects in it, one level down) as this step's. The latest step
@@ -24079,7 +25405,7 @@ var StepTrace = class {
   }
 };
 var now2 = () => typeof performance !== "undefined" ? performance.now() : Date.now();
-var round = (v) => Math.round(v * 100) / 100;
+var round2 = (v) => Math.round(v * 100) / 100;
 var num = (v) => Number.isInteger(v) ? v.toLocaleString("en-US") : String(Math.round(v * 1e3) / 1e3);
 function describeValue(v) {
   if (v === void 0) return "undefined";
@@ -25634,19 +26960,20 @@ function polylinesToSVG(segments, bounds2, options) {
 // src/gui/theme.ts
 var DARK = {
   isDark: true,
-  bg: "#07080e",
-  panelBg: "#0c0d16",
-  popupBg: "#0d0f1e",
-  border: "#16182a",
-  controlBorder: "#1e2140",
-  text: "#b8bdd4",
-  textDim: "#7a80a0",
-  textFaint: "#5a6080",
+  bg: "#0b0b0b",
+  panelBg: "#1e1e1e",
+  popupBg: "#252526",
+  border: "#303030",
+  controlBorder: "#444444",
+  text: "#cccccc",
+  textDim: "#a8a8a8",
+  textFaint: "#808080",
   accent: "#ffffff",
-  hoverBg: "rgba(255,255,255,.06)",
-  fieldBg: "#07080e",
+  hoverBg: "rgba(255,255,255,.08)",
+  fieldBg: "#141414",
   font: "'IBM Plex Mono',ui-monospace,monospace"
 };
+var VIEW_BG_DARK = 723723;
 var LIGHT = {
   isDark: false,
   bg: "#f4f5f8",
@@ -25662,8 +26989,24 @@ var LIGHT = {
   fieldBg: "#f4f5f8",
   font: "'IBM Plex Mono',ui-monospace,monospace"
 };
+var PAPER = {
+  isDark: false,
+  bg: "#ffffff",
+  panelBg: "#ffffff",
+  popupBg: "#ffffff",
+  border: "#d9d9d9",
+  controlBorder: "#c4c4c4",
+  text: "#111111",
+  textDim: "#111111",
+  textFaint: "#111111",
+  accent: "#111111",
+  hoverBg: "rgba(0,0,0,.05)",
+  fieldBg: "#ffffff",
+  font: "'IBM Plex Mono',ui-monospace,monospace",
+  plain: true
+};
 function getTheme(mode = "dark") {
-  return mode === "light" ? LIGHT : DARK;
+  return mode === "paper" ? PAPER : mode === "light" ? LIGHT : DARK;
 }
 
 // src/gui/Commands.ts
@@ -25718,7 +27061,13 @@ function viewCommands(view) {
       label: "Perspective / orthographic",
       group: "View",
       run: () => view.setProjection(view.projection === "perspective" ? "orthographic" : "perspective")
-    }
+    },
+    ...view.setHiddenLineInverse ? [{
+      id: "view.hiddenLineInverse",
+      label: "Hidden line: paper / inverse",
+      group: "View",
+      run: () => view.setHiddenLineInverse(!view.hiddenLineInverse)
+    }] : []
   ];
 }
 var Commands = class {
@@ -25806,6 +27155,237 @@ var Commands = class {
   }
 };
 
+// src/gui/MenuBar.ts
+var STANDARD = ["File", "Edit", "View"];
+function menuOf(c) {
+  if (c.group) return c.group;
+  const head = c.id.includes(".") ? c.id.slice(0, c.id.indexOf(".")) : "tools";
+  return head.charAt(0).toUpperCase() + head.slice(1);
+}
+var familyOf = (id) => id.split(".").length > 2 ? id.slice(0, id.lastIndexOf(".")) : "";
+function menuBar(commands, opts = {}) {
+  const t = opts.theme ?? getTheme();
+  const el = document.createElement("nav");
+  el.dataset.tektoMenubar = "";
+  el.setAttribute("aria-label", "Menus");
+  el.style.cssText = `display:flex;align-items:center;gap:2px;font:12px ${t.font};user-select:none;`;
+  let open = null;
+  let signature = "";
+  const close = () => {
+    if (!open) return;
+    open.list.remove();
+    open.btn.style.background = "transparent";
+    open.btn.style.color = t.textDim;
+    open.btn.setAttribute("aria-expanded", "false");
+    open = null;
+  };
+  const show3 = (name, btn) => {
+    close();
+    const list = document.createElement("div");
+    list.setAttribute("role", "menu");
+    list.dataset.tektoMenu = name;
+    list.style.cssText = `position:fixed;z-index:100000;min-width:200px;max-height:70vh;overflow-y:auto;padding:4px;
+      background:${t.popupBg};border:1px solid ${t.controlBorder};border-radius:6px;
+      box-shadow:0 6px 22px rgba(0,0,0,${t.isDark ? ".45" : ".16"});font:12px ${t.font};color:${t.text};`;
+    let family = null;
+    for (const c of commands.list()) {
+      if (menuOf(c) !== name) continue;
+      const fam = familyOf(c.id);
+      if (family !== null && fam !== family) {
+        const rule = document.createElement("div");
+        rule.style.cssText = `height:1px;margin:4px 2px;background:${t.border};`;
+        list.appendChild(rule);
+      }
+      family = fam;
+      const item = document.createElement("button");
+      item.type = "button";
+      item.setAttribute("role", "menuitem");
+      item.dataset.command = c.id;
+      item.setAttribute("aria-label", c.label);
+      item.disabled = !c.enabled;
+      item.style.cssText = `display:flex;width:100%;align-items:center;gap:24px;padding:6px 10px;border:0;border-radius:4px;
+        background:transparent;color:${c.enabled ? t.text : t.textFaint};opacity:${c.enabled ? 1 : 0.55};
+        font:inherit;text-align:left;cursor:${c.enabled ? "pointer" : "default"};`;
+      const label = document.createElement("span");
+      label.style.cssText = "flex:1;white-space:nowrap;";
+      label.textContent = c.label;
+      item.appendChild(label);
+      if (c.keys.length) {
+        const keys = document.createElement("span");
+        keys.style.cssText = `color:${t.textFaint};font-size:11px;white-space:nowrap;`;
+        keys.textContent = formatKeys(c.keys[0]);
+        item.setAttribute("aria-keyshortcuts", c.keys[0]);
+        item.appendChild(keys);
+      }
+      if (c.enabled) {
+        item.addEventListener("mouseenter", () => {
+          item.style.background = t.hoverBg;
+        });
+        item.addEventListener("mouseleave", () => {
+          item.style.background = "transparent";
+        });
+        item.addEventListener("click", () => {
+          close();
+          void commands.run(c.id).catch((err) => console.error(`command ${c.id}:`, err));
+        });
+      }
+      list.appendChild(item);
+    }
+    document.body.appendChild(list);
+    const r = btn.getBoundingClientRect();
+    list.style.top = `${r.bottom + 2}px`;
+    list.style.left = `${Math.max(4, Math.min(r.left, window.innerWidth - list.offsetWidth - 4))}px`;
+    btn.style.background = t.hoverBg;
+    btn.style.color = t.accent;
+    btn.setAttribute("aria-expanded", "true");
+    open = { name, list, btn };
+  };
+  const render = () => {
+    const list = commands.list();
+    const names = [];
+    for (const c of list) {
+      const m = menuOf(c);
+      if (!names.includes(m)) names.push(m);
+    }
+    names.sort((a, b) => {
+      const ia = STANDARD.indexOf(a), ib = STANDARD.indexOf(b);
+      return (ia < 0 ? STANDARD.length : ia) - (ib < 0 ? STANDARD.length : ib);
+    });
+    const sig = names.join("|");
+    if (sig === signature) return;
+    signature = sig;
+    close();
+    el.replaceChildren();
+    for (const name of names) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = name;
+      btn.dataset.menu = name;
+      btn.setAttribute("aria-haspopup", "menu");
+      btn.setAttribute("aria-expanded", "false");
+      btn.style.cssText = `padding:4px 9px;border:0;border-radius:4px;background:transparent;color:${t.textDim};font:inherit;cursor:pointer;`;
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (open?.name === name) close();
+        else show3(name, btn);
+      });
+      btn.addEventListener("mouseenter", () => {
+        if (open && open.name !== name) show3(name, btn);
+      });
+      el.appendChild(btn);
+    }
+  };
+  let pending = 0;
+  const off = commands.onChange(() => {
+    if (!pending) pending = requestAnimationFrame(() => {
+      pending = 0;
+      render();
+    });
+  });
+  const onDoc = (e) => {
+    if (open && !open.list.contains(e.target)) close();
+  };
+  const onKey = (e) => {
+    if (e.key === "Escape") close();
+  };
+  document.addEventListener("click", onDoc);
+  document.addEventListener("keydown", onKey);
+  render();
+  return {
+    el,
+    dispose() {
+      off();
+      if (pending) cancelAnimationFrame(pending);
+      document.removeEventListener("click", onDoc);
+      document.removeEventListener("keydown", onKey);
+      close();
+      el.remove();
+    }
+  };
+}
+function menuSlot(own) {
+  return own ?? document.querySelector("[data-tekto-menu-slot]");
+}
+
+// src/gui/ParamHistory.ts
+var same2 = (a, b) => a === b || JSON.stringify(a) === JSON.stringify(b);
+var ParamHistory = class {
+  constructor(store, limit = 200) {
+    this.store = store;
+    this.limit = limit;
+    this.past = [];
+    this.future = [];
+    this.applying = false;
+    this.last = this.snapshot();
+  }
+  snapshot() {
+    return JSON.parse(JSON.stringify(this.store.getAll() ?? {}));
+  }
+  /** Controls that appeared since (a sketch declared them) start from their current value: no step. */
+  adopt() {
+    const now3 = this.snapshot();
+    for (const k of Object.keys(now3)) if (!(k in this.last)) this.last[k] = now3[k];
+  }
+  /** Whether the values differ from the last step (a change made in code, not yet committed). */
+  dirty(now3 = this.snapshot()) {
+    return Object.keys(now3).some((k) => k in this.last && !same2(now3[k], this.last[k]));
+  }
+  /** A change is complete: one undo step, if anything differs from the last one. */
+  commit() {
+    if (this.applying) return;
+    const now3 = this.snapshot();
+    const changed = this.dirty(now3);
+    this.adopt();
+    if (!changed) return;
+    this.past.push(this.last);
+    if (this.past.length > this.limit) this.past.shift();
+    this.future = [];
+    this.last = { ...this.last, ...now3 };
+  }
+  canUndo() {
+    return this.past.length > 0 || this.dirty();
+  }
+  canRedo() {
+    return this.future.length > 0;
+  }
+  undo() {
+    this.commit();
+    const target = this.past.pop();
+    if (!target) return;
+    this.future.push(this.last);
+    this.restore(target);
+  }
+  redo() {
+    this.commit();
+    const target = this.future.pop();
+    if (!target) return;
+    this.past.push(this.last);
+    this.restore(target);
+  }
+  restore(target) {
+    this.apply(target);
+    this.last = { ...this.last, ...target };
+  }
+  /** Write a snapshot's values back; controls that no longer exist are left out. */
+  apply(target) {
+    this.applying = true;
+    try {
+      for (const [k, v] of Object.entries(target)) {
+        if (this.store.has(k) && !same2(this.store.get(k), v)) this.store.set(k, v);
+      }
+    } finally {
+      this.applying = false;
+    }
+  }
+  /** The Edit menu's Undo and Redo, with their keys. */
+  commands() {
+    return [
+      { id: "edit.undo", label: "Undo", keys: "Mod+Z", group: "Edit", run: () => this.undo(), enabled: () => this.canUndo() },
+      { id: "edit.redo", label: "Redo", keys: ["Shift+Mod+Z", "Mod+Y"], group: "Edit", run: () => this.redo(), enabled: () => this.canRedo() }
+    ];
+  }
+};
+
 // src/gui/viewModeIcons.ts
 var A = [3, 7.5];
 var B = [13, 4];
@@ -25864,6 +27444,11 @@ function viewModeIconSvg(mode, size = 16) {
 
 // src/gui/ControlPanel.ts
 var DEFAULT_GROUP = "Parameters";
+var LABEL_MIN = 56;
+var LABEL_MAX = 170;
+var CONTROL_MIN = 150;
+var CONTROL_MAX = 220;
+var SECTION_PAD = 14;
 var SLIDER_STYLE_ID = "tekto-slider-style";
 function ensureSliderStyle(doc) {
   if (doc.getElementById(SLIDER_STYLE_ID)) return;
@@ -25871,12 +27456,16 @@ function ensureSliderStyle(doc) {
   el.id = SLIDER_STYLE_ID;
   el.textContent = `
     .tekto-slider{-webkit-appearance:none;appearance:none;background:transparent;cursor:pointer;height:16px;outline:none;padding:0;}
-    .tekto-slider::-webkit-slider-runnable-track{height:4px;background:var(--tekto-track,#2a2d44);}
+    .tekto-slider::-webkit-slider-runnable-track{height:4px;background:var(--tekto-track,#444444);}
     .tekto-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:7px;height:14px;margin-top:-5px;border-radius:0;background:var(--tekto-thumb,#ffffff);}
-    .tekto-slider::-moz-range-track{height:4px;background:var(--tekto-track,#2a2d44);}
+    .tekto-slider::-moz-range-track{height:4px;background:var(--tekto-track,#444444);}
     .tekto-slider::-moz-range-thumb{width:7px;height:14px;border-radius:0;border:none;background:var(--tekto-thumb,#ffffff);}
   `;
   doc.head.appendChild(el);
+}
+function labelFromKey(key) {
+  const words = key.replace(/[_-]+/g, " ").replace(/([a-z0-9])([A-Z])/g, "$1 $2").trim().toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 var ControlPanel = class {
   constructor(cfg) {
@@ -25888,6 +27477,10 @@ var ControlPanel = class {
     this.customRows = [];
     this.extraTabs = [];
     this.updaters = /* @__PURE__ */ new Map();
+    // ── Width ──
+    this.measureCtx = null;
+    this.labelWidth = LABEL_MIN;
+    this.railWidth = 0;
     this.cfg = cfg;
     this.store = cfg.store;
     this.theme = cfg.theme ?? getTheme();
@@ -25899,6 +27492,12 @@ var ControlPanel = class {
     });
     this.docClick = () => this.closeMenus();
     document.addEventListener("click", this.docClick);
+    document.fonts?.ready.then(() => {
+      if (this.items.length) {
+        this.fitLabels();
+        this.cfg.onRender?.();
+      }
+    });
   }
   dispose() {
     this.unsubStore();
@@ -25912,6 +27511,7 @@ var ControlPanel = class {
     this.extraTabs = extraTabs;
     this.updaters.clear();
     this.el.innerHTML = "";
+    this.railWidth = 0;
     const t = this.theme;
     const buttons = this.cfg.getButtons?.() ?? [];
     const menuNames = [];
@@ -25931,7 +27531,7 @@ var ControlPanel = class {
     const pinnedButtons = hasTabs ? buttons.filter((b) => !b.tab && !b.menu) : [];
     if (pinnedItems.length || pinnedButtons.length) {
       const strip = document.createElement("div");
-      strip.style.cssText = `padding:4px 8px 2px;border-bottom:1px solid ${t.border};`;
+      strip.style.cssText = `padding:4px 8px 2px 8px;border-bottom:1px solid ${t.border};`;
       for (const it of pinnedItems) {
         const row = this.buildControl(it);
         if (row) strip.appendChild(row);
@@ -25939,7 +27539,19 @@ var ControlPanel = class {
       for (const b of pinnedButtons) strip.appendChild(this.buildButtonRow(b));
       this.el.appendChild(strip);
     }
-    if (hasTabs) this.el.appendChild(this.buildTabBar(tabOrder));
+    const side = hasTabs && this.cfg.tabs === "side";
+    let body = this.el;
+    this.el.style.display = side ? "flex" : "";
+    this.el.style.flexDirection = side ? "column" : "";
+    this.el.style.minHeight = side ? "100%" : "";
+    if (side) {
+      const row = document.createElement("div");
+      row.style.cssText = "display:flex;align-items:stretch;flex:1;";
+      body = document.createElement("div");
+      body.style.cssText = "flex:1;min-width:0;";
+      row.append(this.buildTabList(tabOrder, items, buttons), body);
+      this.el.appendChild(row);
+    } else if (hasTabs) this.el.appendChild(this.buildTabBar(tabOrder));
     const activeExtra = hasTabs ? this.extraTabs.find((et) => et.name === this.activeTab) : void 0;
     const inTab = (tab, menu) => !menu && (hasTabs ? !!tab && tab === this.activeTab : true);
     const groups = /* @__PURE__ */ new Map();
@@ -25951,15 +27563,56 @@ var ControlPanel = class {
     for (const it of items) if (inTab(it.tab, it.menu)) groupOf(it.group).items.push(it);
     for (const b of buttons) if (inTab(b.tab, b.menu)) groupOf(b.group).buttons.push(b);
     for (const r of customRows) if (inTab(r.tab)) groupOf(r.group).rows.push(r);
+    const bare = groups.size === 1 && groups.has(DEFAULT_GROUP);
     for (const [name, content] of groups) {
-      this.el.appendChild(this.buildSection(name, content));
+      body.appendChild(this.buildSection(name, content, bare));
     }
     if (activeExtra) {
       const host = document.createElement("div");
       activeExtra.render(host);
-      this.el.appendChild(host);
+      body.appendChild(host);
     }
-    this.el.appendChild(this.footer);
+    body.appendChild(this.footer);
+    this.fitLabels();
+    this.cfg.onRender?.();
+  }
+  /** The width of `text` in the panel's font at `px`, in CSS pixels. */
+  textWidth(text, px) {
+    this.measureCtx ?? (this.measureCtx = document.createElement("canvas").getContext("2d"));
+    if (!this.measureCtx) return text.length * px * 0.6;
+    this.measureCtx.font = `${px}px ${this.theme.font}`;
+    return this.measureCtx.measureText(text).width;
+  }
+  /** Size the label column to the longest label of any tab (between LABEL_MIN and LABEL_MAX; longer ones wrap). */
+  fitLabels() {
+    let w = LABEL_MIN;
+    for (const it of this.items) {
+      const def = this.store.getDef(it.key);
+      if (!def || it.menu || def.type === "button") continue;
+      w = Math.max(w, Math.ceil(this.textWidth(def.label ?? labelFromKey(it.key), 11)) + 2);
+    }
+    this.labelWidth = Math.min(w, LABEL_MAX);
+    this.el.style.setProperty("--tekto-label-w", `${this.labelWidth}px`);
+  }
+  /**
+   * The panel width its controls ask for, in px: the label column, a control beside it
+   * (wider for a select with long options), a button's text, and the tab list when the tabs
+   * are on the side. A frame with `panelWidth: "auto"` asks after every render.
+   */
+  preferredWidth() {
+    let control = CONTROL_MIN;
+    let lone = 0;
+    for (const it of this.items) {
+      const def = this.store.getDef(it.key);
+      if (def?.type === "select") {
+        for (const opt of def.options ?? []) control = Math.max(control, this.textWidth(String(opt), 11) + 36);
+      } else if (def?.type === "button") {
+        lone = Math.max(lone, this.textWidth(def.label ?? it.key, 10) + 24);
+      }
+    }
+    for (const b of this.cfg.getButtons?.() ?? []) if (!b.menu) lone = Math.max(lone, this.textWidth(b.label, 10) + 24);
+    const row = this.labelWidth + 8 + Math.min(control, CONTROL_MAX);
+    return Math.ceil(this.railWidth + 2 * SECTION_PAD + Math.max(row, lone)) + 1;
   }
   /** Push a value into a live control without going through the store. */
   applyValue(key, value) {
@@ -26144,12 +27797,60 @@ var ControlPanel = class {
     }
     return bar;
   }
+  /** The tabs as a list down the panel's left side: a name, and how many controls it holds. */
+  buildTabList(tabOrder, items, buttons) {
+    const t = this.theme;
+    const list = document.createElement("nav");
+    list.dataset.tektoTabs = "side";
+    let w = 0;
+    for (const tab of tabOrder) w = Math.max(w, this.textWidth(tab, 11));
+    this.railWidth = Math.min(Math.max(Math.ceil(w) + 26, 72), 160);
+    list.style.cssText = `flex:0 0 ${this.railWidth}px;box-sizing:border-box;padding:6px 0;border-right:1px solid ${t.border};`;
+    for (const tab of tabOrder) {
+      const on = tab === this.activeTab;
+      const n = items.filter((it) => it.tab === tab).length + buttons.filter((b) => b.tab === tab).length;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.setAttribute("aria-pressed", String(on));
+      btn.style.cssText = `
+        display:block;width:100%;box-sizing:border-box;padding:7px 10px 7px 12px;border:none;
+        border-left:2px solid ${on ? t.accent : "transparent"};text-align:left;cursor:pointer;
+        background:${on ? t.hoverBg : "transparent"};color:${on ? t.accent : t.textDim};
+        font-family:inherit;font-size:11px;line-height:1.3;transition:background .12s;
+      `;
+      const name = document.createElement("span");
+      name.style.cssText = `display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:${on ? 600 : 400};`;
+      name.textContent = tab;
+      btn.appendChild(name);
+      if (n > 0) {
+        const count = document.createElement("span");
+        count.style.cssText = `display:block;font-size:9px;color:${t.textFaint};`;
+        count.textContent = `${n} control${n === 1 ? "" : "s"}`;
+        btn.appendChild(count);
+      }
+      if (!on) {
+        btn.addEventListener("mouseenter", () => {
+          btn.style.background = t.hoverBg;
+        });
+        btn.addEventListener("mouseleave", () => {
+          btn.style.background = "transparent";
+        });
+      }
+      btn.addEventListener("click", () => {
+        this.activeTab = tab;
+        this.render(this.items, this.customRows, this.extraTabs);
+        this.cfg.onTabChange?.(tab);
+      });
+      list.appendChild(btn);
+    }
+    return list;
+  }
   // ── Sections ──
-  buildSection(name, content) {
+  buildSection(name, content, bare = false) {
     const t = this.theme;
     const section = document.createElement("div");
     section.style.cssText = `border-bottom:1px solid ${t.border};`;
-    const collapsed = this.collapsedGroups.has(name);
+    const collapsed = !bare && this.collapsedGroups.has(name);
     const header = document.createElement("div");
     header.style.cssText = `
       padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:6px;
@@ -26163,15 +27864,19 @@ var ControlPanel = class {
     });
     const arrow2 = document.createElement("span");
     arrow2.style.cssText = `font-size:8px;color:${t.textFaint};transition:transform .15s;width:10px;`;
-    arrow2.textContent = collapsed ? "\u25B6" : "\u25BC";
+    const paintArrow = (c) => {
+      arrow2.textContent = c ? "\u25B6" : "\u25BC";
+      if (t.plain) arrow2.style.display = c ? "" : "none";
+    };
+    paintArrow(collapsed);
     header.appendChild(arrow2);
     const title = document.createElement("span");
     title.style.cssText = `font-size:9px;font-weight:500;text-transform:uppercase;letter-spacing:1.8px;color:${t.textFaint};`;
     title.textContent = name;
     header.appendChild(title);
-    section.appendChild(header);
+    if (!bare) section.appendChild(header);
     const body = document.createElement("div");
-    body.style.cssText = `padding:0 14px 10px;${collapsed ? "display:none;" : ""}`;
+    body.style.cssText = `padding:${bare ? 10 : 0}px ${SECTION_PAD}px 10px;${collapsed ? "display:none;" : ""}`;
     for (const it of content.items) {
       const row = this.buildControl(it);
       if (row) body.appendChild(row);
@@ -26179,7 +27884,7 @@ var ControlPanel = class {
     for (const r of content.rows) {
       if (r.fullBleed) {
         const wrap = document.createElement("div");
-        wrap.style.cssText = "margin:0 -14px;";
+        wrap.style.cssText = `margin:0 -${SECTION_PAD}px;`;
         wrap.appendChild(r.el);
         body.appendChild(wrap);
       } else {
@@ -26195,7 +27900,7 @@ var ControlPanel = class {
       if (isCollapsed) this.collapsedGroups.delete(name);
       else this.collapsedGroups.add(name);
       body.style.display = isCollapsed ? "" : "none";
-      arrow2.textContent = isCollapsed ? "\u25BC" : "\u25B6";
+      paintArrow(!isCollapsed);
     });
     return section;
   }
@@ -26240,8 +27945,8 @@ var ControlPanel = class {
     const row = document.createElement("div");
     row.style.cssText = "display:flex;align-items:center;gap:8px;margin-bottom:5px;min-height:26px;";
     const label = document.createElement("span");
-    label.style.cssText = `width:80px;flex-shrink:0;font-size:11px;color:${t.textDim};text-transform:capitalize;`;
-    label.textContent = def.label ?? it.key;
+    label.style.cssText = `width:var(--tekto-label-w,80px);flex-shrink:0;font-size:11px;color:${t.textDim};`;
+    label.textContent = def.label ?? labelFromKey(it.key);
     row.appendChild(label);
     switch (def.type) {
       case "float":
@@ -26254,7 +27959,7 @@ var ControlPanel = class {
         input.step = String(step);
         input.value = String(this.store.get(it.key));
         input.className = "tekto-slider";
-        input.style.cssText = `flex:1;--tekto-track:${t.controlBorder};--tekto-thumb:${it.accent || t.accent};`;
+        input.style.cssText = `flex:1;width:0;min-width:40px;--tekto-track:${t.controlBorder};--tekto-thumb:${it.accent || t.accent};`;
         const valueSpan = document.createElement("span");
         valueSpan.style.cssText = `width:42px;text-align:right;font-size:10px;color:${t.accent};`;
         const isInt = def.type === "int" || step >= 1;
@@ -26404,6 +28109,18 @@ var THREE4 = __toESM(require("three"));
 // src/render/viewRules.ts
 var THREE3 = __toESM(require("three"));
 var DEFAULT_BACKGROUND = 16119802;
+var PAPER2 = 16777215;
+var DARK_PAGE = 723723;
+function hiddenLinePage(background, inverse = false) {
+  const light = luminance(background) > 0.5;
+  if (inverse) return light ? DARK_PAGE : new THREE3.Color(background).getHex();
+  return light ? new THREE3.Color(background).getHex() : PAPER2;
+}
+function inkOn(page, colour) {
+  const a = luminance(page), b = luminance(colour);
+  const contrast = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+  return contrast >= 1.6 ? colour : a > 0.5 ? "#2f2f2f" : "#d8d8d8";
+}
 function edgeStyle(mode, background = modeBackground(mode, DEFAULT_BACKGROUND)) {
   if (mode === "hidden-line") return { colour: 1779507, opacity: 1 };
   if (mode === "ghost" && luminance(background) > 0.5) return { colour: 1779507, opacity: 0.6 };
@@ -26705,10 +28422,14 @@ var ObjectBuilder = class {
     this._stripeTexCache.set(layerH, tex);
     return tex;
   }
+  /** A colour as drawn: its own, except in a hidden-line drawing where it would vanish into the page. */
+  ink(colour) {
+    return this.core.gScene.renderMode === "hiddenline" ? inkOn(this.core.pageColor(), colour) : colour;
+  }
   /** Build a THREE.Line for a line-type object — dashed material (+ line distances)
    *  when the style requests it, else a basic line material. */
   _makeLine(geo, s) {
-    const mat = s.dash ? new THREE4.LineDashedMaterial({ color: s.color, opacity: s.opacity, transparent: s.opacity < 1, dashSize: s.dash.size, gapSize: s.dash.gap }) : new THREE4.LineBasicMaterial({ color: s.color, opacity: s.opacity, transparent: s.opacity < 1 });
+    const mat = s.dash ? new THREE4.LineDashedMaterial({ color: this.ink(s.color), opacity: s.opacity, transparent: s.opacity < 1, dashSize: s.dash.size, gapSize: s.dash.gap }) : new THREE4.LineBasicMaterial({ color: this.ink(s.color), opacity: s.opacity, transparent: s.opacity < 1 });
     const line = new THREE4.Line(geo, mat);
     if (s.dash) line.computeLineDistances();
     return line;
@@ -26719,8 +28440,8 @@ var ObjectBuilder = class {
       case "point": {
         const geo = new THREE4.SphereGeometry(s.pointSize, 12, 12);
         const mat = this.makeMaterial({
-          color: s.color,
-          emissive: s.color,
+          color: this.ink(s.color),
+          emissive: this.ink(s.color),
           emissiveIntensity: 0.3,
           opacity: s.opacity,
           transparent: s.opacity < 1,
@@ -26732,7 +28453,7 @@ var ObjectBuilder = class {
         if (s.label) {
           const group = new THREE4.Group();
           group.add(mesh);
-          const sprite = this.createTextSprite(s.label, s.labelColor ?? s.color, s.labelScale ?? 1);
+          const sprite = this.createTextSprite(s.label, this.ink(s.labelColor ?? s.color), s.labelScale ?? 1);
           if (obj.position) sprite.position.set(obj.position.x, obj.position.y, obj.position.z);
           if (this.core.isZUp) sprite.position.z += s.pointSize + 0.15;
           else sprite.position.y += s.pointSize + 0.15;
@@ -26786,7 +28507,7 @@ var ObjectBuilder = class {
         const pts2 = obj.vertices.map((v) => new THREE4.Vector3(v.x, v.y, v.z));
         if (pts2.length > 2) pts2.push(pts2[0].clone());
         const lineGeo = new THREE4.BufferGeometry().setFromPoints(pts2);
-        group.add(new THREE4.Line(lineGeo, new THREE4.LineBasicMaterial({ color: s.color })));
+        group.add(new THREE4.Line(lineGeo, new THREE4.LineBasicMaterial({ color: this.ink(s.color) })));
         if (obj.vertices.length >= 3) {
           if (this.core.isZUp) {
             const shape = new THREE4.Shape(obj.vertices.map((v) => new THREE4.Vector2(v.x, v.y)));
@@ -26887,9 +28608,9 @@ var ObjectBuilder = class {
       const n = data.positions.length / 3;
       const uv = new Float32Array(n * 2);
       for (let k = 0; k < n; k++) {
-        const ring = Math.min(Math.floor(k / pipeUV.sides), pipeUV.vAtRing.length - 1);
+        const ring2 = Math.min(Math.floor(k / pipeUV.sides), pipeUV.vAtRing.length - 1);
         uv[k * 2] = k % pipeUV.sides / pipeUV.sides;
-        uv[k * 2 + 1] = pipeUV.vAtRing[ring] ?? 0;
+        uv[k * 2 + 1] = pipeUV.vAtRing[ring2] ?? 0;
       }
       geo.setAttribute("uv", new THREE4.BufferAttribute(uv, 2));
     }
@@ -26953,7 +28674,7 @@ var ObjectBuilder = class {
       group.add(new THREE4.Mesh(geo, wireMat));
     } else if (mode === "hiddenline") {
       const occlusionMat = new THREE4.MeshBasicMaterial({
-        color: this.core.config.backgroundColor,
+        color: this.core.pageColor(),
         side,
         toneMapped: false,
         polygonOffset: true,
@@ -26962,10 +28683,11 @@ var ObjectBuilder = class {
       });
       group.add(new THREE4.Mesh(geo, occlusionMat));
       const edgeAngle = s.edgeAngle ?? 30;
-      const wireMat = new THREE4.LineBasicMaterial({ color: s.edgeColor ?? 3092271, toneMapped: false });
+      const ink = inkOn(this.core.pageColor(), s.edgeColor ?? 3092271);
+      const wireMat = new THREE4.LineBasicMaterial({ color: ink, toneMapped: false });
       group.add(this._edgeLines(geo, edgeAngle, wireMat));
       const rimMat = new THREE4.MeshBasicMaterial({
-        color: s.edgeColor ?? 3092271,
+        color: ink,
         side: THREE4.BackSide,
         toneMapped: false
       });
@@ -27105,6 +28827,57 @@ var ObjectBuilder = class {
 
 // src/render/Lighting.ts
 var THREE5 = __toESM(require("three"));
+
+// src/render/sunSite.ts
+var SUN_PLACES = [
+  { name: "Zurich", latitude: 47.37, longitude: 8.55, timeZone: 1 },
+  { name: "Berlin", latitude: 52.52, longitude: 13.4, timeZone: 1 },
+  { name: "Paris", latitude: 48.86, longitude: 2.35, timeZone: 1 },
+  { name: "London", latitude: 51.51, longitude: -0.13, timeZone: 0 },
+  { name: "Madrid", latitude: 40.42, longitude: -3.7, timeZone: 1 },
+  { name: "Rome", latitude: 41.9, longitude: 12.5, timeZone: 1 },
+  { name: "Stockholm", latitude: 59.33, longitude: 18.07, timeZone: 1 },
+  { name: "Reykjavik", latitude: 64.13, longitude: -21.95, timeZone: 0 },
+  { name: "Moscow", latitude: 55.76, longitude: 37.62, timeZone: 3 },
+  { name: "Dubai", latitude: 25.27, longitude: 55.3, timeZone: 4 },
+  { name: "Mumbai", latitude: 19.08, longitude: 72.88, timeZone: 5.5 },
+  { name: "Singapore", latitude: 1.35, longitude: 103.82, timeZone: 8 },
+  { name: "Beijing", latitude: 39.9, longitude: 116.41, timeZone: 8 },
+  { name: "Tokyo", latitude: 35.68, longitude: 139.69, timeZone: 9 },
+  { name: "Sydney", latitude: -33.87, longitude: 151.21, timeZone: 10 },
+  { name: "Honolulu", latitude: 21.31, longitude: -157.86, timeZone: -10 },
+  { name: "Anchorage", latitude: 61.22, longitude: -149.9, timeZone: -9 },
+  { name: "San Francisco", latitude: 37.77, longitude: -122.42, timeZone: -8 },
+  { name: "Mexico City", latitude: 19.43, longitude: -99.13, timeZone: -6 },
+  { name: "Chicago", latitude: 41.88, longitude: -87.63, timeZone: -6 },
+  { name: "New York", latitude: 40.71, longitude: -74.01, timeZone: -5 },
+  { name: "Buenos Aires", latitude: -34.61, longitude: -58.38, timeZone: -3 },
+  { name: "S\xE3o Paulo", latitude: -23.55, longitude: -46.63, timeZone: -3 },
+  { name: "Cape Town", latitude: -33.92, longitude: 18.42, timeZone: 2 }
+];
+function sunTimeZone(site) {
+  return site.timeZone ?? Math.round(site.longitude / 15);
+}
+function sunFor(site) {
+  const [y, m, d] = site.date.split("-").map(Number);
+  if (![y, m, d].every(Number.isFinite)) throw new Error(`sunFor: date "${site.date}" is not "YYYY-MM-DD"`);
+  const utc = site.hour - sunTimeZone(site);
+  const date = new Date(Date.UTC(y, m - 1, d, 0, Math.round(utc * 60)));
+  const sun = SunPosition.compute({ date, latitude: site.latitude, longitude: site.longitude });
+  if (!site.north) return sun;
+  const a = site.north * Math.PI / 180, { x: e, y: n, z } = sun.direction;
+  return { ...sun, direction: new Vec3(e * Math.cos(a) + n * Math.sin(a), n * Math.cos(a) - e * Math.sin(a), z) };
+}
+function hhmm(hour) {
+  const min = Math.round(hour * 60);
+  return `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+}
+function sunNow(site, now3 = /* @__PURE__ */ new Date()) {
+  const local = new Date(now3.getTime() + sunTimeZone(site) * 36e5);
+  return { date: local.toISOString().slice(0, 10), hour: local.getUTCHours() + local.getUTCMinutes() / 60 };
+}
+
+// src/render/Lighting.ts
 var Lighting = class {
   constructor(core) {
     this.core = core;
@@ -27143,6 +28916,8 @@ var Lighting = class {
     this.daylightOn = false;
     /** The last preset `sunPreset` set, until the sun is moved another way. */
     this.currentSunPreset = null;
+    /** The date and place `sunAt` last set, until the sun is moved another way. */
+    this.currentSunSite = null;
     const isZUp = core.isZUp;
     this.ambientLight = new THREE5.AmbientLight(16777215, 0.5);
     core.threeScene.add(this.ambientLight);
@@ -27198,6 +28973,7 @@ var Lighting = class {
   }
   setSunDirection(direction, distance = 50) {
     this.currentSunPreset = null;
+    this.currentSunSite = null;
     const x = direction.x;
     const y = this.core.isZUp ? direction.y : direction.z;
     const z = this.core.isZUp ? direction.z : -direction.y;
@@ -27246,6 +29022,14 @@ var Lighting = class {
     this.setSunDirection(new Vec3(d.x, d.y, d.z));
     this.currentSunPreset = name;
   }
+  /** The sun for a date, an hour and a place: Studio, the light following the sun (night included). */
+  sunAt(site) {
+    const sun = sunFor(site);
+    this.core.gScene.setLightingMode("studio");
+    this.setDaylight(true);
+    this.setSunDirection(sun.direction);
+    this.currentSunSite = { ...site };
+  }
   setDaylight(on) {
     this.daylightOn = on;
     if (on) this.sunDirty = true;
@@ -27263,14 +29047,25 @@ var Lighting = class {
     this.hemiLight.intensity = d.skyIntensity;
     this.ambientLight.intensity = d.ambient;
     this.core.renderer.toneMappingExposure = d.exposure;
-    if (!(this.envBackground && this.envSourceTex)) {
-      this.core.threeScene.background = new THREE5.Color(this.core.config.backgroundColor).lerp(new THREE5.Color(d.background), d.backgroundAmount);
+    this.applyPage();
+  }
+  /**
+   * The colour behind the model: the page, tinted by the sky while Studio's light follows
+   * the sun. A hidden-line drawing keeps its page plain. An image as background stays.
+   */
+  applyPage() {
+    if (this.envBackground && this.envSourceTex) return;
+    const page = new THREE5.Color(this.core.pageColor());
+    if (this.daylightOn && this.currentLighting === "studio" && this.core.gScene.renderMode !== "hiddenline") {
+      const d = daylight(this.sunAltitude());
+      page.lerp(new THREE5.Color(d.background), d.backgroundAmount);
     }
+    this.core.threeScene.background = page;
   }
   /** Back to the plain balance of the current mode. */
   _resetDaylight() {
     this.dirLight.color.setHex(16777215);
-    if (!(this.envBackground && this.envSourceTex)) this.core.threeScene.background = new THREE5.Color(this.core.config.backgroundColor);
+    this.applyPage();
     this.applyMode(this.currentLighting);
   }
   /**
@@ -27306,7 +29101,7 @@ var Lighting = class {
       this.dirLight.castShadow = false;
       if (this.daylightOn) {
         this.dirLight.color.setHex(16777215);
-        if (!(this.envBackground && this.envSourceTex)) this.core.threeScene.background = new THREE5.Color(this.core.config.backgroundColor);
+        this.applyPage();
       }
     }
     const cast = studio && this.core.gScene.renderMode !== "ghost";
@@ -27377,7 +29172,8 @@ var Lighting = class {
       this.envSourceTex.mapping = THREE5.EquirectangularReflectionMapping;
       this.core.threeScene.background = this.envSourceTex;
     } else if (this.core.threeScene.background?.isTexture) {
-      this.core.threeScene.background = new THREE5.Color(this.core.config.backgroundColor);
+      this.core.threeScene.background = null;
+      this.applyPage();
     }
   }
   /** A sky: an equirectangular image lighting the scene and, by default, behind it. */
@@ -27491,11 +29287,11 @@ var NavGizmo = class {
     this.ballR = Math.max(7, this.size * 0.105);
     this.reach = this.centre - this.ballR - 2;
     this.root = document.createElement("div");
-    const corner = opts.corner ?? "bottom-right";
+    const corner2 = opts.corner ?? "bottom-right";
     const inset = `${opts.inset ?? 12}px`;
     this.root.style.cssText = `position:absolute;width:${this.size}px;
-      ${corner.includes("top") ? `top:${(opts.inset ?? 12) + (opts.offsetTop ?? 0)}px` : `bottom:${inset}`};
-      ${corner.includes("left") ? "left" : "right"}:${inset};
+      ${corner2.includes("top") ? `top:${(opts.inset ?? 12) + (opts.offsetTop ?? 0)}px` : `bottom:${inset}`};
+      ${corner2.includes("left") ? "left" : "right"}:${inset};
       cursor:grab;touch-action:none;user-select:none;z-index:5;
       display:flex;flex-direction:column;align-items:center;gap:2px`;
     this.svg = document.createElementNS(SVG, "svg");
@@ -27694,6 +29490,7 @@ var CameraRig = class {
     this.projectionListeners = /* @__PURE__ */ new Set();
     // The hand (setHandMode): what the left button and one finger did before it took them.
     this.handPrev = null;
+    this._gizmoShown = true;
     this.onHandDown = () => {
       this.core.renderer.domElement.style.cursor = "grabbing";
     };
@@ -27730,10 +29527,15 @@ var CameraRig = class {
     const visible = v.z > -1 && v.z < 1;
     return { x, y, visible };
   }
+  /** Show or hide the axis widget (with the viewer's other tools); it stays hidden in a strict-2D view. */
+  setGizmoShown(shown2) {
+    this._gizmoShown = shown2;
+    this.navGizmo?.setVisible(shown2 && this._rotateEnabled);
+  }
   setOrbitRotateEnabled(enabled) {
     this._rotateEnabled = enabled;
     if (this.core.controls) this.core.controls.enableRotate = enabled;
-    this.navGizmo?.setVisible(enabled);
+    this.navGizmo?.setVisible(enabled && this._gizmoShown);
     if (enabled) this.setHandMode(false);
   }
   /** The hand, a strict-2D view's tool: on, the left button (and one finger) drags the view along
@@ -29016,14 +30818,14 @@ var Marks = class {
       const pad = box.getSize(new THREE9.Vector3()).multiplyScalar(0.06);
       const lo = box.min.clone().sub(pad), hi = box.max.clone().add(pad);
       const [u, v] = req.axis === "x" ? ["y", "z"] : req.axis === "y" ? ["x", "z"] : ["x", "y"];
-      const corner = (a, b) => {
+      const corner2 = (a, b) => {
         const p = new THREE9.Vector3();
         p[req.axis] = c;
         p[u] = a;
         p[v] = b;
         return p;
       };
-      const geo = new THREE9.BufferGeometry().setFromPoints([corner(lo[u], lo[v]), corner(hi[u], lo[v]), corner(hi[u], hi[v]), corner(lo[u], hi[v])]);
+      const geo = new THREE9.BufferGeometry().setFromPoints([corner2(lo[u], lo[v]), corner2(hi[u], lo[v]), corner2(hi[u], hi[v]), corner2(lo[u], hi[v])]);
       this.sectionFrame = new THREE9.LineLoop(geo, new THREE9.LineBasicMaterial({ color: 16777215, transparent: true, opacity: 0.75, depthTest: false }));
       this.sectionFrame.renderOrder = 1e3;
       this.core.threeScene.add(this.sectionFrame);
@@ -29237,10 +31039,10 @@ var Marks = class {
       if (now3 - this.calloutStillSince >= CALLOUT_SETTLE_MS) {
         const list2 = this.calloutHandlers.stack === "list" && this.calloutHandlers.labels !== false;
         const sides = new Set([...this.calloutAnchors.keys()].map((id) => this.calloutSide(id, cam)));
-        const band = labelWidthFor(w) + 16;
+        const band2 = labelWidthFor(w) + 16;
         this.calloutPending = {
           current: null,
-          bands: { left: list2 && sides.has("left") ? band : 0, right: list2 && sides.has("right") ? band : 0 },
+          bands: { left: list2 && sides.has("left") ? band2 : 0, right: list2 && sides.has("right") ? band2 : 0 },
           queue: [...this.calloutAnchors.keys()].reverse(),
           skipped: [],
           left: 0,
@@ -29329,6 +31131,10 @@ var Marks = class {
 var THREE10 = __toESM(require("three"));
 var srgb = (hex) => new THREE10.Vector3((hex >> 16 & 255) / 255, (hex >> 8 & 255) / 255, (hex & 255) / 255);
 var FadingGrid = class {
+  /** The page changed (a hidden-line drawing's paper): the lines a step off the new one. */
+  setBackground(background) {
+    this.mesh.material.uniforms.uLine.value = srgb(gridLineColour(background));
+  }
   constructor(background, zUp) {
     const material = new THREE10.ShaderMaterial({
       transparent: true,
@@ -29418,6 +31224,8 @@ var SHADING_ICONS = {
   noon: svg(`<circle cx="12" cy="12" r="4"/><path d="${RAYS}"/>`),
   morning: HORIZON("M9 5.5 12 2.5l3 3"),
   sunset: HORIZON("M9 6.5l3 3 3-3"),
+  // The sun for a date: a calendar sheet.
+  date: svg(`<rect x="4" y="5.5" width="16" height="14" rx="1.5"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/>`),
   // Ambient occlusion: two faces meeting, darkened into the corner.
   ao: svg(`<path d="M5 4v15h15"/><path d="M5 9.5v9.5h9.5A9.5 9.5 0 0 0 5 9.5z" fill="currentColor" fill-opacity="0.5" stroke="none"/>`),
   // Overlays: two overlapping rings, as Blender draws it.
@@ -29438,11 +31246,12 @@ var SHADING_ICONS = {
 var ZOOM_STEP = 1.25;
 var MODES = [["solid", "Solid"], ["wireframe", "Wireframe"], ["hiddenline", "Hidden line"], ["ghost", "Ghost"]];
 var LIGHTS = [["flat", "Flat lighting"], ["studio", "Studio lighting: soft shadows"]];
+var SUN_PLACE_KEY = "tekto.sunPlace";
 var SUNS = [["morning", "Morning"], ["noon", "Noon"], ["sunset", "Sunset"]];
 var OVERLAY_LABELS = { grid: "Grid", axes: "Axes", wireframe: "Wireframe", labels: "Labels", notes: "Notes" };
 var VIEWER_HEADER_H = 34;
 var ShadingBar = class {
-  constructor(core, lighting, marks, ao, view, placement = "top-left", headerHost = null) {
+  constructor(core, lighting, marks, ao, view, placement = "top-left", headerHost = null, tools = {}) {
     this.core = core;
     this.lighting = lighting;
     this.marks = marks;
@@ -29468,18 +31277,33 @@ var ShadingBar = class {
     this.overlayPaints = [];
     this.setCut = null;
     this.paints = [];
+    this.toolsHidden = false;
+    // ── The sun for a date and a place ──────────────────────────────────────────────────────
+    /** What the Date sun's fields hold: the place last chosen (remembered), today, 13:30. */
+    this.sunState = (() => {
+      const z = SUN_PLACES[0];
+      let place = { place: z.name, latitude: z.latitude, longitude: z.longitude, timeZone: z.timeZone };
+      try {
+        const stored = JSON.parse(localStorage.getItem(SUN_PLACE_KEY) ?? "null");
+        if (stored && Number.isFinite(stored.latitude) && Number.isFinite(stored.longitude)) {
+          place = { place: stored.place, latitude: stored.latitude, longitude: stored.longitude, timeZone: stored.timeZone };
+        }
+      } catch {
+      }
+      return { ...place, date: (/* @__PURE__ */ new Date()).toISOString().slice(0, 10), hour: 13.5 };
+    })();
     const host = core.container;
     if (getComputedStyle(host).position === "static") host.style.position = "relative";
     const rootHost = placement === "header" && headerHost ? headerHost : host;
     if (rootHost !== host && getComputedStyle(rootHost).position === "static") rootHost.style.position = "relative";
     const isHeader = placement === "header";
-    const corner = isHeader ? "top-left" : placement;
-    const [v, h] = [corner.startsWith("top") ? "top" : "bottom", corner.endsWith("left") ? "left" : "right"];
+    const corner2 = isHeader ? "top-left" : placement;
+    const [v, h] = [corner2.startsWith("top") ? "top" : "bottom", corner2.endsWith("left") ? "left" : "right"];
     this.root.dataset.tektoShadingBar = "";
     this.full.style.display = "contents";
     this.flat.style.display = "contents";
     if (isHeader) {
-      this.root.style.cssText = `position:absolute;top:0;left:0;right:0;height:${VIEWER_HEADER_H}px;box-sizing:border-box;z-index:23;display:flex;align-items:center;gap:2px;padding:0 6px;background:rgba(16,18,26,.9);border-bottom:1px solid rgba(255,255,255,.08);user-select:none;`;
+      this.root.style.cssText = `position:absolute;top:0;left:0;right:0;height:${VIEWER_HEADER_H}px;box-sizing:border-box;z-index:23;display:flex;align-items:center;gap:2px;padding:0 6px;background:rgba(30,30,30,.96);border-bottom:1px solid rgba(255,255,255,.08);user-select:none;`;
       this.root.dataset.tektoViewerHeader = "";
       const slot = () => {
         const d = document.createElement("div");
@@ -29489,92 +31313,140 @@ var ShadingBar = class {
       const left = slot(), right = slot(), end = slot(), spacer = document.createElement("div");
       spacer.style.cssText = "flex:1;min-width:8px;";
       right.style.marginLeft = end.style.marginLeft = "8px";
+      left.dataset.tektoHeaderSlot = "left";
+      right.dataset.tektoHeaderSlot = "right";
+      end.dataset.tektoHeaderSlot = "end";
       this.header = { left, right, end };
       this.root.append(left, spacer, this.full, this.flat, right, end);
       this.nav = document.createElement("div");
       this.nav.dataset.tektoNavColumn = "";
-      this.nav.style.cssText = "position:absolute;z-index:5;display:flex;flex-direction:column;gap:2px;padding:3px;border-radius:7px;background:rgba(16,18,26,.78);border:1px solid rgba(255,255,255,.08);user-select:none;";
+      this.nav.style.cssText = "position:absolute;z-index:5;display:flex;flex-direction:column;gap:2px;padding:3px;border-radius:7px;background:rgba(30,30,30,.9);border:1px solid rgba(255,255,255,.08);user-select:none;";
       host.appendChild(this.nav);
     } else {
-      this.root.style.cssText = `position:absolute;${v}:10px;${h}:10px;z-index:5;display:flex;align-items:center;gap:2px;padding:3px;border-radius:7px;background:rgba(16,18,26,.78);border:1px solid rgba(255,255,255,.08);box-shadow:0 2px 8px rgba(0,0,0,.3);user-select:none;`;
+      this.root.style.cssText = `position:absolute;${v}:10px;${h}:10px;z-index:5;display:flex;align-items:center;gap:2px;padding:3px;border-radius:7px;background:rgba(30,30,30,.9);border:1px solid rgba(255,255,255,.08);box-shadow:0 2px 8px rgba(0,0,0,.3);user-select:none;`;
       this.root.append(this.full, this.flat);
     }
     const scene = core.gScene;
-    for (const [mode, label] of MODES) this.button(viewModeIconSvg(mode, 16), label, () => scene.renderMode === mode, () => scene.setRenderMode(mode));
-    this.separator();
-    for (const [mode, label] of LIGHTS) this.button(SHADING_ICONS[mode], label, () => scene.lightingMode === mode, () => scene.setLightingMode(mode));
-    this.button(SHADING_ICONS.ao, "Ambient occlusion: darker where surfaces meet (Solid, perspective)", () => this.ao.enabled, () => this.ao.set(!this.ao.enabled));
-    this.separator();
-    const sunPop = this.popover(v, h);
-    const sun = this.button(SHADING_ICONS.noon, "Sun: morning, noon, sunset", () => this.openPop === sunPop, () => this.toggle(sunPop));
-    this.openers.set(sunPop, sun);
-    this.paints.push(() => {
-      sun.innerHTML = SHADING_ICONS[this.lighting.currentSunPreset ?? "noon"];
-    });
-    for (const [preset, label] of SUNS) {
-      const b = this.button(
-        `${SHADING_ICONS[preset]}<span style="font:500 9.5px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${label}</span>`,
-        `${label}: Studio, the light following the sun`,
-        () => this.lighting.currentSunPreset === preset,
-        () => {
-          this.lighting.sunPreset(preset);
-          this.toggle(null);
-        },
-        sunPop
-      );
-      b.style.width = "54px";
-      b.style.height = "42px";
-      b.style.flexDirection = "column";
-      b.style.gap = "4px";
-    }
-    const cutPop = this.popover(v, h);
-    cutPop.style.flexDirection = "column";
-    cutPop.style.gap = "6px";
-    this.openers.set(cutPop, this.button(SHADING_ICONS.section, "Section: cut the model", () => this.openPop === cutPop || !!this.marks.section, () => this.toggle(cutPop)));
-    this.sectionControls(cutPop);
-    this.separator();
-    const overlayPop = this.popover(v, h);
-    overlayPop.style.flexDirection = "column";
-    overlayPop.style.minWidth = "120px";
-    this.openers.set(overlayPop, this.button(SHADING_ICONS.overlays, "Overlays: grid, axes, wireframe, labels, notes", () => this.openPop === overlayPop, () => this.toggle(overlayPop)));
-    let listed = "";
-    this.paints.push(() => {
-      const names = Object.keys(this.view.overlays);
-      if (names.join() === listed) return;
-      listed = names.join();
-      overlayPop.replaceChildren();
-      this.overlayPaints = [];
-      for (const name of names) {
-        const label = OVERLAY_LABELS[name] ?? name[0].toUpperCase() + name.slice(1);
-        const b = this.button(
-          `<span style="width:14px;font:600 11px/1 system-ui,sans-serif">${"\u2713"}</span><span style="font:500 11px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${escapeHtml(label)}</span>`,
-          `${label}: show or hide`,
-          () => false,
-          // a checklist: a tick, not a filled button
-          () => this.view.setOverlays({ [name]: !(this.view.overlays[name] ?? false) }),
-          overlayPop,
-          this.overlayPaints
+    let any = false;
+    const group = (shown2, build) => {
+      if (shown2 === false) return;
+      if (any) this.separator();
+      any = true;
+      build();
+    };
+    group(tools.modes, () => {
+      for (const [mode, label] of MODES) {
+        const again = mode === "hiddenline";
+        this.button(
+          viewModeIconSvg(mode, 16),
+          again ? `${label}: dark lines on paper (click again for the inverse)` : label,
+          () => scene.renderMode === mode,
+          () => {
+            if (again && scene.renderMode === mode) this.view.setHiddenLineInverse(!this.view.hiddenLineInverse);
+            else scene.setRenderMode(mode);
+          }
         );
-        b.style.width = "auto";
-        b.style.justifyContent = "flex-start";
-        b.style.gap = "6px";
-        b.style.padding = "0 10px 0 6px";
-        const tick = b.firstElementChild;
-        this.overlayPaints.push(() => {
-          const on = !!this.view.overlays[name];
-          tick.style.visibility = on ? "visible" : "hidden";
-          b.style.color = on ? "#e8ebf0" : "rgba(232,235,240,.5)";
-          b.setAttribute("aria-pressed", String(on));
-        });
       }
     });
-    this.paints.push(() => {
-      for (const p of this.overlayPaints) p();
+    group(tools.light, () => {
+      for (const [mode, label] of LIGHTS) this.button(SHADING_ICONS[mode], label, () => scene.lightingMode === mode, () => scene.setLightingMode(mode));
+      this.button(SHADING_ICONS.ao, "Ambient occlusion: darker where surfaces meet (Solid, perspective)", () => this.ao.enabled, () => this.ao.set(!this.ao.enabled));
     });
-    if (!isHeader) this.button(SHADING_ICONS.frame, "Frame: the selection, or everything", () => false, () => this.view.frame());
-    this.button(SHADING_ICONS.snapshot, "Snapshot: save the view as a PNG", () => false, () => this.view.saveSnapshot());
+    const sunAndSection = tools.sun !== false || tools.section !== false;
+    group(sunAndSection, () => {
+      if (tools.sun !== false) {
+        const sunPop = this.popover(v, h);
+        sunPop.style.flexDirection = "column";
+        const row = document.createElement("div");
+        row.style.cssText = "display:flex;gap:2px;";
+        sunPop.appendChild(row);
+        const sun = this.button(SHADING_ICONS.noon, "Sun: morning, noon, sunset, or a date and a place", () => this.openPop === sunPop, () => this.toggle(sunPop));
+        this.openers.set(sunPop, sun);
+        this.paints.push(() => {
+          sun.innerHTML = SHADING_ICONS[this.sunIcon()];
+        });
+        const tile = (b) => {
+          b.style.width = "54px";
+          b.style.height = "42px";
+          b.style.flexDirection = "column";
+          b.style.gap = "4px";
+        };
+        const caption = (label) => `<span style="font:500 9.5px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${label}</span>`;
+        for (const [preset, label] of SUNS) {
+          tile(this.button(
+            `${SHADING_ICONS[preset]}${caption(label)}`,
+            `${label}: Studio, the light following the sun`,
+            () => this.lighting.currentSunPreset === preset,
+            () => {
+              this.lighting.sunPreset(preset);
+              this.toggle(null);
+            },
+            row
+          ));
+        }
+        tile(this.button(
+          `${SHADING_ICONS.date}${caption("Date")}`,
+          "Date: the sun for a date, an hour and a place",
+          () => !!this.lighting.currentSunSite,
+          () => this.lighting.sunAt(this.sunState),
+          row
+        ));
+        this.sunControls(sunPop);
+      }
+      if (tools.section !== false) {
+        const cutPop = this.popover(v, h);
+        cutPop.style.flexDirection = "column";
+        cutPop.style.gap = "6px";
+        this.openers.set(cutPop, this.button(SHADING_ICONS.section, "Section: cut the model", () => this.openPop === cutPop || !!this.marks.section, () => this.toggle(cutPop)));
+        this.sectionControls(cutPop);
+      }
+    });
+    group(tools.overlays !== false || tools.snapshot !== false || !isHeader && tools.zoom !== false, () => {
+      if (tools.overlays !== false) {
+        const overlayPop = this.popover(v, h);
+        overlayPop.style.flexDirection = "column";
+        overlayPop.style.minWidth = "120px";
+        this.openers.set(overlayPop, this.button(SHADING_ICONS.overlays, "Overlays: grid, axes, wireframe, labels, notes", () => this.openPop === overlayPop, () => this.toggle(overlayPop)));
+        let listed = "";
+        this.paints.push(() => {
+          const names = Object.keys(this.view.overlays);
+          if (names.join() === listed) return;
+          listed = names.join();
+          overlayPop.replaceChildren();
+          this.overlayPaints = [];
+          for (const name of names) {
+            const label = OVERLAY_LABELS[name] ?? name[0].toUpperCase() + name.slice(1);
+            const b = this.button(
+              `<span style="width:14px;font:600 11px/1 system-ui,sans-serif">${"\u2713"}</span><span style="font:500 11px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${escapeHtml(label)}</span>`,
+              `${label}: show or hide`,
+              () => false,
+              // a checklist: a tick, not a filled button
+              () => this.view.setOverlays({ [name]: !(this.view.overlays[name] ?? false) }),
+              overlayPop,
+              this.overlayPaints
+            );
+            b.style.width = "auto";
+            b.style.justifyContent = "flex-start";
+            b.style.gap = "6px";
+            b.style.padding = "0 10px 0 6px";
+            const tick = b.firstElementChild;
+            this.overlayPaints.push(() => {
+              const on = !!this.view.overlays[name];
+              tick.style.visibility = on ? "visible" : "hidden";
+              b.style.color = on ? "#e8ebf0" : "rgba(232,235,240,.5)";
+              b.setAttribute("aria-pressed", String(on));
+            });
+          }
+        });
+        this.paints.push(() => {
+          for (const p of this.overlayPaints) p();
+        });
+      }
+      if (!isHeader && tools.zoom !== false) this.button(SHADING_ICONS.frame, "Frame: the selection, or everything", () => false, () => this.view.frame());
+      if (tools.snapshot !== false) this.button(SHADING_ICONS.snapshot, "Snapshot: save the view as a PNG", () => false, () => this.view.saveSnapshot());
+    });
     this.group = this.flat;
-    if (isHeader) this.button(SHADING_ICONS.snapshot, "Snapshot: save the view as a PNG", () => false, () => this.view.saveSnapshot());
+    if (isHeader && tools.snapshot !== false) this.button(SHADING_ICONS.snapshot, "Snapshot: save the view as a PNG", () => false, () => this.view.saveSnapshot());
     this.group = this.nav ?? this.flat;
     const hand = this.button(
       SHADING_ICONS.hand,
@@ -29588,8 +31460,9 @@ var ShadingBar = class {
     this.paints.push(() => {
       const flat = !this.view.orbitRotateEnabled;
       this.root.dataset.palette = flat ? "2d" : "3d";
-      this.full.style.display = flat ? "none" : "contents";
-      this.flat.style.display = flat ? "contents" : "none";
+      this.full.style.display = flat || this.toolsHidden ? "none" : "contents";
+      this.flat.style.display = flat && !this.toolsHidden ? "contents" : "none";
+      if (this.nav) this.nav.style.display = this.toolsHidden || tools.zoom === false ? "none" : "flex";
       hand.style.display = flat ? "flex" : "none";
       if (flat && this.openPop) {
         this.openPop.style.display = "none";
@@ -29602,6 +31475,15 @@ var ShadingBar = class {
     this.off = scene.on((e) => {
       if (e.type === "scene:renderMode" || e.type === "scene:lightingMode") this.paint();
     });
+    this.paint();
+  }
+  /** Hide or show the tools (the header strip itself stays, with the app's slots and ✎ Markup). */
+  setToolsVisible(visible) {
+    this.toolsHidden = !visible;
+    if (!visible && this.openPop) {
+      this.openPop.style.display = "none";
+      this.openPop = null;
+    }
     this.paint();
   }
   /** Redraw which buttons are on (after a change made elsewhere, such as the sun moved in code). */
@@ -29618,7 +31500,7 @@ var ShadingBar = class {
   /** A popover under the bar (above it when the bar sits at the bottom). */
   popover(v, h) {
     const pop = document.createElement("div");
-    pop.style.cssText = `position:absolute;${v === "top" ? "top" : "bottom"}:calc(100% + 6px);${h}:0;display:none;gap:2px;padding:4px;border-radius:7px;background:rgba(16,18,26,.92);border:1px solid rgba(255,255,255,.08);box-shadow:0 4px 14px rgba(0,0,0,.4);`;
+    pop.style.cssText = `position:absolute;${v === "top" ? "top" : "bottom"}:calc(100% + 6px);${h}:0;display:none;gap:2px;padding:4px;border-radius:7px;background:rgba(37,37,38,.98);border:1px solid rgba(255,255,255,.08);box-shadow:0 4px 14px rgba(0,0,0,.4);`;
     this.root.appendChild(pop);
     return pop;
   }
@@ -29627,12 +31509,135 @@ var ShadingBar = class {
     const next = pop && this.openPop !== pop ? pop : null;
     if (this.openPop) this.openPop.style.display = "none";
     if (next) next.style.display = "flex";
-    const opener = next && this.header ? this.openers.get(next) : void 0;
-    if (next && opener) {
-      next.style.left = `${Math.max(0, Math.min(opener.offsetLeft, this.root.clientWidth - next.offsetWidth - 4))}px`;
-    }
     this.openPop = next;
+    if (next) this.placePop(next);
     this.paint();
+  }
+  /** In the header: a popover under its button, kept inside the header's width. */
+  placePop(pop) {
+    const opener = this.header ? this.openers.get(pop) : void 0;
+    if (opener) pop.style.left = `${Math.max(0, Math.min(opener.offsetLeft, this.root.clientWidth - pop.offsetWidth - 4))}px`;
+  }
+  /** The sun button's icon: the named sun, or for a date the one nearest its hour. */
+  sunIcon() {
+    const site = this.lighting.currentSunSite;
+    if (!site) return this.lighting.currentSunPreset ?? "noon";
+    return this.lighting.sunAltitude() > 20 ? "noon" : site.hour < 12 ? "morning" : "sunset";
+  }
+  /** The Date sun's fields under the sun popover's row: place, latitude and longitude, north, date, hour. */
+  sunControls(pop) {
+    ensureSliderStyle(document);
+    const form = document.createElement("div");
+    form.dataset.tektoSunDate = "";
+    form.style.cssText = "display:none;flex-direction:column;gap:6px;padding:6px 4px 4px;margin-top:2px;border-top:1px solid rgba(255,255,255,.1);color:rgba(232,235,240,.72);font:11px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;";
+    const FIELD = "box-sizing:border-box;height:22px;min-width:0;padding:0 5px;border:1px solid rgba(255,255,255,.14);border-radius:4px;background:#141414;color:#e8ebf0;font:inherit;color-scheme:dark;";
+    const line = (label, ...controls) => {
+      const l = document.createElement("div");
+      l.style.cssText = "display:flex;align-items:center;gap:6px;";
+      const name = document.createElement("span");
+      name.textContent = label;
+      name.style.cssText = "flex:0 0 38px;";
+      l.append(name, ...controls);
+      form.appendChild(l);
+    };
+    const field = (tag, label, type) => {
+      const f2 = document.createElement(tag);
+      if (type) f2.type = type;
+      f2.setAttribute("aria-label", label);
+      f2.title = label;
+      f2.style.cssText = `${FIELD}flex:1;`;
+      return f2;
+    };
+    const place = field("select", "Place");
+    for (const p of SUN_PLACES) place.add(new Option(p.name, p.name));
+    place.add(new Option("Other", ""));
+    const lat = field("input", "Latitude, north positive", "number");
+    const lon = field("input", "Longitude, east positive", "number");
+    lat.step = lon.step = "0.01";
+    [lat.min, lat.max, lon.min, lon.max] = ["-85", "85", "-180", "180"];
+    const north = field("input", "North: degrees clockwise from the model's +Y axis (up on the plan)", "range");
+    [north.min, north.max, north.step] = ["0", "360", "1"];
+    const date = field("input", "Date", "date");
+    const time = field("input", "Time of day (standard time)", "range");
+    [time.min, time.max, time.step] = ["0", "24", "0.25"];
+    const value = () => {
+      const v = document.createElement("span");
+      v.style.cssText = "flex:0 0 38px;text-align:right;color:#e8ebf0;font:11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;";
+      return v;
+    };
+    for (const slider of [time, north]) {
+      slider.className = "tekto-slider";
+      slider.style.cssText = "flex:1;width:0;min-width:40px;--tekto-track:rgba(255,255,255,.18);--tekto-thumb:#e8ebf0;";
+    }
+    const clock = value(), bearing = value();
+    const readout = document.createElement("span");
+    readout.dataset.tektoSunReadout = "";
+    readout.style.cssText = "flex:1;white-space:nowrap;";
+    const now3 = document.createElement("button");
+    now3.type = "button";
+    now3.textContent = "Now";
+    now3.title = "Today, at this hour";
+    now3.style.cssText = `${FIELD}cursor:pointer;padding:0 9px;`;
+    line("Place", place);
+    line("Lat", lat, lon);
+    line("North", north, bearing);
+    line("Date", date);
+    line("Time", time, clock);
+    const foot = document.createElement("div");
+    foot.style.cssText = "display:flex;align-items:center;gap:6px;padding-top:2px;";
+    foot.append(readout, now3);
+    form.appendChild(foot);
+    pop.appendChild(form);
+    const apply = (change) => {
+      this.sunState = { ...this.sunState, ...change };
+      const { place: name, latitude, longitude, timeZone } = this.sunState;
+      try {
+        localStorage.setItem(SUN_PLACE_KEY, JSON.stringify({ place: name, latitude, longitude, timeZone }));
+      } catch {
+      }
+      this.lighting.sunAt(this.sunState);
+      this.paint();
+    };
+    const num2 = (el, fallback) => {
+      const v = Number(el.value);
+      return el.value === "" || !Number.isFinite(v) ? fallback : Math.min(Number(el.max), Math.max(Number(el.min), v));
+    };
+    place.addEventListener("change", () => {
+      const p = SUN_PLACES.find((q) => q.name === place.value);
+      if (p) apply({ place: p.name, latitude: p.latitude, longitude: p.longitude, timeZone: p.timeZone });
+      else apply({ place: void 0, timeZone: void 0 });
+    });
+    const moved = () => apply({ place: void 0, timeZone: void 0, latitude: num2(lat, this.sunState.latitude), longitude: num2(lon, this.sunState.longitude) });
+    lat.addEventListener("change", moved);
+    lon.addEventListener("change", moved);
+    date.addEventListener("change", () => {
+      if (date.value) apply({ date: date.value });
+    });
+    time.addEventListener("input", () => apply({ hour: Number(time.value) }));
+    north.addEventListener("input", () => apply({ north: Number(north.value) % 360 }));
+    now3.addEventListener("click", () => apply(sunNow(this.sunState)));
+    const set = (el, value2) => {
+      if (document.activeElement !== el && el.value !== value2) el.value = value2;
+    };
+    this.paints.push(() => {
+      const site = this.lighting.currentSunSite;
+      const shown2 = form.style.display !== "none";
+      form.style.display = site ? "flex" : "none";
+      if (!site) return;
+      this.sunState = { ...site };
+      set(place, site.place && SUN_PLACES.some((p) => p.name === site.place) ? site.place : "");
+      set(lat, site.latitude.toFixed(2));
+      set(lon, site.longitude.toFixed(2));
+      set(date, site.date);
+      set(time, String(site.hour));
+      clock.textContent = hhmm(site.hour);
+      const turned = ((site.north ?? 0) % 360 + 360) % 360;
+      set(north, String(turned));
+      bearing.textContent = `${Math.round(turned)}\xB0`;
+      const s = sunFor(site), deg = (r) => Math.round(r * 180 / Math.PI), tz = sunTimeZone(site);
+      readout.textContent = `${s.isDaytime ? `Alt ${deg(s.altitude)}\xB0 \xB7 Az ${deg(s.azimuth)}\xB0` : "Below the horizon"} \xB7 UTC${tz < 0 ? "\u2212" : "+"}${Math.abs(tz)}`;
+      if (!shown2 && this.openPop === pop) this.placePop(pop);
+    });
   }
   /** The section popover's controls, kept in step with the cut however it was set. */
   sectionControls(pop) {
@@ -29666,7 +31671,7 @@ var ShadingBar = class {
       this.marks.setSection({ axis, ...w, ...flip ? { flip } : {} });
       this.paint();
     };
-    const show2 = (c, r) => units ? `${c.toFixed(2)} ${units}` : `${Math.round((c - r[0]) / Math.max(r[1] - r[0], 1e-12) * 100)} %`;
+    const show3 = (c, r) => units ? `${c.toFixed(2)} ${units}` : `${Math.round((c - r[0]) / Math.max(r[1] - r[0], 1e-12) * 100)} %`;
     for (const [label, axis, title] of axes) {
       const b = this.button(
         `<span style="font:600 10px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${label}</span>`,
@@ -29725,7 +31730,7 @@ var ShadingBar = class {
           slider.value = String(near);
         }
       }
-      value.textContent = show2(pending, [Number(slider.min), Number(slider.max)]);
+      value.textContent = show3(pending, [Number(slider.min), Number(slider.max)]);
       this.marks.showSectionPlane(true);
       clearTimeout(hide);
       if (!frame) frame = requestAnimationFrame(() => {
@@ -29757,7 +31762,7 @@ var ShadingBar = class {
         slider.step = String(Math.max((r[1] - r[0]) / 500, 1e-4));
         const c = this.marks.sectionCoordinate() ?? r[0];
         if (document.activeElement !== slider) slider.value = String(c);
-        value.textContent = show2(c, r);
+        value.textContent = show3(c, r);
       } else {
         value.textContent = "\u2014";
       }
@@ -29808,7 +31813,7 @@ var ShadingBar = class {
       const active = on();
       b.setAttribute("aria-pressed", String(active));
       b.style.background = active ? "#e8ebf0" : "transparent";
-      b.style.color = active ? "#11131a" : "rgba(232,235,240,.72)";
+      b.style.color = active ? "#1e1e1e" : "rgba(232,235,240,.72)";
     };
     b.onmouseenter = () => {
       if (!on()) b.style.color = "#fff";
@@ -29894,7 +31899,7 @@ var AmbientOcclusion = class {
     this.core.requestRender();
   }
   /** After the frame is on the screen: multiply the occlusion over it. */
-  apply(camera, clip) {
+  apply(camera, clip2) {
     if (!this.enabled || !camera.isPerspectiveCamera) return;
     if (this.core.gScene.renderMode !== "solid") return;
     const gl = this.core.renderer;
@@ -29914,9 +31919,9 @@ var AmbientOcclusion = class {
       this.ratio = gl.getPixelRatio();
       g.setSize(this.size.x * this.ratio, this.size.y * this.ratio);
     }
-    if (clip !== this.clip) {
-      this.clip = clip;
-      g.normalMaterial.clippingPlanes = clip ? [clip] : null;
+    if (clip2 !== this.clip) {
+      this.clip = clip2;
+      g.normalMaterial.clippingPlanes = clip2 ? [clip2] : null;
       g.normalMaterial.needsUpdate = true;
     }
     g.camera = camera;
@@ -29941,7 +31946,7 @@ var AmbientOcclusion = class {
 var INERT_STYLE_KEYS = /* @__PURE__ */ new Set(["layer", "lineWidth", "noExport"]);
 var DEFAULTS5 = {
   antialias: true,
-  backgroundColor: 658196,
+  backgroundColor: 723723,
   showGrid: true,
   gridStyle: "lines",
   gridSize: 20,
@@ -29956,10 +31961,12 @@ var DEFAULTS5 = {
   up: "y",
   navGizmo: false,
   shadingBar: false,
+  viewerTools: {},
   units: null,
   headerHost: null,
   flatLighting: "sketch",
-  studioLighting: "filmic"
+  studioLighting: "filmic",
+  hiddenLineInverse: false
 };
 var EDGE_BUDGET_MS = 8;
 var ThreeRenderer = class {
@@ -29985,6 +31992,7 @@ var ThreeRenderer = class {
     // sketch re-runs (clearThree only touches objectMap-managed objects).
     this.externalObjects = /* @__PURE__ */ new Map();
     this.resizeObserver = null;
+    this.page = null;
     this.drawListeners = /* @__PURE__ */ new Set();
     this.gScene = gScene;
     this.container = container;
@@ -30018,6 +32026,7 @@ var ThreeRenderer = class {
       config: this.config,
       camera: this.camera,
       overlay: (name) => this.overlayState[name] ?? true,
+      pageColor: () => this.pageColor(),
       get controls() {
         return self.controls;
       },
@@ -30034,19 +32043,17 @@ var ThreeRenderer = class {
     this.lighting.applyMode(this.gScene.lightingMode);
     this.builder = new ObjectBuilder(this.core, this.lighting);
     if (cfg.showGrid && cfg.gridStyle === "fading") {
-      this.fadingGrid = new FadingGrid(cfg.backgroundColor, this.isZUp);
+      this.fadingGrid = new FadingGrid(this.pageColor(), this.isZUp);
       this.gridHelper = this.fadingGrid.mesh;
       this.threeScene.add(this.fadingGrid.mesh);
     } else if (cfg.showGrid) {
-      const grid = new THREE12.GridHelper(cfg.gridSize, cfg.gridDivisions, 3816538, 2763850);
-      if (this.isZUp) grid.rotation.x = Math.PI / 2;
-      this.gridHelper = grid;
-      this.threeScene.add(grid);
+      this.buildLineGrid(this.pageColor());
     }
     if (cfg.showAxes) {
       this.axesHelper = new THREE12.AxesHelper(cfg.axesSize);
       this.threeScene.add(this.axesHelper);
     }
+    this.syncPage();
     if (cfg.enableOrbitControls) {
       this.controls = new import_OrbitControls.OrbitControls(this.camera, this.renderer.domElement);
       this.controls.enableDamping = cfg.enableDamping;
@@ -30056,7 +32063,7 @@ var ThreeRenderer = class {
     }
     this.rig = new CameraRig(this.core, this.camera, orthoCam, cfg.navGizmo, cfg.shadingBar === "header" ? VIEWER_HEADER_H : 0);
     this.pointer = new Pointer(this.core, this.builder, this.marks);
-    if (cfg.shadingBar) this.shadingBar = new ShadingBar(this.core, this.lighting, this.marks, this.ao, this, cfg.shadingBar === true ? "top-left" : cfg.shadingBar, cfg.headerHost);
+    if (cfg.shadingBar) this.shadingBar = new ShadingBar(this.core, this.lighting, this.marks, this.ao, this, cfg.shadingBar === true ? "top-left" : cfg.shadingBar, cfg.headerHost, cfg.viewerTools);
     this.renderer.domElement.addEventListener("webglcontextrestored", () => this.requestRender());
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(container);
@@ -30105,7 +32112,8 @@ var ThreeRenderer = class {
         this.clearThree();
         break;
       case "scene:renderMode":
-        this.rebuildAllMeshes();
+        if (this.syncPage()) this.rebuildAll();
+        else this.rebuildAllMeshes();
         break;
       case "scene:lightingMode":
         this.lighting.applyMode(event.mode);
@@ -30210,6 +32218,58 @@ var ThreeRenderer = class {
       this.removeFromThree(obj.id);
       this.addToThree(obj);
     }
+  }
+  /** Rebuild every object (the page changed: lines and marks are drawn for the page they are on). */
+  rebuildAll() {
+    for (const obj of this.gScene.all()) {
+      this.removeFromThree(obj.id);
+      this.addToThree(obj);
+    }
+  }
+  // ── The page ──
+  /** The colour behind the model now: the background, or in hidden line the drawing's page. */
+  pageColor() {
+    const background = new THREE12.Color(this.config.backgroundColor).getHex();
+    return this.gScene.renderMode === "hiddenline" ? hiddenLinePage(background, this.config.hiddenLineInverse) : background;
+  }
+  /** Put the page behind the model and rule the grid for it. True if the page changed. */
+  syncPage() {
+    const page = this.pageColor();
+    this.lighting.applyPage();
+    if (page === this.page) return false;
+    const first = this.page === null;
+    this.page = page;
+    this.fadingGrid?.setBackground(page);
+    if (!this.fadingGrid && this.gridHelper && !first) {
+      const visible = this.gridHelper.visible;
+      this.threeScene.remove(this.gridHelper);
+      this.gridHelper.dispose?.();
+      this.buildLineGrid(page);
+      this.gridHelper.visible = visible;
+    }
+    this.requestRender();
+    return !first;
+  }
+  /** The grid of lines, ruled for the page it lies on: dark greys on a dark page, pale ones on paper. */
+  buildLineGrid(page) {
+    const [major, minor] = luminance(page) > 0.5 && page !== new THREE12.Color(this.config.backgroundColor).getHex() ? [11842740, 14342874] : [3815994, 2500134];
+    const grid = new THREE12.GridHelper(this.config.gridSize, this.config.gridDivisions, major, minor);
+    if (this.isZUp) grid.rotation.x = Math.PI / 2;
+    this.gridHelper = grid;
+    this.threeScene.add(grid);
+  }
+  /**
+   * Draw hidden line inverse — light lines on a dark page — or, with false, as a drawing
+   * on light paper (the default; `hiddenLineInverse` in the config).
+   */
+  setHiddenLineInverse(on) {
+    this.config.hiddenLineInverse = on;
+    if (this.syncPage()) this.rebuildAll();
+    this.shadingBar?.paint();
+  }
+  /** Whether hidden line is drawn inverse (`setHiddenLineInverse`). */
+  get hiddenLineInverse() {
+    return this.config.hiddenLineInverse;
   }
   // Line/point "helper" object types (vs solid meshes/polygons/planes).
   _isHelper(type) {
@@ -30461,8 +32521,8 @@ var ThreeRenderer = class {
   }
   /** Set the viewport background color. */
   setBackground(color) {
-    this.threeScene.background = new THREE12.Color(color);
     this.config.backgroundColor = color;
+    if (this.syncPage()) this.rebuildAll();
     this.requestRender();
   }
   // ── Cleanup ──
@@ -30550,9 +32610,23 @@ var ThreeRenderer = class {
     return this.lighting.currentSunPreset;
   }
   /**
+   * The sun for a date, an hour and a place, as the sun menu's "Date" sets it: Studio, the
+   * light following the sun, so the hour gives the evening and the night too.
+   *
+   *   renderer.setSunAt({ latitude: 47.37, longitude: 8.55, date: "2026-06-21", hour: 17 });
+   */
+  setSunAt(site) {
+    this.lighting.sunAt(site);
+    this.shadingBar?.paint();
+  }
+  /** The date and place last set (`setSunAt`), or null once the sun was moved another way. */
+  get sunSite() {
+    return this.lighting.currentSunSite;
+  }
+  /**
    * Let Studio's light follow the sun: with it on, the sun's colour and strength, the sky,
    * the exposure and the background come from the sun's altitude (`setSunDirection`, which
-   * the shell's Sun popover drives by date and hour), so evening and dusk follow from the
+   * `setSunAt` drives by date and hour), so evening and dusk follow from the
    * hour: noon as Studio is, a warm low sun, a blue dusk, night. Flat lighting is unchanged.
    * Off by default.
    */
@@ -30636,6 +32710,13 @@ var ThreeRenderer = class {
     this.rig.setOrbitRotateEnabled(enabled);
     this.pointer.handMode = this.rig.handMode;
     this.shadingBar?.paint();
+  }
+  /** Hide or show the viewer's tools (the shading bar's icons, the zoom column, the axis widget)
+   *  while the view shows something they do not apply to, such as a drawing laid over it. The
+   *  header strip stays, with the app's own slots and ✎ Markup. */
+  setViewerToolsVisible(visible) {
+    this.shadingBar?.setToolsVisible(visible);
+    this.rig.setGizmoShown(visible);
   }
   /** The hand, a strict-2D view's tool (the 2D palette has its button): on, the left button drags
    *  the view along — over drag handles too — under a grab cursor; a click still picks. Off again
@@ -30919,7 +33000,7 @@ var DEFAULTS6 = {
   width: 800,
   height: 600,
   viewBox: { minX: -5, minY: -5, width: 10, height: 10 },
-  backgroundColor: "#0a0b14",
+  backgroundColor: "#0b0b0b",
   showGrid: true,
   gridSpacing: 1,
   gridColor: "#1a1c3a",
@@ -31563,10 +33644,10 @@ var LayerPanel = class {
     const isActive = node.id === this._active;
     const guarded = this._activePath.has(node.id);
     const d = this._isDark;
-    const labelColor = d ? effectiveVisible ? "#b8bdd4" : "#3a3f5a" : effectiveVisible ? "#2a2d3a" : "#b0b4c0";
+    const labelColor = d ? effectiveVisible ? "#cccccc" : "#3a3f5a" : effectiveVisible ? "#2a2d3a" : "#b0b4c0";
     const arrowColor = d ? "#3a3f5a" : "#b0b4c0";
     const hoverBg = d ? "rgba(255,255,255,.04)" : "rgba(0,0,0,.04)";
-    const iconOn = d ? "#b8bdd4" : "#2a2d3a";
+    const iconOn = d ? "#cccccc" : "#2a2d3a";
     const iconOff = d ? "#3a3f5a" : "#b0b4c0";
     const bulbOn = d ? "#fbbf24" : "#d97706";
     const checkColor = d ? "#ffffff" : "#16182c";
@@ -31674,17 +33755,13 @@ var LayerPanel = class {
 
 // src/sketch/sketchLayout.ts
 function buildSketchLayout(container, config, t) {
-  const defaultWidth = config.panelWidth ?? 320;
-  const storageKey = `tekto.panelWidth.${config.title ?? "default"}`;
-  const stored = parseInt(localStorage.getItem(storageKey) ?? "", 10);
-  const panelWidth = Number.isFinite(stored) && stored >= 200 && stored <= 800 ? stored : defaultWidth;
   const inShell = container instanceof HTMLElement && container.dataset.shell != null;
   const showHeader = config.showHeader ?? !inShell;
   const headerRow = showHeader ? "44px " : "";
-  let fileMenusEl = null;
+  let menuHost = null;
   const root = document.createElement("div");
   root.style.cssText = `
-    display:grid; grid-template-columns:${panelWidth}px 1fr; grid-template-rows:${headerRow}1fr;
+    display:grid; grid-template-columns:320px 1fr; grid-template-rows:${headerRow}1fr;
     height:100%; width:100%; overflow:hidden; position:relative;
     background:${t.bg};
     color:${t.text};
@@ -31704,9 +33781,9 @@ function buildSketchLayout(container, config, t) {
       <span style="font-size:9px;padding:2px 6px;border-radius:3px;
         background:${t.hoverBg};color:${t.accent}">LIVE</span>
     `;
-    fileMenusEl = document.createElement("div");
-    fileMenusEl.style.cssText = "margin-left:auto;display:flex;gap:8px;position:relative;";
-    header.appendChild(fileMenusEl);
+    menuHost = document.createElement("div");
+    menuHost.style.cssText = "display:flex;align-items:center;margin-left:8px;";
+    header.appendChild(menuHost);
     root.appendChild(header);
   }
   const panelEl = document.createElement("div");
@@ -31717,84 +33794,6 @@ function buildSketchLayout(container, config, t) {
     position:relative; grid-column:1;
   `;
   root.appendChild(panelEl);
-  const resizeHandle = document.createElement("div");
-  resizeHandle.title = "Drag to resize panel \xB7 double-click to reset";
-  const handleIdle = t.isDark ? "rgba(255,255,255,.14)" : "rgba(0,0,0,.14)";
-  const handleHover = t.isDark ? "rgba(255,255,255,.35)" : "rgba(0,0,0,.30)";
-  resizeHandle.style.cssText = `
-    position:absolute; top:${showHeader ? 44 : 0}px; bottom:0;
-    left:${panelWidth - 3}px; width:6px;
-    cursor:col-resize; z-index:10;
-    background:${handleIdle};
-    transition:background .15s;
-  `;
-  resizeHandle.addEventListener("mouseenter", () => {
-    resizeHandle.style.background = handleHover;
-  });
-  resizeHandle.addEventListener("mouseleave", () => {
-    resizeHandle.style.background = handleIdle;
-  });
-  resizeHandle.addEventListener("dblclick", () => applyWidth(defaultWidth));
-  resizeHandle.addEventListener("mousedown", (e) => {
-    e.preventDefault();
-    const startX = e.clientX;
-    const startWidth = parseInt(root.style.gridTemplateColumns, 10) || panelWidth;
-    const onMove = (ev) => {
-      const next = Math.max(200, Math.min(800, startWidth + (ev.clientX - startX)));
-      applyWidth(next);
-    };
-    const onUp = () => {
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
-      document.body.style.cursor = "";
-    };
-    document.body.style.cursor = "col-resize";
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
-  });
-  root.appendChild(resizeHandle);
-  let curWidth = panelWidth;
-  const applyWidth = (w) => {
-    curWidth = w;
-    root.style.gridTemplateColumns = `${w}px 1fr`;
-    resizeHandle.style.left = `${w - 3}px`;
-    collapseBtn.style.left = `${w - 26}px`;
-    localStorage.setItem(storageKey, String(w));
-    requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
-  };
-  const collapseKey = `tekto.panelCollapsed.${config.title ?? "default"}`;
-  const btnCss = (left) => `
-    position:absolute; top:${(showHeader ? 44 : 0) + 6}px; left:${left}px;
-    width:20px; height:24px; z-index:11; cursor:pointer; user-select:none;
-    display:flex; align-items:center; justify-content:center;
-    font:13px/1 ui-monospace,monospace;
-    border:1px solid ${t.controlBorder}; border-radius:4px;
-    background:${t.panelBg}; color:${t.accent};
-  `;
-  const collapseBtn = document.createElement("div");
-  collapseBtn.title = "Collapse panel";
-  collapseBtn.textContent = "\u2039";
-  collapseBtn.style.cssText = btnCss(panelWidth - 26);
-  root.appendChild(collapseBtn);
-  const expandBtn = document.createElement("div");
-  expandBtn.title = "Show panel";
-  expandBtn.textContent = "\u203A";
-  expandBtn.style.cssText = btnCss(4);
-  expandBtn.style.display = "none";
-  root.appendChild(expandBtn);
-  const applyCollapsed = (c) => {
-    root.style.gridTemplateColumns = c ? "28px 1fr" : `${curWidth}px 1fr`;
-    panelEl.style.display = c ? "none" : "";
-    resizeHandle.style.display = c ? "none" : "";
-    collapseBtn.style.display = c ? "none" : "flex";
-    collapseBtn.style.left = `${curWidth - 26}px`;
-    expandBtn.style.display = c ? "flex" : "none";
-    localStorage.setItem(collapseKey, c ? "1" : "0");
-    requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
-  };
-  collapseBtn.addEventListener("click", () => applyCollapsed(true));
-  expandBtn.addEventListener("click", () => applyCollapsed(false));
-  if (localStorage.getItem(collapseKey) === "1") applyCollapsed(true);
   const vpWrap = document.createElement("div");
   vpWrap.style.cssText = "position:relative;overflow:hidden;grid-column:2;";
   const viewportEl = document.createElement("div");
@@ -31804,10 +33803,10 @@ function buildSketchLayout(container, config, t) {
   logEl.style.cssText = `
     position:absolute; bottom:12px; left:12px;
     padding:8px 12px; border-radius:6px;
-    background:rgba(7,8,14,.85); backdrop-filter:blur(8px);
-    font-size:11px; line-height:1.7; color:#7a80a0;
+    background:rgba(30,30,30,.92); backdrop-filter:blur(8px);
+    font-size:11px; line-height:1.7; color:#a8a8a8;
     pointer-events:none; max-width:300px;
-    border:1px solid rgba(22,24,42,.8);
+    border:1px solid rgba(255,255,255,.1);
     display:none;
   `;
   vpWrap.appendChild(logEl);
@@ -31818,74 +33817,193 @@ function buildSketchLayout(container, config, t) {
     container.style.overflow = "hidden";
   }
   container.appendChild(root);
-  return { root, fileMenusEl, panelEl, viewportEl, viewportWrap: vpWrap, logEl };
+  return { root, menuHost, panelEl, viewportEl, viewportWrap: vpWrap, logEl, headerHeight: showHeader ? 44 : 0 };
 }
-function renderFileMenus(host, exports2, imports, t) {
-  host.innerHTML = "";
-  const menu = (label, items) => {
-    if (!items.length) return;
-    const wrap = document.createElement("div");
-    wrap.style.cssText = "position:relative;";
-    const btn = document.createElement("button");
-    btn.textContent = `${label} \u25BE`;
-    btn.style.cssText = `font:12px ${t.font};padding:4px 10px;border-radius:4px;cursor:pointer;
-      background:${t.panelBg};color:${t.text};border:1px solid ${t.controlBorder};`;
-    const list = document.createElement("div");
-    list.style.cssText = `position:absolute;right:0;top:calc(100% + 4px);min-width:180px;z-index:30;display:none;
-      background:${t.panelBg};border:1px solid ${t.controlBorder};border-radius:6px;padding:4px;box-shadow:0 4px 16px rgba(0,0,0,.3);`;
-    for (const it of items) {
-      const b = document.createElement("button");
-      b.textContent = it.name;
-      if (it.title) b.title = it.title;
-      b.style.cssText = `display:block;width:100%;text-align:left;font:12px ${t.font};padding:6px 10px;border:0;border-radius:4px;
-        background:transparent;color:${t.text};cursor:pointer;`;
-      b.addEventListener("mouseenter", () => {
-        b.style.background = t.hoverBg;
-      });
-      b.addEventListener("mouseleave", () => {
-        b.style.background = "transparent";
-      });
-      b.addEventListener("click", async () => {
-        list.style.display = "none";
-        try {
-          await it.run();
-        } catch (e) {
-          console.error(`tekto ${label.toLowerCase()} "${it.name}":`, e);
-        }
-      });
-      list.appendChild(b);
-    }
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const open = list.style.display === "none";
-      for (const l of host.querySelectorAll("[data-tekto-menu]")) l.style.display = "none";
-      list.style.display = open ? "block" : "none";
+function fileCommands(exports2, imports) {
+  const slug2 = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const verb = (v, name) => new RegExp(`^${v}\\b`, "i").test(name) ? name : `${v} ${name}`;
+  return [
+    ...imports.map((it) => ({
+      id: `file.import.${slug2(it.name)}`,
+      label: verb("Import", it.name),
+      group: "File",
+      run: () => {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = it.accept ?? "";
+        input.onchange = async () => {
+          const f2 = input.files?.[0];
+          if (f2) await it.handler(f2);
+        };
+        input.click();
+      }
+    })),
+    ...exports2.map((it) => ({
+      id: `file.export.${slug2(it.name)}`,
+      label: verb("Export", it.name),
+      group: "File",
+      run: async () => download(await it.handler(), it.fileName, it.mimeType ? { type: it.mimeType } : {})
+    }))
+  ];
+}
+
+// src/sketch/panelFrame.ts
+var MIN_WIDTH = 180;
+var MAX_WIDTH = 800;
+var FOLDED_INSET = 32;
+function ensureFoldedStyle() {
+  if (document.getElementById("tekto-panel-folded")) return;
+  const style = document.createElement("style");
+  style.id = "tekto-panel-folded";
+  style.textContent = `[data-tekto-panel=folded] [data-tekto-viewer-header]{padding-left:${FOLDED_INSET}px !important}[data-tekto-panel=folded] [data-tekto-shading-bar]:not([data-tekto-viewer-header]){margin-left:${FOLDED_INSET - 6}px}`;
+  document.head.appendChild(style);
+}
+var PANEL_TOP_H = 34;
+function read(key) {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+function write(key, value) {
+  try {
+    if (value === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, value);
+  } catch {
+  }
+}
+function panelFrame(o) {
+  const { root, panelEl, theme: t } = o;
+  const widthKey = `tekto.panelWidth.${o.storageKey}`;
+  const foldKey = `tekto.panelCollapsed.${o.storageKey}`;
+  const clamp2 = (w) => Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, Math.round(w)));
+  const dragged = parseInt(read(widthKey) ?? "", 10);
+  let chosen = Number.isFinite(dragged) ? clamp2(dragged) : null;
+  let folded = read(foldKey) === "1";
+  const defaultWidth = () => clamp2(o.width === "auto" ? o.preferred?.() ?? 260 : o.width);
+  let width = chosen ?? defaultWidth();
+  const handle = document.createElement("div");
+  handle.title = "Drag to resize the panel \xB7 double-click to reset";
+  const idle = "transparent", hover = t.isDark ? "rgba(255,255,255,.3)" : "rgba(0,0,0,.25)";
+  handle.style.cssText = `position:absolute;top:${o.top}px;bottom:0;width:6px;cursor:col-resize;z-index:10;background:${idle};transition:background .15s;`;
+  handle.addEventListener("mouseenter", () => {
+    handle.style.background = hover;
+  });
+  handle.addEventListener("mouseleave", () => {
+    handle.style.background = idle;
+  });
+  handle.addEventListener("dblclick", () => {
+    chosen = null;
+    write(widthKey, null);
+    width = defaultWidth();
+    apply();
+  });
+  handle.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    const x0 = e.clientX, w0 = width;
+    const move = (ev) => {
+      chosen = width = clamp2(w0 + ev.clientX - x0);
+      write(widthKey, String(width));
+      apply();
+    };
+    const up = () => {
+      document.removeEventListener("mousemove", move);
+      document.removeEventListener("mouseup", up);
+      document.body.style.cursor = "";
+    };
+    document.body.style.cursor = "col-resize";
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", up);
+  });
+  const top = document.createElement("div");
+  top.dataset.tektoPanelTop = "";
+  const named = !!o.title;
+  top.style.cssText = `
+    position:absolute; left:0; top:${o.top}px; height:${PANEL_TOP_H}px; box-sizing:border-box; z-index:9;
+    display:flex; align-items:center; padding:0 32px 0 14px; overflow:hidden; user-select:none;
+    background:${t.panelBg}; border-right:1px solid ${t.border};
+    border-bottom:1px solid ${t.plain && !named ? "transparent" : t.border};
+  `;
+  const name = document.createElement("span");
+  name.textContent = o.title ?? "";
+  name.title = o.title ?? "";
+  name.style.cssText = t.plain ? `font:600 13px/1 ${t.font};color:${t.text};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;` : `font:500 10px/1 ${t.font};letter-spacing:1.6px;text-transform:uppercase;color:${t.textDim};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;`;
+  top.appendChild(name);
+  panelEl.style.marginTop = `${PANEL_TOP_H}px`;
+  const chevron = document.createElement("button");
+  chevron.type = "button";
+  chevron.dataset.tektoPanelFold = "";
+  chevron.style.cssText = `
+    position:absolute; top:${o.top + (PANEL_TOP_H - 24) / 2}px; width:20px; height:24px; z-index:11; padding:0;
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+    font:13px/1 ui-monospace,monospace; border-radius:4px;
+    border:1px solid ${t.controlBorder}; background:${t.panelBg}; color:${t.accent};
+  `;
+  chevron.addEventListener("click", () => {
+    folded = !folded;
+    write(foldKey, folded ? "1" : "0");
+    apply();
+  });
+  const isEmpty = () => !panelEl.textContent?.trim() && !panelEl.querySelector("input,button,select,textarea,canvas,svg,img");
+  let empty = isEmpty();
+  ensureFoldedStyle();
+  const apply = () => {
+    root.style.gridTemplateColumns = `${empty || folded ? 0 : width}px 1fr`;
+    root.dataset.tektoPanel = empty ? "none" : folded ? "folded" : "open";
+    panelEl.style.display = folded || empty ? "none" : "";
+    chevron.style.display = empty ? "none" : "flex";
+    top.style.display = empty || folded ? "none" : "flex";
+    top.style.width = `${width}px`;
+    chevron.style.zIndex = folded ? "30" : "11";
+    handle.style.display = folded || empty ? "none" : "";
+    handle.style.left = `${width - 3}px`;
+    chevron.style.left = `${folded ? 6 : width - 26}px`;
+    chevron.textContent = folded ? "\u203A" : "\u2039";
+    chevron.title = folded ? "Show the panel" : "Hide the panel";
+    chevron.setAttribute("aria-label", chevron.title);
+    chevron.setAttribute("aria-expanded", String(!folded));
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new Event("resize"));
+      o.onResize?.();
     });
-    list.dataset.tektoMenu = "";
-    document.addEventListener("click", () => {
-      list.style.display = "none";
-    });
-    wrap.append(btn, list);
-    host.appendChild(wrap);
   };
-  menu("Export", exports2.map((it) => ({
-    name: it.name,
-    title: `Download as ${it.fileName}`,
-    run: async () => download(await it.handler(), it.fileName, it.mimeType ? { type: it.mimeType } : {})
-  })));
-  menu("Import", imports.map((it) => ({
-    name: it.name,
-    run: () => {
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = it.accept ?? "";
-      input.onchange = async () => {
-        const f2 = input.files?.[0];
-        if (f2) await it.handler(f2);
-      };
-      input.click();
+  root.append(top, handle, chevron);
+  apply();
+  const sync = () => {
+    const now3 = isEmpty();
+    if (now3 !== empty) {
+      empty = now3;
+      apply();
     }
-  })));
+  };
+  let queued = 0;
+  const watch = new MutationObserver(() => {
+    if (!queued) queued = requestAnimationFrame(() => {
+      queued = 0;
+      sync();
+    });
+  });
+  watch.observe(panelEl, { childList: true, subtree: true, characterData: true });
+  return {
+    fit() {
+      sync();
+      if (chosen !== null || o.width !== "auto") return;
+      const w = defaultWidth();
+      if (w !== width) {
+        width = w;
+        apply();
+      }
+    },
+    dispose() {
+      watch.disconnect();
+      if (queued) cancelAnimationFrame(queued);
+      top.remove();
+      handle.remove();
+      chevron.remove();
+      panelEl.style.marginTop = "";
+    }
+  };
 }
 
 // src/sketch/handles.ts
@@ -32345,6 +34463,12 @@ function agentDoc(doc, opts = {}) {
       await settled();
       return [...opts.check?.() ?? []];
     },
+    propose: (patch, label, by, note) => {
+      const r = propose(doc, patch, { label, by, note, schema: opts.schema });
+      if (!r.ok || !opts.preview) return r;
+      return { ...r, issues: [...opts.preview(patchedCollections(collections(), patch))] };
+    },
+    proposals: (status) => listProposals(doc, status ?? "open").map(({ patch: _patch, base: _base, ...p }) => p),
     undo: () => doc.undo(),
     redo: () => doc.redo()
   };
@@ -32385,6 +34509,10 @@ function doingOf(op, args) {
   switch (op) {
     case "apply":
       return typeof args.label === "string" && args.label ? args.label : "editing";
+    case "propose":
+      return `proposing: ${typeof args.label === "string" && args.label ? args.label : "a change"}`;
+    case "proposals":
+      return "reading the proposals";
     case "undo":
       return "undo";
     case "redo":
@@ -32468,6 +34596,13 @@ async function runRelayed(op, args, agent) {
       return needDoc().apply(args.patch, args.label);
     case "check":
       return needDoc().check();
+    case "propose": {
+      const label = String(args.label ?? "").trim();
+      if (!label) throw new Error("label is required: a few words saying what the proposal does");
+      return needDoc().propose(args.patch, label, agent, String(args.note ?? "").trim() || void 0);
+    }
+    case "proposals":
+      return needDoc().proposals(args.status === "all" ? "all" : "open");
     case "undo":
       return { undone: needDoc().undo() };
     case "redo":
@@ -32492,7 +34627,7 @@ async function runRelayed(op, args, agent) {
       return { viewPng: b.viewPng, camera: m.camera ?? null, scene: m.scene ?? null, logs: m.logs ?? [], errors: m.errors ?? [] };
     }
     default:
-      throw new Error(`unknown call "${op}" (info, records, apply, check, notes, noteReply, noteResolve, undo, redo, setParams, run, camera, section, steps, snapshot)`);
+      throw new Error(`unknown call "${op}" (info, records, apply, check, propose, proposals, notes, noteReply, noteResolve, undo, redo, setParams, run, camera, section, steps, snapshot)`);
   }
 }
 function paramSchema(store) {
@@ -32648,8 +34783,15 @@ function callSite() {
 
 // src/sketch/Markup.ts
 var INK = "#ff00d4";
+var TOGGLE_TITLE = "Draw on the view what should change. Each mark is saved with the parts it touches, for Claude (or a colleague) to read.";
 var MarkupOverlay = class {
   constructor(host) {
+    /** Buttons that act on marks: greyed out while there is none. */
+    this.needMarks = [];
+    /** What the last Save or Pin did, shown until the next mark is drawn. */
+    this.message = "";
+    /** The mark whose text is being typed, if any. */
+    this.noting = null;
     this.marks = [];
     this.drawing = null;
     this.active = false;
@@ -32666,40 +34808,56 @@ var MarkupOverlay = class {
     const btnCss = "font:12px system-ui,sans-serif;padding:5px 10px;border-radius:5px;border:1px solid #d0d0d6;background:#fff;color:#222;cursor:pointer;";
     this.toggleBtn = document.createElement("button");
     this.toggleBtn.textContent = "\u270E Markup";
-    this.toggleBtn.title = "Draw on the view to give instructions (saved as screenshot + JSON)";
+    this.toggleBtn.title = TOGGLE_TITLE;
     this.toggleBtn.style.cssText = host.buttonHost ? `${btnCss}padding:3px 9px;` : `position:absolute;top:10px;right:10px;z-index:22;${btnCss}`;
     this.toggleBtn.addEventListener("click", () => this.setActive(!this.active));
     (host.buttonHost ?? vp).appendChild(this.toggleBtn);
+    const right = host.buttonHost ? 10 : 100;
     this.bar = document.createElement("div");
-    this.bar.style.cssText = `position:absolute;top:${(host.top ?? 0) + 10}px;right:${host.buttonHost ? 10 : 100}px;z-index:22;display:none;gap:6px;align-items:center;background:#fff;border:1px solid #d0d0d6;border-radius:7px;padding:5px;box-shadow:0 2px 8px rgba(0,0,0,.12);`;
+    this.bar.dataset.markupBar = "";
+    this.bar.style.cssText = `position:absolute;top:${(host.top ?? 0) + 10}px;right:${right}px;max-width:calc(100% - ${right + 10}px);box-sizing:border-box;z-index:22;display:none;flex-direction:column;gap:6px;background:#fff;border:1px solid #d0d0d6;border-radius:7px;padding:7px 8px;box-shadow:0 2px 8px rgba(0,0,0,.12);font:12px system-ui,sans-serif;color:#222;`;
+    const lead = document.createElement("div");
+    lead.style.cssText = "width:0;min-width:100%;line-height:1.35;";
+    const name = document.createElement("b");
+    name.textContent = "Markup";
+    this.status = document.createElement("span");
+    this.status.dataset.markupHint = "";
+    this.status.style.cssText = "color:#444;margin-left:8px;";
+    lead.append(name, this.status);
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;align-items:center;";
     this.noteBox = document.createElement("input");
-    this.noteBox.placeholder = "Instruction for the whole view\u2026";
-    this.noteBox.style.cssText = "font:12px system-ui,sans-serif;width:260px;padding:5px 8px;border:1px solid #d0d0d6;border-radius:5px;";
+    this.noteBox.placeholder = "General instruction, not tied to a mark (optional)";
+    this.noteBox.title = "Something to change that no single mark shows, e.g. \u201Cmake the whole roof steeper\u201D. It is saved with the marks; a mark without a text of its own takes it.";
+    this.noteBox.style.cssText = "font:12px system-ui,sans-serif;width:290px;flex:1 1 200px;min-width:0;padding:5px 8px;border:1px solid #d0d0d6;border-radius:5px;";
     this.noteBox.addEventListener("keydown", (e) => {
       e.stopPropagation();
       if (e.key === "Enter") void this.save();
     });
-    const mk = (label, title, fn) => {
+    const mk = (label, title, fn, primary = false) => {
       const b = document.createElement("button");
       b.textContent = label;
       b.title = title;
-      b.style.cssText = btnCss;
+      b.style.cssText = btnCss + (primary ? "background:#222;border-color:#222;color:#fff;" : "");
       b.addEventListener("click", fn);
       return b;
     };
-    this.status = document.createElement("span");
-    this.status.style.cssText = "font:11px system-ui,sans-serif;color:#666;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
-    this.bar.append(
-      this.noteBox,
-      mk("Undo", "Remove last mark (\u2318Z)", () => this.undo()),
-      mk("Clear", "Remove all marks", () => {
-        this.marks = [];
-        this.redraw();
-      }),
-      mk("Save", host.keep ? "Save view.png + markup.json, and keep the marks as notes an agent can answer (\u2318S)" : "Save view.png + markup.json (\u2318S)", () => void this.save()),
-      ...host.keep ? [mk("Keep as notes", "Keep the marks as notes with the model: saved, undoable, shared", () => this.keepNotes())] : [],
-      this.status
+    const undo = mk("Undo mark", "Remove the last mark (\u2318Z)", () => this.undo());
+    const clear = mk("Clear marks", "Remove all marks", () => {
+      this.marks = [];
+      this.message = "";
+      this.redraw();
+    });
+    const pin = host.keep ? mk("Pin notes to the model", "Keep each mark with its text as a note on the model: a numbered pin, saved with the model, undoable, seen by everyone on a shared model. Claude answers open notes.", () => this.keepNotes()) : null;
+    const save = mk(
+      "Save for Claude",
+      "Save the view with the marks and a file naming the parts each mark touches (\u2318S), for Claude to read: in .tekto/markup/, or as downloads without the dev server." + (host.keep ? " The marks are pinned to the model as notes too." : ""),
+      () => void this.save(),
+      true
     );
+    this.needMarks = [undo, clear, ...pin ? [pin] : []];
+    row.append(this.noteBox, undo, clear, ...pin ? [pin] : [], save);
+    this.bar.append(lead, row);
     vp.appendChild(this.bar);
     this.canvas.addEventListener("pointerdown", (e) => this.down(e));
     this.canvas.addEventListener("pointermove", (e) => this.move(e));
@@ -32713,10 +34871,11 @@ var MarkupOverlay = class {
     this.chips.style.display = on ? "block" : "none";
     this.bar.style.display = on ? "flex" : "none";
     this.toggleBtn.textContent = on ? "Done" : "\u270E Markup";
+    this.toggleBtn.title = on ? "Close Markup (Esc). Marks that were not saved or pinned are dropped." : TOGGLE_TITLE;
+    this.message = "";
     if (on) {
-      this.resize();
       window.addEventListener("keydown", this.onKey, true);
-      this.setStatus("Drag to mark \xB7 Shift adds to the last mark");
+      this.resize();
     } else {
       window.removeEventListener("keydown", this.onKey, true);
       this.marks = [];
@@ -32739,6 +34898,7 @@ var MarkupOverlay = class {
     if (e.button !== 0) return;
     this.canvas.setPointerCapture(e.pointerId);
     this.drawing = [this.local(e)];
+    this.message = "";
     if (!(e.shiftKey && this.marks.length)) {
       this.marks.push({ n: this.marks.length + 1, strokes: [], note: "" });
     }
@@ -32779,6 +34939,7 @@ var MarkupOverlay = class {
   }
   undo() {
     this.marks.pop();
+    this.message = "";
     this.redraw();
   }
   /** Each mark as a note: its strokes laid on the model (or the ground), its text, the
@@ -32786,18 +34947,18 @@ var MarkupOverlay = class {
   keepNotes() {
     if (!this.host.keep) return;
     if (!this.marks.length) {
-      this.setStatus("Draw a mark first");
+      this.setStatus("Draw a mark first.");
       return;
     }
     const kept = this.marksToNotes();
     if (!kept) {
-      this.setStatus("The marks lie on nothing to keep them on");
+      this.setStatus("The marks lie on nothing: draw them on the model or the ground to pin them.");
       return;
     }
     this.marks = [];
     this.noteBox.value = "";
     this.redraw();
-    this.setStatus(`Kept ${kept} note${kept > 1 ? "s" : ""}`);
+    this.setStatus(`${kept} note${kept > 1 ? "s" : ""} pinned to the model. Click a pin to read it.`);
   }
   /** Keep the marks that lie on the model (or the ground) as notes; each remembers its note's key. Returns how many. */
   marksToNotes() {
@@ -32836,16 +34997,19 @@ var MarkupOverlay = class {
   askNote(mark) {
     const [x, y] = badgeAt(mark);
     const inp = document.createElement("input");
-    inp.placeholder = `note for ${mark.n}\u2026`;
-    inp.style.cssText = `position:absolute;left:${x + 16}px;top:${y - 12}px;z-index:23;font:12px system-ui,sans-serif;width:200px;padding:4px 7px;border:2px solid ${INK};border-radius:5px;background:#fff;`;
+    inp.placeholder = `Mark ${mark.n}: what should change here?`;
+    inp.style.cssText = `position:absolute;left:${x + 16}px;top:${y - 12}px;z-index:23;font:12px system-ui,sans-serif;width:230px;padding:4px 7px;border:2px solid ${INK};border-radius:5px;background:#fff;`;
     let closed = false;
     const done = () => {
       if (closed) return;
       closed = true;
       mark.note = inp.value.trim();
       inp.remove();
+      this.noting = null;
       this.redraw();
     };
+    this.noting = mark.n;
+    this.refresh();
     inp.addEventListener("keydown", (e) => {
       e.stopPropagation();
       if (e.key === "Enter") done();
@@ -32878,8 +35042,8 @@ var MarkupOverlay = class {
     const world = {};
     const all = mark.strokes.flat();
     if (kind2 === "loop") {
-      const ring = mark.strokes[0];
-      for (const p of gridInside(ring, 150)) hit(p);
+      const ring2 = mark.strokes[0];
+      for (const p of gridInside(ring2, 150)) hit(p);
       if (points.length) world.centroid = round32(mean(points));
       if (points.length) world.bounds = bounds(points).map(round32);
     } else if (kind2 === "point") {
@@ -32923,10 +35087,28 @@ var MarkupOverlay = class {
       chip.style.cssText = `position:absolute;left:${x + 16}px;top:${y + 14}px;font:11px system-ui,sans-serif;color:#222;background:rgba(255,255,255,.9);border:1px solid #ddd;border-radius:4px;padding:2px 6px;max-width:320px;`;
       this.chips.appendChild(chip);
     }
+    this.refresh();
   }
   setStatus(s) {
-    this.status.textContent = s;
-    this.status.title = s;
+    this.message = s;
+    this.refresh();
+  }
+  /** What to do next, in a sentence. */
+  hint() {
+    if (this.message) return this.message;
+    if (this.noting !== null) return `Type what should change at mark ${this.noting}, then press Enter.`;
+    const n = this.marks.length;
+    if (!n) return "Draw on the view what should change: circle a part, or click a point.";
+    return `${n} mark${n > 1 ? "s" : ""}. Draw the next one, then ${this.host.keep ? "pin or save" : "save"}. Shift-drag adds a stroke to the last mark.`;
+  }
+  /** The bar's sentence, and the buttons that need a mark. */
+  refresh() {
+    this.status.textContent = this.hint();
+    for (const b of this.needMarks) {
+      b.disabled = !this.marks.length;
+      b.style.opacity = b.disabled ? "0.45" : "1";
+      b.style.cursor = b.disabled ? "default" : "pointer";
+    }
   }
   // ── Capture ──
   async save() {
@@ -32938,8 +35120,8 @@ var MarkupOverlay = class {
         this.marks = this.marks.filter((m) => !m.noteKey);
         this.redraw();
       }
-      const notes = kept ? ` \xB7 kept ${kept} note${kept > 1 ? "s" : ""}` : "";
-      this.setStatus((b.dir ? `Saved \u2192 ${b.dir}` : "Downloaded (no dev-server plugin)") + notes);
+      const notes = kept ? ` ${kept} note${kept > 1 ? "s" : ""} pinned to the model.` : "";
+      this.setStatus((b.dir ? `Saved to ${b.dir}. Ask Claude to look at the markup.` : "Downloaded two pictures of the view and markup.json (no dev server to save to). Give them to Claude.") + notes);
     } catch (e) {
       this.setStatus(`Save failed: ${e}`);
     }
@@ -33111,23 +35293,23 @@ function resample(s, step, max) {
   out.push(s[s.length - 1]);
   return out;
 }
-function gridInside(ring, target) {
-  const [x0, y0, x1, y1] = bbox2(ring);
-  const area = Math.abs(ring.reduce((a, p, i) => {
-    const q = ring[(i + 1) % ring.length];
+function gridInside(ring2, target) {
+  const [x0, y0, x1, y1] = bbox2(ring2);
+  const area = Math.abs(ring2.reduce((a, p, i) => {
+    const q = ring2[(i + 1) % ring2.length];
     return a + p[0] * q[1] - q[0] * p[1];
   }, 0)) / 2;
   const step = Math.max(4, Math.sqrt(area / target));
   const out = [];
   for (let y = y0 + step / 2; y < y1; y += step) {
-    for (let x = x0 + step / 2; x < x1; x += step) if (inside([x, y], ring)) out.push([x, y]);
+    for (let x = x0 + step / 2; x < x1; x += step) if (inside([x, y], ring2)) out.push([x, y]);
   }
   return out;
 }
-function inside(p, ring) {
+function inside(p, ring2) {
   let c = false;
-  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    const [xi, yi] = ring[i], [xj, yj] = ring[j];
+  for (let i = 0, j = ring2.length - 1; i < ring2.length; j = i++) {
+    const [xi, yi] = ring2[i], [xj, yj] = ring2[j];
     if (yi > p[1] !== yj > p[1] && p[0] < (xj - xi) * (p[1] - yi) / (yj - yi) + xi) c = !c;
   }
   return c;
@@ -33228,12 +35410,12 @@ var StepsPanel = class {
     this.pill.type = "button";
     this.pill.dataset.tektoSteps = "pill";
     this.pill.style.cssText = `position:absolute;bottom:12px;left:50%;transform:translateX(-50%);z-index:20;display:none;
-      padding:5px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.18);background:rgba(7,8,14,.85);
+      padding:5px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.18);background:rgba(30,30,30,.92);
       backdrop-filter:blur(8px);color:${t.text};font:500 11px/1.2 ${t.font};cursor:pointer;`;
     this.pill.addEventListener("click", () => this.setOpen(true));
     this.el.dataset.tektoSteps = "panel";
     this.el.style.cssText = `position:absolute;left:0;right:0;bottom:0;height:38%;min-height:200px;max-height:340px;z-index:20;
-      display:none;flex-direction:column;background:rgba(7,8,14,.92);backdrop-filter:blur(8px);
+      display:none;flex-direction:column;background:rgba(30,30,30,.96);backdrop-filter:blur(8px);
       border-top:1px solid rgba(255,255,255,.12);color:${t.textDim};font:11px/1.45 ${t.font};`;
     const head = document.createElement("div");
     head.style.cssText = "display:flex;align-items:center;gap:10px;padding:6px 10px 6px 14px;border-bottom:1px solid rgba(255,255,255,.08);";
@@ -33560,6 +35742,7 @@ var SketchInstance = class {
     // Param model: values live in the shared ParamStore, panel placement in
     // `items`, and the DOM is rendered by the shared ControlPanel (src/gui/).
     this.store = new ParamStore({});
+    this.panelFrame = null;
     this.items = /* @__PURE__ */ new Map();
     this.layerTrees = /* @__PURE__ */ new Map();
     this.buttons = [];
@@ -33631,8 +35814,9 @@ var SketchInstance = class {
     /** Notes on steps on their way into a snapshot (`saveStepMarks`). */
     this._stepMarks = [];
     // Export ▾ / Import ▾ in the sketch's own header (a shell's top bar does it otherwise).
-    this._fileMenusEl = null;
-    this._fileMenusSig = "";
+    this._menuHost = null;
+    this._menuBar = null;
+    this.history = new ParamHistory(this.store);
     this._trackSource = false;
     this._srcById = /* @__PURE__ */ new Map();
     this.separatorCount = 0;
@@ -33663,6 +35847,8 @@ var SketchInstance = class {
     // Layer ids locked in any layer tree (own or a parent's lock): objects on
     // them — by `.layer()` name or view layer — can't be picked or hovered.
     this._lockedLayers = /* @__PURE__ */ new Set();
+    /** File ▸ Import … / Export …: a command per registered entry, replaced when the entries change. */
+    this._fileCommandsOff = null;
     this.fn = fn;
     this.config = config;
     this.scene = new Scene();
@@ -33691,8 +35877,14 @@ var SketchInstance = class {
     this.scene.on((e) => {
       if (!this._running && (e.type === "scene:renderMode" && this._readsStyle.has("renderMode") || e.type === "scene:lightingMode" && this._readsStyle.has("lightingMode"))) this.runSketch();
     });
+    this.commands.add(this.history.commands());
     this.commands.add(viewCommands(this.renderer));
     this._unbindCommandKeys = this.commands.bindKeys();
+    const slot = menuSlot(this._menuHost);
+    if (slot) {
+      this._menuBar = menuBar(this.commands, { theme: this.theme });
+      slot.appendChild(this._menuBar.el);
+    }
     this.wireInput();
     this.runSketch();
     this.startLoop();
@@ -33702,7 +35894,7 @@ var SketchInstance = class {
   buildDOM() {
     this.theme = getTheme(this.config.theme);
     const layout = buildSketchLayout(this.container, this.config, this.theme);
-    this._fileMenusEl = layout.fileMenusEl;
+    this._menuHost = layout.menuHost;
     this.panelEl = layout.panelEl;
     this.viewportEl = layout.viewportEl;
     this.viewportWrap = layout.viewportWrap;
@@ -33713,15 +35905,28 @@ var SketchInstance = class {
       theme: t,
       getButtons: () => this.buttons,
       onCommit: (key) => {
+        this.history.commit();
         if (this.isDisplayChange(key)) this.runDisplayPass();
         else this.commitRun();
       },
       onAction: () => this.runSketch(),
       onTabChange: (tab) => {
         this._onTabChange?.(tab);
-      }
+      },
+      tabs: this.config.tabs,
+      onRender: () => this.panelFrame?.fit()
     });
     this.panelEl.appendChild(this.panel.el);
+    this.panelFrame = panelFrame({
+      root: layout.root,
+      panelEl: this.panelEl,
+      theme: t,
+      top: layout.headerHeight,
+      width: this.config.panelWidth ?? 320,
+      title: this.config.panelTitle ?? "Parameters",
+      storageKey: this.config.title ?? "default",
+      preferred: () => this.panel.preferredWidth()
+    });
     this.store.onChange((key) => {
       if (this._running || this._squelch) return;
       if (this.isDisplayChange(key)) this.runDisplayPass();
@@ -33736,15 +35941,16 @@ var SketchInstance = class {
   initRenderer() {
     const zUp = this.config.up === "z";
     this.renderer = new ThreeRenderer(this.scene, this.viewportEl, {
-      backgroundColor: this.config.background ?? 460814,
+      backgroundColor: this.config.background ?? VIEW_BG_DARK,
       showGrid: this.config.grid !== false,
       showAxes: this.config.axes !== false,
       cameraPosition: this.config.camera ?? (zUp ? [8, -10, 6] : [5, 6, 8]),
       cameraTarget: this.config.target ?? [0, 0, 0],
       up: this.config.up ?? "y",
-      navGizmo: this.config.navGizmo ?? false,
-      // On by default; a shell with its own bar (the testbench's data-shell) turns it off.
-      shadingBar: this.config.shadingBar ?? (this.container.dataset.shell == null ? "header" : false),
+      // The view's tools are the same in every 3D view: the header strip and the axis widget.
+      navGizmo: this.config.navGizmo ?? true,
+      shadingBar: this.config.shadingBar ?? "header",
+      viewerTools: this.config.viewerTools ?? {},
       headerHost: this.viewportWrap,
       // above overlay() layers and ✎ Markup's drawing layer
       units: this.config.units ?? null
@@ -33940,6 +36146,7 @@ var SketchInstance = class {
       if (!usedParams.has(key)) this.layerTrees.delete(key);
     }
     this.refreshLocks();
+    this.history.adopt();
     const hasTabControls = [...this.items.values()].some((it) => it.tab) || this.buttons.some((b) => b.tab) || [...this.layerTrees.values()].some((lt) => lt.tab);
     const hasInfoTab = hasTabControls && this.logs.length > 0;
     const fingerprint = [
@@ -34147,12 +36354,12 @@ var SketchInstance = class {
       registerExport(opts) {
         self.exports.set(opts.name, { ...opts });
         for (const l of self._exportListeners) l();
-        self.renderFileMenus();
+        self.syncFileCommands();
       },
       registerImport(opts) {
         self.imports.set(opts.name, { ...opts });
         for (const l of self._importListeners) l();
-        self.renderFileMenus();
+        self.syncFileCommands();
       },
       // ── Geometry Builders ──
       mesh(m, style) {
@@ -34403,14 +36610,14 @@ var SketchInstance = class {
       styleViewLayer(name, style) {
         const ids = self._viewLayerObjects.get(name);
         if (!ids) return 0;
-        let touched = 0;
+        let touched2 = 0;
         for (const id of ids) {
           if (self.scene.has(id)) {
             self.scene.setStyle(id, style);
-            touched++;
+            touched2++;
           }
         }
-        return touched;
+        return touched2;
       },
       // ── Picking + transform gizmo ──
       enablePicking(enabled = true) {
@@ -34869,13 +37076,9 @@ var SketchInstance = class {
       ...this._stepMarks.length ? { stepMarks: this._stepMarks } : {}
     };
   }
-  /** Rebuild the header's Export / Import menus when the registered names change. */
-  renderFileMenus() {
-    if (!this._fileMenusEl) return;
-    const sig = [...this.exports.keys()].join("\0") + "|" + [...this.imports.keys()].join("\0");
-    if (sig === this._fileMenusSig) return;
-    this._fileMenusSig = sig;
-    renderFileMenus(this._fileMenusEl, this.getExports(), this.getImports(), this.theme);
+  syncFileCommands() {
+    this._fileCommandsOff?.();
+    this._fileCommandsOff = this.commands.add(fileCommands(this.getExports(), this.getImports()));
   }
   /** The current value of every control, keyed for `setParams` — save it to reopen a design. */
   getParams() {
@@ -34886,7 +37089,9 @@ var SketchInstance = class {
    * returned — and re-run once. Reports names it could not apply instead of dropping them.
    */
   setParams(values) {
-    return this.store.setByName(values);
+    const result = this.store.setByName(values);
+    this.history.commit();
+    return result;
   }
   /** Destroy the sketch and clean up */
   dispose() {
@@ -34894,6 +37099,7 @@ var SketchInstance = class {
     this.markup?.dispose();
     this.bridge?.dispose();
     this._unbindCommandKeys?.();
+    this._menuBar?.dispose();
     if (this._boundKeyDown) window.removeEventListener("keydown", this._boundKeyDown);
     if (this._boundKeyUp) window.removeEventListener("keyup", this._boundKeyUp);
     this._boundKeyDown = null;
@@ -34906,7 +37112,7 @@ var SketchInstance = class {
 // src/sketch/ViewerToolbar.ts
 function viewerToolbar(scene, renderer, opts = {}) {
   const t = opts.theme ?? getTheme();
-  const show2 = opts;
+  const show3 = opts;
   const offs = [];
   const bar = document.createElement("div");
   bar.style.cssText = "margin-left:auto; display:flex; align-items:center; gap:16px;";
@@ -34969,7 +37175,7 @@ function viewerToolbar(scene, renderer, opts = {}) {
     g.append(tag(label), control);
     return g;
   };
-  if (show2.light !== false) {
+  if (show3.light !== false) {
     const light = group("Light", segmented(
       [["Flat", "flat"], ["Studio", "studio"]],
       scene.lightingMode,
@@ -34978,7 +37184,7 @@ function viewerToolbar(scene, renderer, opts = {}) {
         if (e.type === "scene:lightingMode") set(e.mode);
       }))
     ));
-    if (show2.ao !== false) {
+    if (show3.ao !== false) {
       light.appendChild(toggle(
         "AO",
         "Ambient occlusion: darker where surfaces meet (perspective views)",
@@ -34988,7 +37194,7 @@ function viewerToolbar(scene, renderer, opts = {}) {
     }
     bar.appendChild(light);
   }
-  if (show2.mode !== false) bar.appendChild(group("Mode", segmented(
+  if (show3.mode !== false) bar.appendChild(group("Mode", segmented(
     [["Solid", "solid"], ["Wire", "wireframe"], ["Hidden", "hiddenline"], ["Ghost", "ghost"]].map(([label, mode]) => [label, mode, viewModeIconSvg(mode, 14)]),
     scene.renderMode,
     (v) => scene.setRenderMode(v),
@@ -34996,7 +37202,7 @@ function viewerToolbar(scene, renderer, opts = {}) {
       if (e.type === "scene:renderMode") set(e.mode);
     }))
   )));
-  if (show2.camera !== false) {
+  if (show3.camera !== false) {
     const cam = group("Cam", segmented(
       [["Persp", "perspective"], ["Ortho", "orthographic"]],
       renderer.projection,
@@ -35014,8 +37220,8 @@ function viewerToolbar(scene, renderer, opts = {}) {
     cam.appendChild(iso);
     bar.appendChild(cam);
   }
-  if (show2.cut !== false) bar.appendChild(buildCut(renderer, t, segmented));
-  if (show2.sun !== false) bar.appendChild(buildSun(renderer, t));
+  if (show3.cut !== false) bar.appendChild(buildCut(renderer, t, segmented));
+  if (show3.sun !== false) bar.appendChild(buildSun(renderer, t));
   return { el: bar, dispose() {
     for (const off of offs) off();
     offs.length = 0;
@@ -35235,7 +37441,7 @@ var NotesLayer = class {
   reopen(id) {
     this.doc.update(this.collection, id, (n) => ({ ...n, status: "open" }), { label: "Reopen note" });
   }
-  /** Keep several notes as one undo step ("Keep as notes"). Returns their ids. */
+  /** Keep several notes as one undo step ("Pin notes to the model"). Returns their ids. */
   keep(notes) {
     return this.doc.transact(notes.length > 1 ? "Add notes" : "Add note", () => notes.map((n) => this.doc.add(this.collection, n)));
   }
@@ -35344,7 +37550,7 @@ var NotesLayer = class {
     b.type = "button";
     b.dataset.note = id;
     b.setAttribute("aria-label", "Note");
-    b.style.cssText = `position:absolute;width:22px;height:22px;border-radius:50%;border:2px solid #fff;background:${INK2};color:#14161e;font:700 11px/1 system-ui,sans-serif;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;pointer-events:auto;box-shadow:0 1px 4px rgba(0,0,0,.45);`;
+    b.style.cssText = `position:absolute;width:22px;height:22px;border-radius:50%;border:2px solid #fff;background:${INK2};color:#1e1e1e;font:700 11px/1 system-ui,sans-serif;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;pointer-events:auto;box-shadow:0 1px 4px rgba(0,0,0,.45);`;
     b.addEventListener("click", (e) => {
       e.stopPropagation();
       this.openId === id ? this.closeCard() : this.openCard(id);
@@ -35361,7 +37567,7 @@ var NotesLayer = class {
     this.openId = id;
     const card = this.card = document.createElement("div");
     card.dataset.noteCard = id;
-    card.style.cssText = "position:absolute;z-index:17;width:230px;padding:10px 12px;border-radius:8px;pointer-events:auto;background:#11131a;border:1px solid rgba(255,255,255,.12);box-shadow:0 6px 18px rgba(0,0,0,.45);color:#e8ebf0;font:12px/1.45 system-ui,sans-serif;";
+    card.style.cssText = "position:absolute;z-index:17;width:230px;padding:10px 12px;border-radius:8px;pointer-events:auto;background:#1e1e1e;border:1px solid rgba(255,255,255,.12);box-shadow:0 6px 18px rgba(0,0,0,.45);color:#e8ebf0;font:12px/1.45 system-ui,sans-serif;";
     const text = document.createElement("div");
     text.textContent = n.text || "(no text)";
     text.style.cssText = "white-space:pre-wrap;margin-bottom:6px;";
@@ -35439,11 +37645,13 @@ function notesLayer(renderer, doc, opts = {}) {
 // src/sketch/AppShell.ts
 function appShell(config) {
   const t = getTheme(config.theme);
-  const panelWidth = config.panelWidth ?? 260;
+  const showHeader = config.showHeader ?? (config.container.dataset.shell == null || !!config.topBar);
+  const headerH = showHeader ? 36 : 0;
+  const bodyRow = showHeader ? 2 : 1;
   const root = document.createElement("div");
   root.style.cssText = `
-    display:grid; grid-template-columns:${panelWidth}px 1fr;
-    grid-template-rows:36px 1fr;
+    display:grid; grid-template-columns:260px 1fr;
+    grid-template-rows:${showHeader ? "36px " : ""}1fr; position:relative;
     width:100%; height:100%; font-family:${t.font};
     font-size:12px; color:${t.text}; background:${t.panelBg};
   `;
@@ -35459,15 +37667,15 @@ function appShell(config) {
     <span style="font-size:9px;padding:2px 6px;border-radius:3px;
       background:${t.hoverBg};color:${t.accent}">LIVE</span>
   `;
-  root.appendChild(header);
+  if (showHeader) root.appendChild(header);
   const panelEl = document.createElement("div");
   panelEl.style.cssText = `
-    overflow-y:auto; overflow-x:hidden; padding:0;
+    overflow-y:auto; overflow-x:hidden; padding:0; grid-column:1; grid-row:${bodyRow};
     background:${t.panelBg}; border-right:1px solid ${t.border};
   `;
   root.appendChild(panelEl);
   const vpWrap = document.createElement("div");
-  vpWrap.style.cssText = "position:relative;overflow:hidden;";
+  vpWrap.style.cssText = `position:relative;overflow:hidden;grid-column:2;grid-row:${bodyRow};`;
   const viewportEl = document.createElement("div");
   viewportEl.style.cssText = "width:100%;height:100%;isolation:isolate;";
   vpWrap.appendChild(viewportEl);
@@ -35476,10 +37684,10 @@ function appShell(config) {
   statusEl.style.cssText = `
     position:absolute; bottom:12px; left:12px;
     border-radius:6px;
-    background:rgba(7,8,14,.85); backdrop-filter:blur(8px);
+    background:rgba(30,30,30,.92); backdrop-filter:blur(8px);
     font-size:11px; line-height:1.7; color:${t.textDim};
     pointer-events:none; max-width:340px;
-    border:1px solid rgba(22,24,42,.8);
+    border:1px solid rgba(255,255,255,.1);
     font-family:${t.font};
     display:none; align-items:flex-start;
   `;
@@ -35528,7 +37736,9 @@ function appShell(config) {
   root.appendChild(vpWrap);
   config.container.appendChild(root);
   const params = new ParamStore(config.params);
-  const panel = new ControlPanel({ store: params, theme: t });
+  let frame = null;
+  const history = new ParamHistory(params);
+  const panel = new ControlPanel({ store: params, theme: t, tabs: config.tabs, onRender: () => frame?.fit(), onCommit: () => history.commit() });
   const groups = config.groups ?? { Parameters: Object.keys(config.params) };
   const items = [];
   for (const [groupName, keys] of Object.entries(groups)) {
@@ -35536,26 +37746,41 @@ function appShell(config) {
   }
   panel.render(items);
   panelEl.appendChild(panel.el);
+  frame = panelFrame({
+    root,
+    panelEl,
+    theme: t,
+    top: headerH,
+    width: config.panelWidth ?? 260,
+    title: config.panelTitle ?? "Parameters",
+    storageKey: config.title ?? "app",
+    preferred: () => panel.preferredWidth()
+  });
   const scene = new Scene();
   const renderer = new ThreeRenderer(scene, viewportEl, {
-    backgroundColor: config.background ?? 658196,
+    backgroundColor: config.background ?? VIEW_BG_DARK,
     cameraPosition: config.camera ?? [6, 8, 10],
     cameraTarget: config.target ?? [0, 0, 0],
     // Z-up by default — matches the tekto convention (XY = ground plane) and
     // the architectural / BIM / voxel geometry these apps usually build. Pass
     // `up: "y"` if you're showing the Y-up built-in primitives (box/cylinder/sphere).
     up: config.up ?? "z",
-    navGizmo: config.navGizmo ?? false,
-    shadingBar: config.shadingBar ?? false,
+    navGizmo: config.navGizmo ?? true,
+    shadingBar: config.shadingBar ?? "header",
+    viewerTools: config.viewerTools ?? {},
     headerHost: vpWrap,
     // the viewer header (shadingBar: "header") above overlays and ✎ Markup
     units: config.units ?? null,
     ...config.renderer
   });
   const commands = new Commands();
+  commands.add(history.commands());
   commands.add(viewCommands(renderer));
   const unbindKeys = commands.bindKeys();
-  const toolbar = config.topBar === false ? null : viewerToolbar(scene, renderer, { ...config.topBar === true || config.topBar === void 0 ? {} : config.topBar, theme: t });
+  const menuHost = menuSlot(showHeader ? header : null);
+  const menus = menuHost ? menuBar(commands, { theme: t }) : null;
+  if (menus) menuHost.appendChild(menus.el);
+  const toolbar = !config.topBar ? null : viewerToolbar(scene, renderer, { ...config.topBar === true ? {} : config.topBar, theme: t });
   if (toolbar) header.appendChild(toolbar.el);
   const notesCfg = config.notes ? "doc" in config.notes ? config.notes : { doc: config.notes } : null;
   const notes = notesCfg ? new NotesLayer(renderer, notesCfg.doc, {
@@ -35645,6 +37870,7 @@ function appShell(config) {
       bridge.dispose();
       unbindKeys();
       toolbar?.dispose();
+      menus?.dispose();
       notes?.dispose();
       panel.dispose();
       renderer.dispose();
@@ -35732,23 +37958,35 @@ function appShell(config) {
 }
 
 // src/collab/PresenceBar.ts
+function headerSlot(host) {
+  for (let el = host, up = 0; el && up < 4; el = el.parentElement, up++) {
+    const slot = el.querySelector(":scope > [data-tekto-viewer-header] > [data-tekto-header-slot=right]");
+    if (slot) return slot;
+  }
+  return null;
+}
 var STATUS_COL = { online: "#2f9e44", connecting: "#f08c00", offline: "#adb5bd", error: "#e03131" };
 var PresenceBar = class {
   constructor(store, host, opts = {}) {
     this.store = store;
     this.opts = opts;
     this.unsubs = [];
+    /** In the viewer header's (dark) row, not floating on its own white card. */
+    this.inHeader = false;
     this.el = document.createElement("div");
-    this.el.style.cssText = `position:absolute;${opts.position ?? "top:10px;right:100px;"}z-index:22;display:flex;gap:6px;align-items:center;font:12px system-ui,sans-serif;background:#fff;border:1px solid #d0d0d6;border-radius:7px;padding:3px 6px;box-shadow:0 2px 8px rgba(0,0,0,.12);`;
+    const slot = opts.position ? null : headerSlot(host);
+    this.inHeader = !!slot;
+    this.el.dataset.tektoPresence = slot ? "header" : "floating";
+    this.el.style.cssText = slot ? "display:flex;gap:6px;align-items:center;font:12px system-ui,sans-serif;" : `position:absolute;${opts.position ?? "top:10px;right:100px;"}z-index:22;display:flex;gap:6px;align-items:center;font:12px system-ui,sans-serif;background:#fff;border:1px solid #d0d0d6;border-radius:7px;padding:3px 6px;box-shadow:0 2px 8px rgba(0,0,0,.12);`;
     this.dot = document.createElement("span");
     this.dot.style.cssText = "width:8px;height:8px;border-radius:50%;display:inline-block;";
     this.people = document.createElement("div");
     this.people.style.cssText = "display:flex;gap:3px;align-items:center;";
     this.btn = document.createElement("button");
-    this.btn.style.cssText = "font:12px system-ui,sans-serif;padding:3px 8px;border-radius:5px;border:1px solid #d0d0d6;background:#fff;color:#222;cursor:pointer;";
+    this.btn.style.cssText = slot ? "font:11px system-ui,sans-serif;padding:3px 8px;border-radius:5px;border:1px solid rgba(255,255,255,.22);background:transparent;color:#e8ebf0;cursor:pointer;" : "font:12px system-ui,sans-serif;padding:3px 8px;border-radius:5px;border:1px solid #d0d0d6;background:#fff;color:#222;cursor:pointer;";
     this.btn.addEventListener("click", () => void (store.user ? store.signOut() : store.signIn()));
     this.el.append(this.dot, this.people, this.btn);
-    host.appendChild(this.el);
+    (slot ?? host).appendChild(this.el);
     this.unsubs.push(store.onPresence(() => this.render()), store.onStatus(() => this.render()), store.onUser(() => this.render()));
     this.render();
   }
@@ -35770,7 +38008,7 @@ var PresenceBar = class {
       seen.add(p.user.id);
       const b = document.createElement("span");
       const me = p.session === this.store.session;
-      b.style.cssText = `width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font:600 10px system-ui,sans-serif;color:#fff;background:${p.color};box-shadow:0 0 0 2px ${me ? "#222" : "#fff"};overflow:hidden;`;
+      b.style.cssText = `width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font:600 10px system-ui,sans-serif;color:#fff;background:${p.color};box-shadow:0 0 0 2px ${this.inHeader ? me ? "#fff" : "transparent" : me ? "#222" : "#fff"};overflow:hidden;`;
       if (p.user.avatarUrl) {
         const img = document.createElement("img");
         img.src = p.user.avatarUrl;
@@ -35789,12 +38027,152 @@ var PresenceBar = class {
       if (!agent?.name) continue;
       const b = document.createElement("span");
       b.dataset.agent = agent.name;
-      b.style.cssText = "height:22px;padding:0 6px;border-radius:5px;display:inline-flex;align-items:center;font:600 10px system-ui,sans-serif;color:#14161e;background:#ffb020;white-space:nowrap;";
+      b.style.cssText = "height:22px;padding:0 6px;border-radius:5px;display:inline-flex;align-items:center;font:600 10px system-ui,sans-serif;color:#1e1e1e;background:#ffb020;white-space:nowrap;";
       b.textContent = agent.name;
       const me = p.session === this.store.session;
       b.title = `${agent.name}, through ${me ? "your" : `${p.user.name}'s`} window${agent.doing ? `: ${agent.doing}` : ""}`;
       this.people.appendChild(b);
     }
+  }
+};
+
+// src/collab/ProposalBar.ts
+var show2 = (v) => {
+  if (v === void 0) return "\u2014";
+  if (typeof v === "number") return String(Math.round(v * 1e3) / 1e3);
+  const s = typeof v === "string" ? v : JSON.stringify(v);
+  return s.length > 34 ? `${s.slice(0, 33)}\u2026` : s;
+};
+var ProposalBar = class {
+  constructor(doc, host, opts = {}) {
+    this.doc = doc;
+    this.opts = opts;
+    this.index = 0;
+    this.error = "";
+    this.pending = 0;
+    this.shown = "";
+    this.t = opts.theme ?? getTheme();
+    const t = this.t;
+    this.el = document.createElement("div");
+    this.el.dataset.tektoProposals = "";
+    this.el.setAttribute("role", "region");
+    this.el.setAttribute("aria-label", "Proposals");
+    this.el.style.cssText = `position:absolute;${opts.position ?? "left:50%;bottom:56px;transform:translateX(-50%);"}z-index:24;display:none;
+      width:min(420px,calc(100% - 32px));max-height:60%;overflow-y:auto;box-sizing:border-box;padding:10px 12px;
+      background:${t.popupBg};color:${t.text};border:1px solid ${t.controlBorder};border-radius:8px;
+      box-shadow:0 6px 22px rgba(0,0,0,${t.isDark ? ".45" : ".16"});font:12px/1.45 ${t.font};`;
+    host.appendChild(this.el);
+    this.off = doc.onChange(() => {
+      if (!this.pending) this.pending = requestAnimationFrame(() => {
+        this.pending = 0;
+        this.render();
+      });
+    });
+    this.render();
+  }
+  destroy() {
+    this.off();
+    if (this.pending) cancelAnimationFrame(this.pending);
+    this.el.remove();
+  }
+  decider() {
+    return this.opts.by?.() ?? this.doc.store.user?.name;
+  }
+  render() {
+    const t = this.t;
+    const open = listProposals(this.doc);
+    if (!open.length) {
+      this.el.style.display = "none";
+      this.el.replaceChildren();
+      this.shown = "";
+      this.error = "";
+      return;
+    }
+    this.index = Math.min(this.index, open.length - 1);
+    const p = open[this.index];
+    if (p.id !== this.shown) {
+      this.shown = p.id;
+      this.error = "";
+    }
+    this.el.style.display = "block";
+    const make = (tag, css, text) => {
+      const e = document.createElement(tag);
+      e.style.cssText = css;
+      if (text !== void 0) e.textContent = text;
+      return e;
+    };
+    const button2 = (label, solid, run) => {
+      const b = make("button", `padding:5px 12px;border-radius:5px;font:inherit;cursor:pointer;border:1px solid ${solid ? t.accent : t.controlBorder};
+        background:${solid ? t.accent : "transparent"};color:${solid ? t.popupBg : t.text};`, label);
+      b.type = "button";
+      b.addEventListener("click", run);
+      return b;
+    };
+    const head = make("div", `display:flex;align-items:center;gap:6px;color:${t.textDim};font-size:11px;`);
+    head.append(make("span", "flex:1;", `${p.by} proposes${open.length > 1 ? ` \xB7 ${this.index + 1} of ${open.length}` : ""}`));
+    if (open.length > 1) {
+      const step = (d, label, name) => {
+        const b = button2(label, false, () => {
+          this.index = (this.index + d + open.length) % open.length;
+          this.render();
+        });
+        b.style.padding = "1px 8px";
+        b.setAttribute("aria-label", name);
+        return b;
+      };
+      head.append(step(-1, "\u2039", "Previous proposal"), step(1, "\u203A", "Next proposal"));
+    }
+    const title = make("div", "font-weight:600;font-size:13px;margin:3px 0 2px;", p.label);
+    title.dataset.proposal = p.id;
+    const rows = [head, title];
+    if (p.note) rows.push(make("div", `color:${t.textDim};margin-bottom:6px;white-space:pre-wrap;`, p.note));
+    const list = make("div", `margin:6px 0;padding:6px 0;border-top:1px solid ${t.controlBorder};border-bottom:1px solid ${t.controlBorder};display:grid;gap:3px;`);
+    for (const c of p.changes) {
+      const row = make("button", `display:block;width:100%;text-align:left;padding:2px 4px;border:0;border-radius:4px;background:transparent;color:${t.text};font:inherit;cursor:${this.opts.onFocus ? "pointer" : "default"};`);
+      row.type = "button";
+      row.dataset.change = c.key;
+      const sign = c.kind === "add" ? "+" : c.kind === "remove" ? "\u2212" : "~";
+      row.append(make("span", `display:inline-block;width:14px;color:${t.textDim};`, sign), make("span", "", c.key));
+      if (c.kind === "change") for (const f2 of c.fields ?? []) row.append(make("div", `padding-left:14px;color:${t.textDim};`, `${f2.name}: ${show2(f2.from)} \u2192 ${show2(f2.to)}`));
+      row.setAttribute("aria-label", `${c.kind === "add" ? "Adds" : c.kind === "remove" ? "Removes" : "Changes"} ${c.key}`);
+      if (this.opts.onFocus) {
+        row.addEventListener("click", () => this.opts.onFocus([c.key]));
+        row.addEventListener("mouseenter", () => {
+          row.style.background = t.hoverBg;
+        });
+        row.addEventListener("mouseleave", () => {
+          row.style.background = "transparent";
+        });
+      }
+      list.append(row);
+    }
+    rows.push(list);
+    if (p.stale.length) rows.push(make("div", `color:${t.textDim};margin-bottom:6px;`, `Changed since it was proposed: ${p.stale.join(", ")}`));
+    if (this.error) {
+      const e = make("div", "color:#ff8a80;margin-bottom:6px;white-space:pre-wrap;", this.error);
+      e.setAttribute("role", "alert");
+      rows.push(e);
+    }
+    const foot = make("div", "display:flex;gap:6px;align-items:center;");
+    const reason = make("input", `flex:1;min-width:0;padding:5px 8px;border-radius:5px;border:1px solid ${t.controlBorder};background:transparent;color:${t.text};font:inherit;`);
+    reason.placeholder = "Reason, if you reject";
+    reason.setAttribute("aria-label", "Reason for rejecting");
+    const reject = () => {
+      rejectProposal(this.doc, p.id, { by: this.decider(), reason: reason.value.trim() || void 0 });
+      this.render();
+    };
+    reason.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") reject();
+      e.stopPropagation();
+    });
+    foot.append(reason, button2("Reject", false, reject), button2("Accept", true, () => {
+      const r = acceptProposal(this.doc, p.id, { schema: this.opts.schema, by: this.decider() });
+      this.error = r.ok ? "" : `It no longer applies:
+${r.rejected.map((x) => `${x.key}: ${x.message}`).join("\n")}`;
+      this.render();
+    }));
+    rows.push(foot);
+    this.el.replaceChildren(...rows);
   }
 };
 
@@ -35804,9 +38182,16 @@ function sketch2d(fn, config) {
 }
 var Sketch2DInstance = class {
   constructor(fn, config) {
+    this.logColors = ["", ""];
+    this._logHtml = "";
     // Param model: values in the ParamStore, placement in `items` — rendered
     // by the shared ControlPanel.
     this.store = new ParamStore({});
+    /** What the sketch can do, with its keys: Undo and Redo over its controls, to begin with. */
+    this.commands = new Commands();
+    this.history = new ParamHistory(this.store);
+    this.menus = null;
+    this.unbindKeys = null;
     this.items = /* @__PURE__ */ new Map();
     this.buttons = [];
     this.logs = [];
@@ -35817,6 +38202,12 @@ var Sketch2DInstance = class {
     this.pointerMoveFns = [];
     this.pointerUpFns = [];
     this.continuous = false;
+    this.drawQueued = 0;
+    /** Handle name → its position, and the `x, y` it was declared with (it follows those until dragged). */
+    this.handleState = /* @__PURE__ */ new Map();
+    /** The handles this run declared, in order. */
+    this.handleList = [];
+    this.dragging = null;
     this._prevFingerprint = "";
     this._baseLogCount = 0;
     this._onceRan = [];
@@ -35850,6 +38241,7 @@ var Sketch2DInstance = class {
       owner: this,
       harness: "sketch2d",
       store: this.store,
+      commands: this.commands,
       snapshot: (opts) => plainBundle({
         ...opts,
         title: this.config.title ?? "sketch2d",
@@ -35867,95 +38259,97 @@ var Sketch2DInstance = class {
   }
   // ── DOM ──
   buildDOM() {
-    const pw = this.config.panelWidth ?? 280;
-    const t = getTheme(this.config.theme);
+    const paper = this.config.style === "paper";
+    const t = getTheme(paper ? "paper" : this.config.theme);
+    const inShell = this.container.dataset.shell != null;
+    const showHeader = this.config.showHeader ?? (!paper && !inShell);
+    const headerH = showHeader ? 44 : 0;
     const root = document.createElement("div");
     root.style.cssText = `
-      display:grid; grid-template-columns:${pw}px 1fr; grid-template-rows:44px 1fr;
+      display:grid; grid-template-columns:280px 1fr; grid-template-rows:${showHeader ? "44px " : ""}1fr;
       height:100%; width:100%; overflow:hidden; position:relative;
       background:${t.bg}; color:${t.text};
       font-family:${t.font};
     `;
-    const header = document.createElement("div");
-    header.style.cssText = `
-      grid-column:1/-1; display:flex; align-items:center; padding:0 16px; gap:12px;
-      background:${t.panelBg}; border-bottom:1px solid ${t.border};
-    `;
-    header.innerHTML = `
-      <span style="font-weight:600;font-size:14px;color:${t.accent}">
-        &#x2B21; ${this.config.title ?? "Tekto Sketch2D"}
-      </span>
-      <span style="font-size:9px;padding:2px 6px;border-radius:3px;
-        background:${t.hoverBg};color:${t.accent}">2D</span>
-    `;
-    root.appendChild(header);
+    let menuHost = null;
+    if (showHeader) {
+      const header = document.createElement("div");
+      header.style.cssText = `
+        grid-column:1/-1; display:flex; align-items:center; padding:0 16px; gap:12px;
+        background:${t.panelBg}; border-bottom:1px solid ${t.border};
+      `;
+      header.innerHTML = `
+        <span style="font-weight:600;font-size:14px;color:${t.accent}">
+          &#x2B21; ${this.config.title ?? "Tekto Sketch2D"}
+        </span>
+        <span style="font-size:9px;padding:2px 6px;border-radius:3px;
+          background:${t.hoverBg};color:${t.accent}">2D</span>
+      `;
+      root.appendChild(header);
+      menuHost = header;
+    }
+    this.commands.add(this.history.commands());
+    this.unbindKeys = this.commands.bindKeys();
+    const slot = paper ? null : menuSlot(menuHost);
+    if (slot) {
+      this.menus = menuBar(this.commands, { theme: t });
+      slot.appendChild(this.menus.el);
+    }
     this.panelEl = document.createElement("div");
     this.panelEl.style.cssText = `
-      grid-column:1; grid-row:2; overflow-y:auto; overflow-x:hidden; padding:0;
+      grid-column:1; grid-row:${showHeader ? 2 : 1}; overflow-y:auto; overflow-x:hidden; padding:0;
       background:${t.panelBg}; border-right:1px solid ${t.border};
     `;
     root.appendChild(this.panelEl);
+    let frame = null;
     this.panel = new ControlPanel({
       store: this.store,
       theme: t,
       getButtons: () => this.buttons,
-      onAction: () => this.scheduleRerun()
+      onAction: () => this.scheduleRerun(),
+      onCommit: () => this.history.commit(),
+      // a finished change: one undo step
+      tabs: this.config.tabs,
+      onRender: () => frame?.fit()
     });
     this.panelEl.appendChild(this.panel.el);
     this.store.onChange(() => this.scheduleRerun());
-    const collapseKey = "tekto.sketch2d.collapsed";
-    let collapsed = false;
-    try {
-      collapsed = localStorage.getItem(collapseKey) === "1";
-    } catch {
-    }
-    const toggleBtn = document.createElement("button");
-    toggleBtn.style.cssText = `
-      margin-left:auto; cursor:pointer; width:28px; height:26px; border-radius:6px;
-      border:1px solid ${t.border}; background:transparent; color:${t.text};
-      font-size:15px; line-height:1; padding:0; flex:none;
-    `;
-    const applyCollapse = () => {
-      root.style.gridTemplateColumns = collapsed ? "0 1fr" : `${pw}px 1fr`;
-      this.panelEl.style.display = collapsed ? "none" : "";
-      toggleBtn.textContent = collapsed ? "\u203A" : "\u2039";
-      toggleBtn.title = collapsed ? "Show controls" : "Hide controls";
-    };
-    toggleBtn.addEventListener("click", () => {
-      collapsed = !collapsed;
-      try {
-        localStorage.setItem(collapseKey, collapsed ? "1" : "0");
-      } catch {
-      }
-      applyCollapse();
-      this.resizeCanvas();
-    });
-    header.appendChild(toggleBtn);
+    const view = document.createElement("div");
+    view.style.cssText = `grid-column:2;grid-row:${showHeader ? 2 : 1};display:flex;flex-direction:column;min-width:0;min-height:0;`;
     const vpWrap = document.createElement("div");
-    vpWrap.style.cssText = "grid-column:2;grid-row:2;position:relative;overflow:hidden;";
+    vpWrap.style.cssText = "flex:1;min-height:0;position:relative;overflow:hidden;";
     this.canvas.style.cssText = `
       width:100%; height:100%; display:block;
-      background:${this.config.background ?? (t.isDark ? "#0a0a10" : "#ffffff")};
+      background:${this.config.background ?? (t.isDark ? "#0b0b0b" : "#ffffff")};
     `;
     vpWrap.appendChild(this.canvas);
     this.logEl = document.createElement("div");
+    this.logEl.dataset.tektoStatus = "";
     this.logEl.style.cssText = `
-      position:absolute; bottom:12px; left:12px;
-      padding:8px 12px; border-radius:6px;
-      background:rgba(7,8,14,.85); backdrop-filter:blur(8px);
-      font-size:11px; line-height:1.7; color:${t.textDim};
-      pointer-events:none; max-width:300px;
-      border:1px solid rgba(22,24,42,.8); display:none;
+      flex:none; display:none; flex-wrap:wrap; column-gap:20px; padding:5px 12px;
+      background:${t.panelBg}; border-top:1px solid ${t.border};
+      font-size:11px; line-height:1.55; color:${t.text};
     `;
-    vpWrap.appendChild(this.logEl);
-    root.appendChild(vpWrap);
+    this.logColors = [t.textFaint, t.text];
+    view.append(vpWrap, this.logEl);
+    root.appendChild(view);
     if (this.container === document.body) {
       this.container.style.margin = "0";
       this.container.style.height = "100vh";
       this.container.style.overflow = "hidden";
     }
     this.container.appendChild(root);
-    applyCollapse();
+    frame = panelFrame({
+      root,
+      panelEl: this.panelEl,
+      theme: t,
+      top: headerH,
+      width: this.config.panelWidth ?? (paper ? "auto" : 280),
+      // A paper figure has no bar: its title is the panel's name (a shell names it already).
+      title: this.config.panelTitle ?? (paper ? inShell ? "" : this.config.title ?? "" : "Parameters"),
+      storageKey: this.config.title ?? "sketch2d",
+      preferred: () => this.panel.preferredWidth()
+    });
     const ro = new ResizeObserver(() => this.resizeCanvas());
     ro.observe(vpWrap);
     this.resizeCanvas();
@@ -35978,25 +38372,57 @@ var Sketch2DInstance = class {
       const rect = this.canvas.getBoundingClientRect();
       return { x: e.clientX - rect.left, y: e.clientY - rect.top, id: e.pointerId };
     };
+    const run = (fns, p) => {
+      if (!fns.length) return;
+      for (const fn of fns) fn(p);
+      this.queueDraw();
+    };
     this.canvas.addEventListener("pointerdown", (e) => {
       const p = sample(e);
       this._mouseX = p.x;
       this._mouseY = p.y;
       this._mousePressed = true;
-      for (const fn of this.pointerDownFns) fn(p);
+      const hit = this.handleAt(p.x, p.y);
+      if (hit) {
+        this.dragging = { name: hit.name, id: p.id };
+        try {
+          this.canvas.setPointerCapture(p.id);
+        } catch {
+        }
+        this.canvas.style.cursor = "grabbing";
+        this.queueDraw();
+        return;
+      }
+      run(this.pointerDownFns, p);
     });
     this.canvas.addEventListener("pointermove", (e) => {
       const p = sample(e);
       this._mouseX = p.x;
       this._mouseY = p.y;
-      for (const fn of this.pointerMoveFns) fn(p);
+      if (this.dragging && this.dragging.id === p.id) {
+        const h = this.handleList.find((x) => x.name === this.dragging.name);
+        const st = this.handleState.get(this.dragging.name);
+        if (h && st) {
+          st.value = this.fromScreen(p.x, p.y, h.opts);
+          this.scheduleRerun();
+        }
+        return;
+      }
+      if (this.handleList.length) this.canvas.style.cursor = this.handleAt(p.x, p.y) ? "grab" : "";
+      run(this.pointerMoveFns, p);
     });
     const onUp = (e) => {
       const p = sample(e);
       this._mouseX = p.x;
       this._mouseY = p.y;
       this._mousePressed = false;
-      for (const fn of this.pointerUpFns) fn(p);
+      if (this.dragging && this.dragging.id === p.id) {
+        this.dragging = null;
+        this.canvas.style.cursor = this.handleAt(p.x, p.y) ? "grab" : "";
+        this.queueDraw();
+        return;
+      }
+      run(this.pointerUpFns, p);
     };
     this.canvas.addEventListener("pointerup", onUp);
     this.canvas.addEventListener("pointercancel", onUp);
@@ -36011,6 +38437,7 @@ var Sketch2DInstance = class {
     this.pointerDownFns = [];
     this.pointerMoveFns = [];
     this.pointerUpFns = [];
+    this.handleList = [];
     this._onceSeq = 0;
     const usedParams = /* @__PURE__ */ new Set();
     const lab = this.buildLab(usedParams);
@@ -36033,6 +38460,7 @@ var Sketch2DInstance = class {
       this._prevFingerprint = fingerprint;
       this.panel.render([...this.items.values()]);
     }
+    this.history.adopt();
     this._baseLogCount = this.logs.length;
     this.updateLog();
     this.redraw();
@@ -36046,6 +38474,69 @@ var Sketch2DInstance = class {
       this.drawFn(this.ctx, w, h);
       this.ctx.restore();
     }
+    if (w > 0 && h > 0) this.drawHandles();
+  }
+  /** Draw on the next frame, once however often it is asked for. */
+  queueDraw() {
+    if (this.drawQueued || this.disposed) return;
+    this.drawQueued = requestAnimationFrame(() => {
+      this.drawQueued = 0;
+      if (!this.continuous) {
+        this.redraw();
+        this.updateLog();
+      }
+    });
+  }
+  // ── Drag handles ──
+  viewOf(opts) {
+    return typeof opts.view === "function" ? opts.view() : opts.view ?? null;
+  }
+  toScreen(p, opts) {
+    const v = this.viewOf(opts);
+    return v ? new Vec2(v.x + p.x * v.scale, v.y - p.y * v.scale) : p;
+  }
+  fromScreen(x, y, opts) {
+    const v = this.viewOf(opts);
+    const p = v ? new Vec2((x - v.x) / v.scale, (v.y - y) / v.scale) : new Vec2(x, y);
+    if (!opts.constrain) return p;
+    const [cx, cy] = opts.constrain(p.x, p.y);
+    return new Vec2(cx, cy);
+  }
+  /** The topmost handle within reach of a canvas point, or null. */
+  handleAt(x, y) {
+    for (let i = this.handleList.length - 1; i >= 0; i--) {
+      const h = this.handleList[i];
+      const st = this.handleState.get(h.name);
+      if (!st) continue;
+      const q = this.toScreen(st.value, h.opts);
+      if (Math.hypot(q.x - x, q.y - y) <= (h.opts.size ?? 6) + 5) return h;
+    }
+    return null;
+  }
+  drawHandles() {
+    if (!this.handleList.length) return;
+    const ctx = this.ctx;
+    ctx.save();
+    for (const h of this.handleList) {
+      const st = this.handleState.get(h.name);
+      if (!st) continue;
+      const q = this.toScreen(st.value, h.opts);
+      const r = h.opts.size ?? 6;
+      const active = this.dragging?.name === h.name;
+      ctx.beginPath();
+      ctx.arc(q.x, q.y, active ? r + 1.5 : r, 0, Math.PI * 2);
+      ctx.fillStyle = h.opts.color ?? "#ffffff";
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = "#1a1a1a";
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(q.x, q.y, (active ? r + 1.5 : r) + 1.5, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(255,255,255,.85)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+    ctx.restore();
   }
   scheduleRerun() {
     if (this._running || this.rerunTimer) return;
@@ -36075,13 +38566,13 @@ var Sketch2DInstance = class {
         return makeParam(
           key,
           { type: "float", min, max, default: def, step: opts?.step ?? (max - min) / 100, label },
-          { key, group }
+          { key, group, tab: opts?.tab }
         );
       },
       toggle(label, def = false, opts) {
         const group = opts?.group ?? "Parameters";
         const key = `toggle:${opts?.group ?? ""}:${label}`;
-        return makeParam(key, { type: "bool", default: def, label }, { key, group });
+        return makeParam(key, { type: "bool", default: def, label }, { key, group, tab: opts?.tab });
       },
       select(label, options, def, opts) {
         const group = opts?.group ?? "Parameters";
@@ -36089,19 +38580,45 @@ var Sketch2DInstance = class {
         return makeParam(
           key,
           { type: "select", options, default: def ?? options[0], label },
-          { key, group }
+          { key, group, tab: opts?.tab }
         );
       },
       colorPicker(label, def = "#38d9a9", opts) {
         const group = opts?.group ?? "Display";
         const key = `color:${opts?.group ?? ""}:${label}`;
-        return makeParam(key, { type: "color", default: def, label }, { key, group });
+        return makeParam(key, { type: "color", default: def, label }, { key, group, tab: opts?.tab });
       },
       button(label, action, opts) {
-        self.buttons.push({ label, action, group: opts?.group ?? "Actions" });
+        self.buttons.push({ label, action, group: opts?.group ?? "Actions", tab: opts?.tab });
       },
       draw(fn) {
         self.drawFn = fn;
+      },
+      redraw() {
+        self.queueDraw();
+      },
+      dragHandle(x, y, opts = {}) {
+        const name = opts.name ?? `handle:${self.handleList.length}`;
+        if (self.handleList.some((h) => h.name === name)) throw new Error(`lab.dragHandle: two handles named "${name}"; give each its own name`);
+        const declared = new Vec2(x, y);
+        let st = self.handleState.get(name);
+        if (!st || self.dragging?.name !== name && st.declared.distTo(declared) > 1e-12) {
+          st = { value: declared, declared };
+          self.handleState.set(name, st);
+        }
+        self.handleList.push({ name, opts });
+        return {
+          get value() {
+            return self.handleState.get(name)?.value ?? declared;
+          },
+          set(v) {
+            const cur = self.handleState.get(name);
+            if (cur) {
+              cur.value = new Vec2(v.x, v.y);
+              self.scheduleRerun();
+            }
+          }
+        };
       },
       animate(fn) {
         self.animateFn = fn;
@@ -36181,14 +38698,14 @@ var Sketch2DInstance = class {
     };
   }
   updateLog() {
-    if (this.logs.length === 0) {
-      this.logEl.style.display = "none";
-      return;
-    }
-    this.logEl.style.display = "block";
-    this.logEl.innerHTML = this.logs.map(
-      (l) => `<div style="display:flex;gap:8px;"><span style="color:#4a5070">${l.label}</span><span style="color:#b8bdd4">${l.value}</span></div>`
+    const [dim, ink] = this.logColors;
+    const html = this.logs.map(
+      (l) => `<div style="display:flex;gap:8px;white-space:nowrap;"><span style="color:${dim}">${l.label}</span><span style="color:${ink}">${l.value}</span></div>`
     ).join("");
+    if (html === this._logHtml) return;
+    this._logHtml = html;
+    this.logEl.style.display = this.logs.length ? "flex" : "none";
+    this.logEl.innerHTML = html;
   }
   // ── Animation Loop ──
   startLoop() {
@@ -36218,7 +38735,10 @@ var Sketch2DInstance = class {
   /** Tear down the sketch */
   dispose() {
     this.disposed = true;
+    if (this.drawQueued) cancelAnimationFrame(this.drawQueued);
     this.bridge?.dispose();
+    this.unbindKeys?.();
+    this.menus?.dispose();
     this.panel.dispose();
     this.container.innerHTML = "";
   }
@@ -36228,12 +38748,14 @@ var Sketch2DInstance = class {
   AABB,
   Algo,
   ArcCurve,
+  Axonometric,
   BUILDING_COLLECTIONS,
   BUILDING_SCHEMA,
   BalloonFrame,
   BlobDetect,
   BspTree,
   Building,
+  BuildingSession,
   Callouts,
   Capsule2D,
   CltConstruction,
@@ -36244,6 +38766,7 @@ var Sketch2DInstance = class {
   CurveUtils,
   DASH_PATTERNS,
   DEFAULT_BACKGROUND,
+  DRAWING_PALETTE,
   Delaunay2D,
   DistanceTransform,
   Doc,
@@ -36285,6 +38808,8 @@ var Sketch2DInstance = class {
   PGFace,
   PGHalfEdge,
   PGVertex,
+  PROPOSALS,
+  ParamHistory,
   ParamStore,
   Particles2D,
   PixelView,
@@ -36296,6 +38821,7 @@ var Sketch2DInstance = class {
   PolygonBool,
   PolylineCurve,
   PresenceBar,
+  ProposalBar,
   Ray,
   RibbonEndTrim,
   RibbonFrame,
@@ -36304,6 +38830,7 @@ var Sketch2DInstance = class {
   RibbonSystem,
   RigidBody2D,
   Roof,
+  SUN_PLACES,
   SVGRenderer,
   Scene,
   SdfBlend,
@@ -36376,6 +38903,7 @@ var Sketch2DInstance = class {
   WallOpening,
   WallSystem,
   WallType,
+  acceptProposal,
   aciFromHex,
   activateLayer,
   agentDoc,
@@ -36386,6 +38914,7 @@ var Sketch2DInstance = class {
   boundingWalls,
   boxOf,
   buildCutList,
+  buildingPlan,
   buildingSchema,
   checkRecord,
   chooseJoistDirection,
@@ -36407,6 +38936,7 @@ var Sketch2DInstance = class {
   easeInOut,
   edgeOutwardVisibility,
   edgeStyle,
+  encodePNG,
   extractVisiblePolylines,
   findAdjacent,
   fitRadius,
@@ -36416,7 +38946,9 @@ var Sketch2DInstance = class {
   getTheme,
   groundAppearance,
   hiddenLineIdBuffer,
+  hiddenLinePage,
   holzrahmenbauLayers,
+  inkOn,
   joistDirectionFromBounds,
   joistDirectionFromPCA,
   joistDirectionFromSupports,
@@ -36426,9 +38958,12 @@ var Sketch2DInstance = class {
   layoutLabels,
   lightBalance,
   lineClipPolygon,
+  listProposals,
   localAdapter,
   markup,
   memoryAdapter,
+  menuBar,
+  menuSlot,
   modeBackground,
   nearestAxis,
   neighboursOf,
@@ -36437,6 +38972,8 @@ var Sketch2DInstance = class {
   openingFill,
   orbitFor,
   orthoFrustum,
+  patchChanges,
+  patchedCollections,
   perpVisibility,
   perpVisibilityOfPolys,
   pickPrim,
@@ -36444,9 +38981,12 @@ var Sketch2DInstance = class {
   polygonIntersection,
   polylinesToSVG,
   processWorkerRequest,
+  propose,
+  rasterizeSheet,
   realize,
   realizeBuilding,
   realizeSlab,
+  rejectProposal,
   repelBodies,
   reverseContact,
   sectionAppearance,
@@ -36455,12 +38995,14 @@ var Sketch2DInstance = class {
   selectOnClick,
   setClipSnap,
   shareSelection,
+  sheetToPNG,
   shortestTurn,
   sketch,
   sketch2d,
   stampName,
   standardOrbit,
   studioLights,
+  sunFor,
   supabaseAdapter,
   surfaceAppearance,
   validateBuilding,

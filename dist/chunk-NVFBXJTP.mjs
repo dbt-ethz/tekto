@@ -1,22 +1,32 @@
 import {
+  DRAWING_PALETTE,
   Polygon2D,
   PolygonBool,
+  Sheet,
   createRandom
-} from "./chunk-TR2ZDYFK.mjs";
+} from "./chunk-MPAWQFRS.mjs";
 import {
   Mesh,
   Plane
-} from "./chunk-F764YID7.mjs";
+} from "./chunk-PPIR23JZ.mjs";
 import {
+  Doc,
   HMath,
   Mat4,
+  PROPOSALS,
   Segment,
   Vec2,
   Vec3,
   VecMath,
+  acceptProposal,
+  applyPatch,
   checkRecord,
-  closestPointOnSegment
-} from "./chunk-56LGGW6L.mjs";
+  closestPointOnSegment,
+  listProposals,
+  patchedCollections,
+  propose,
+  rejectProposal
+} from "./chunk-K6X6LVYU.mjs";
 
 // src/core/geometry/Ray.ts
 var Ray = class {
@@ -466,22 +476,22 @@ function solvePlanePair(_zeroCoord, coordA, coordB, p1, p2) {
 import { makeCCW, quickDecomp, removeCollinearPoints } from "poly-decomp";
 var NoFitPolygon = {
   /** Reflect a ring through the origin (negate every vertex) — forms −B. */
-  reflect(ring) {
-    return ring.map((v) => new Vec2(-v.x, -v.y));
+  reflect(ring2) {
+    return ring2.map((v) => new Vec2(-v.x, -v.y));
   },
   /**
    * Decompose a simple polygon into convex pieces (poly-decomp quickDecomp).
    * Input may have any winding; pieces come back CCW. Triangles and convex
    * inputs pass through as a single piece.
    */
-  decomposeConvex(ring) {
-    if (ring.length <= 3) return [ring.slice()];
-    const pts = ring.map((v) => [v.x, v.y]);
+  decomposeConvex(ring2) {
+    if (ring2.length <= 3) return [ring2.slice()];
+    const pts = ring2.map((v) => [v.x, v.y]);
     removeCollinearPoints(pts, 0.01);
     if (pts.length <= 3) return [pts.map(([x, y]) => new Vec2(x, y))];
     makeCCW(pts);
     const pieces = quickDecomp(pts);
-    return pieces.map((piece) => piece.map(([x, y]) => new Vec2(x, y)));
+    return pieces.map((piece2) => piece2.map(([x, y]) => new Vec2(x, y)));
   },
   /**
    * Minkowski sum of two *convex* rings = convex hull of all pairwise vertex
@@ -544,7 +554,7 @@ function clipSlabY(px, py, qx, qy, top) {
   let t1 = 1;
   const dx = qx - px;
   const dy = qy - py;
-  const clip = (p, q) => {
+  const clip2 = (p, q) => {
     if (Math.abs(p) < 1e-12) return q >= 0;
     const r = q / p;
     if (p < 0) {
@@ -556,8 +566,8 @@ function clipSlabY(px, py, qx, qy, top) {
     }
     return true;
   };
-  if (!clip(-dy, py)) return null;
-  if (!clip(dy, top - py)) return null;
+  if (!clip2(-dy, py)) return null;
+  if (!clip2(dy, top - py)) return null;
   if (t1 < t0) return null;
   return [px + t0 * dx, py + t0 * dy, px + t1 * dx, py + t1 * dy];
 }
@@ -573,9 +583,9 @@ function perpVisibility(a, b, obstacles, maxDist) {
   const back = (x, y) => new Vec2(a.x + x * ux + y * nx, a.y + x * uy + y * ny);
   const shadows = [];
   for (const [p, q] of obstacles) {
-    const clip = clipSlabY(fwdX(p), fwdY(p), fwdX(q), fwdY(q), maxDist);
-    if (!clip) continue;
-    const [px, py, qx, qy] = clip;
+    const clip2 = clipSlabY(fwdX(p), fwdY(p), fwdX(q), fwdY(q), maxDist);
+    if (!clip2) continue;
+    const [px, py, qx, qy] = clip2;
     if (Math.abs(px - qx) < 1e-9) continue;
     shadows.push(PolygonBool.fromRing([
       new Vec2(px, py),
@@ -598,8 +608,8 @@ function perpVisibility(a, b, obstacles, maxDist) {
   }
   const out = [];
   for (const poly of lit) {
-    for (const ring of poly) {
-      if (ring.length >= 3) out.push(ring.map((v) => back(v.x, v.y)));
+    for (const ring2 of poly) {
+      if (ring2.length >= 3) out.push(ring2.map((v) => back(v.x, v.y)));
     }
   }
   return out;
@@ -607,10 +617,10 @@ function perpVisibility(a, b, obstacles, maxDist) {
 function perpVisibilityOfPolys(a, b, polygons, maxDist, skipEdge) {
   const same = (u, v) => Math.abs(u.x - v.x) < 1e-6 && Math.abs(u.y - v.y) < 1e-6;
   const segs = [];
-  for (const ring of polygons) {
-    for (let i = 0; i < ring.length; i++) {
-      const p = ring[i];
-      const q = ring[(i + 1) % ring.length];
+  for (const ring2 of polygons) {
+    for (let i = 0; i < ring2.length; i++) {
+      const p = ring2[i];
+      const q = ring2[(i + 1) % ring2.length];
       if (skipEdge && (same(p, skipEdge[0]) && same(q, skipEdge[1]) || same(p, skipEdge[1]) && same(q, skipEdge[0]))) {
         continue;
       }
@@ -619,10 +629,10 @@ function perpVisibilityOfPolys(a, b, polygons, maxDist, skipEdge) {
   }
   return perpVisibility(a, b, segs, maxDist);
 }
-function edgeOutwardVisibility(ring, i, obstacles, maxDist) {
-  const p = ring[i];
-  const q = ring[(i + 1) % ring.length];
-  const ccw = Polygon2D.signedArea(ring) > 0;
+function edgeOutwardVisibility(ring2, i, obstacles, maxDist) {
+  const p = ring2[i];
+  const q = ring2[(i + 1) % ring2.length];
+  const ccw = Polygon2D.signedArea(ring2) > 0;
   const a = ccw ? q : p;
   const b = ccw ? p : q;
   return perpVisibilityOfPolys(a, b, obstacles, maxDist, [p, q]);
@@ -1301,6 +1311,8 @@ var MeshFactory = {
     const ids = [];
     const isClosed = Math.abs(angleRange - Math.PI * 2) < 1e-6;
     const slices = isClosed ? segments : segments + 1;
+    const onAxis = profile.map((p) => Math.abs(p.x) < 1e-9);
+    const axisNode = profile.map((p, i) => onAxis[i] ? mesh.addNode(new Vec3(0, p.y, 0)) : -1);
     for (let s = 0; s < slices; s++) {
       ids[s] = [];
       const angle = s / segments * angleRange;
@@ -1308,13 +1320,17 @@ var MeshFactory = {
       const sin = Math.sin(angle);
       for (let i = 0; i < n; i++) {
         const p = profile[i];
-        ids[s][i] = mesh.addNode(new Vec3(p.x * cos, p.y, p.x * sin));
+        ids[s][i] = onAxis[i] ? axisNode[i] : mesh.addNode(new Vec3(p.x * cos, p.y, p.x * sin));
       }
     }
     for (let s = 0; s < segments; s++) {
       const ns = (s + 1) % slices;
       for (let i = 0; i < n - 1; i++) {
-        mesh.addQuad(ids[s][i], ids[s][i + 1], ids[ns][i + 1], ids[ns][i]);
+        const a = ids[s][i], b = ids[s][i + 1], c = ids[ns][i + 1], d = ids[ns][i];
+        if (onAxis[i] && onAxis[i + 1]) continue;
+        if (onAxis[i]) mesh.addTriangle(a, b, c);
+        else if (onAxis[i + 1]) mesh.addTriangle(a, b, d);
+        else mesh.addQuad(a, b, c, d);
       }
     }
     mesh.computeVertexNormals();
@@ -1370,28 +1386,31 @@ var MeshFactory = {
   sphere(radius = 1, segments = 24, rings = 16) {
     need(isCount(segments, 3) && isCount(rings, 2), `sphere: needs whole numbers, segments \u2265 3 and rings \u2265 2, got ${segments} and ${rings}`);
     const mesh = new Mesh();
-    const ids = [];
-    for (let r = 0; r <= rings; r++) {
-      ids[r] = [];
+    const ring2 = [];
+    const north = mesh.addNode(new Vec3(0, radius, 0));
+    for (let r = 1; r < rings; r++) {
+      ring2[r] = [];
       const phi = r / rings * Math.PI;
       const sinPhi = Math.sin(phi);
       const cosPhi = Math.cos(phi);
-      for (let s = 0; s <= segments; s++) {
+      for (let s = 0; s < segments; s++) {
         const theta = s / segments * Math.PI * 2;
-        ids[r][s] = mesh.addNode(new Vec3(
+        ring2[r][s] = mesh.addNode(new Vec3(
           radius * sinPhi * Math.cos(theta),
           radius * cosPhi,
           radius * sinPhi * Math.sin(theta)
         ));
       }
     }
+    const south = mesh.addNode(new Vec3(0, -radius, 0));
+    const id = (r, s) => r === 0 ? north : r === rings ? south : ring2[r][s % segments];
     for (let r = 0; r < rings; r++) {
       for (let s = 0; s < segments; s++) {
         if (r > 0) {
-          mesh.addTriangle(ids[r][s], ids[r][s + 1], ids[r + 1][s + 1]);
+          mesh.addTriangle(id(r, s), id(r, s + 1), id(r + 1, s + 1));
         }
         if (r < rings - 1) {
-          mesh.addTriangle(ids[r][s], ids[r + 1][s + 1], ids[r + 1][s]);
+          mesh.addTriangle(id(r, s), id(r + 1, s + 1), id(r + 1, s));
         }
       }
     }
@@ -1402,24 +1421,36 @@ var MeshFactory = {
     need(isCount(segments, 3), `cylinder: segments must be a whole number \u2265 3, got ${segments}`);
     const mesh = new Mesh();
     const h2 = height / 2;
-    const bottomIds = [];
-    const topIds = [];
-    for (let s = 0; s <= segments; s++) {
-      const angle = s / segments * Math.PI * 2;
-      const cos = Math.cos(angle);
-      const sin = Math.sin(angle);
-      bottomIds.push(mesh.addNode(new Vec3(radiusBottom * cos, -h2, radiusBottom * sin)));
-      topIds.push(mesh.addNode(new Vec3(radiusTop * cos, h2, radiusTop * sin)));
-    }
+    const rim = (r, y) => {
+      if (r === 0) {
+        const tip = mesh.addNode(new Vec3(0, y, 0));
+        return Array(segments).fill(tip);
+      }
+      const out = [];
+      for (let s = 0; s < segments; s++) {
+        const angle = s / segments * Math.PI * 2;
+        out.push(mesh.addNode(new Vec3(r * Math.cos(angle), y, r * Math.sin(angle))));
+      }
+      return out;
+    };
+    const bottomIds = rim(radiusBottom, -h2);
+    const topIds = rim(radiusTop, h2);
+    const next = (s) => (s + 1) % segments;
     for (let s = 0; s < segments; s++) {
-      mesh.addQuad(bottomIds[s], topIds[s], topIds[s + 1], bottomIds[s + 1]);
+      const a = bottomIds[s], b = topIds[s], c = topIds[next(s)], d = bottomIds[next(s)];
+      if (radiusTop === 0 && radiusBottom === 0) continue;
+      if (radiusTop === 0) mesh.addTriangle(a, b, d);
+      else if (radiusBottom === 0) mesh.addTriangle(a, b, c);
+      else mesh.addQuad(a, b, c, d);
     }
     if (cap) {
-      const bottomCenter = mesh.addNode(new Vec3(0, -h2, 0));
-      const topCenter = mesh.addNode(new Vec3(0, h2, 0));
-      for (let s = 0; s < segments; s++) {
-        mesh.addTriangle(bottomCenter, bottomIds[s], bottomIds[s + 1]);
-        mesh.addTriangle(topCenter, topIds[s + 1], topIds[s]);
+      if (radiusBottom !== 0) {
+        const bottomCenter = mesh.addNode(new Vec3(0, -h2, 0));
+        for (let s = 0; s < segments; s++) mesh.addTriangle(bottomCenter, bottomIds[s], bottomIds[next(s)]);
+      }
+      if (radiusTop !== 0) {
+        const topCenter = mesh.addNode(new Vec3(0, h2, 0));
+        for (let s = 0; s < segments; s++) mesh.addTriangle(topCenter, topIds[next(s)], topIds[s]);
       }
     }
     mesh.computeVertexNormals();
@@ -1429,12 +1460,12 @@ var MeshFactory = {
     need(isCount(segments, 3) && isCount(sides, 3), `torus: segments and sides must be whole numbers \u2265 3, got ${segments} and ${sides}`);
     const mesh = new Mesh();
     const ids = [];
-    for (let s = 0; s <= segments; s++) {
+    for (let s = 0; s < segments; s++) {
       ids[s] = [];
       const theta = s / segments * Math.PI * 2;
       const cosT = Math.cos(theta);
       const sinT = Math.sin(theta);
-      for (let r = 0; r <= sides; r++) {
+      for (let r = 0; r < sides; r++) {
         const phi = r / sides * Math.PI * 2;
         const x = (majorRadius + minorRadius * Math.cos(phi)) * cosT;
         const y = minorRadius * Math.sin(phi);
@@ -1443,8 +1474,10 @@ var MeshFactory = {
       }
     }
     for (let s = 0; s < segments; s++) {
+      const ns = (s + 1) % segments;
       for (let r = 0; r < sides; r++) {
-        mesh.addQuad(ids[s][r], ids[s][r + 1], ids[s + 1][r + 1], ids[s + 1][r]);
+        const nr = (r + 1) % sides;
+        mesh.addQuad(ids[s][r], ids[s][nr], ids[ns][nr], ids[ns][r]);
       }
     }
     mesh.computeVertexNormals();
@@ -2052,10 +2085,10 @@ var MeshSubdivide = {
 function dooSabinFaceRing(mesh, node, _allFaces, _vertPosInFace, _faceIdToLocalIdx) {
   const facesAround = node.faces;
   if (facesAround.length === 0) return null;
-  const ring = [];
+  const ring2 = [];
   const visited = /* @__PURE__ */ new Set();
   const startFace = facesAround[0];
-  ring.push(startFace);
+  ring2.push(startFace);
   visited.add(startFace);
   const startFaceObj = mesh.face(startFace);
   const posInFace = startFaceObj.nodes.indexOf(node.id);
@@ -2066,7 +2099,7 @@ function dooSabinFaceRing(mesh, node, _allFaces, _vertPosInFace, _faceIdToLocalI
   let currentFace = sharedEdge.faces.find((f) => f !== startFace);
   if (currentFace === void 0) return null;
   while (!visited.has(currentFace)) {
-    ring.push(currentFace);
+    ring2.push(currentFace);
     visited.add(currentFace);
     const cf = mesh.face(currentFace);
     const idx = cf.nodes.indexOf(node.id);
@@ -2082,7 +2115,7 @@ function dooSabinFaceRing(mesh, node, _allFaces, _vertPosInFace, _faceIdToLocalI
     crossVert = otherVert;
     currentFace = nextFace;
   }
-  return ring.length === facesAround.length ? ring : null;
+  return ring2.length === facesAround.length ? ring2 : null;
 }
 function findSharedEdge(mesh, nodeA, nodeB) {
   const nA = mesh.node(nodeA);
@@ -4460,7 +4493,7 @@ var Voronoi2D = {
    */
   cells(sites, options = {}) {
     const n = sites.length;
-    const { clip, radii } = options;
+    const { clip: clip2, radii } = options;
     for (let i = 0; i < n; i++) {
       const p = sites[i];
       if (!p || !Number.isFinite(p.x) || !Number.isFinite(p.y))
@@ -4474,9 +4507,9 @@ var Voronoi2D = {
           throw new Error(`Voronoi2D.cells: options.radii[${i}] is ${radii[i]}; a radius must be a finite number >= 0.`);
       }
     }
-    if (clip !== void 0) {
-      for (let k = 0; k < clip.length; k++) {
-        const p = clip[k];
+    if (clip2 !== void 0) {
+      for (let k = 0; k < clip2.length; k++) {
+        const p = clip2[k];
         if (!p || !Number.isFinite(p.x) || !Number.isFinite(p.y))
           throw new Error(`Voronoi2D.cells: options.clip[${k}] is ${p ? `(${p.x}, ${p.y})` : p}; clip points need finite x and y.`);
       }
@@ -4491,8 +4524,8 @@ var Voronoi2D = {
     }
     const sw = sx1 - sx0, sh = sy1 - sy0;
     let rawClip;
-    if (clip !== void 0) {
-      rawClip = clip;
+    if (clip2 !== void 0) {
+      rawClip = clip2;
     } else {
       const pad = Math.max(sw, sh) / 2 || 1;
       rawClip = [
@@ -4512,11 +4545,11 @@ var Voronoi2D = {
     const scale = Math.max(sw, sh, cx1 - cx0, cy1 - cy0) || 1;
     const far = Math.max(Math.abs(sx0), Math.abs(sx1), Math.abs(sy0), Math.abs(sy1), Math.abs(cx0), Math.abs(cx1), Math.abs(cy0), Math.abs(cy1));
     const eps = Math.max(VORONOI_EPS * scale, VORONOI_ULPS * Number.EPSILON * far);
-    const ring = voronoiClipRing(rawClip, eps, clip !== void 0);
-    const convexClip = voronoiIsConvex(ring.x, ring.y);
+    const ring2 = voronoiClipRing(rawClip, eps, clip2 !== void 0);
+    const convexClip = voronoiIsConvex(ring2.x, ring2.y);
     const base = new VPoly();
     if (convexClip) {
-      for (let k = 0; k < ring.x.length; k++) base.push(ring.x[k], ring.y[k], -1);
+      for (let k = 0; k < ring2.x.length; k++) base.push(ring2.x[k], ring2.y[k], -1);
     } else {
       base.push(cx0, cy0, -1);
       base.push(cx1, cy0, -1);
@@ -4616,7 +4649,7 @@ var Voronoi2D = {
       }
       return { site, polygon, neighbors };
     };
-    const ringClip = convexClip ? null : new VoronoiRingClip(ring.x, ring.y, eps);
+    const ringClip = convexClip ? null : new VoronoiRingClip(ring2.x, ring2.y, eps);
     for (let i = 0; i < n; i++) {
       const cell = dead[i] ? null : convexCell(i);
       if (!ringClip || !cell) {
@@ -4653,9 +4686,9 @@ var Voronoi2D = {
     return sets.map((s) => [...s].sort((a, b) => a - b));
   }
 };
-function voronoiClipRing(clip, eps, given) {
+function voronoiClipRing(clip2, eps, given) {
   let x = [], y = [];
-  for (const p of clip) {
+  for (const p of clip2) {
     const m = x.length;
     if (m > 0 && Math.abs(p.x - x[m - 1]) <= eps && Math.abs(p.y - y[m - 1]) <= eps) continue;
     x.push(p.x);
@@ -4685,7 +4718,7 @@ function voronoiClipRing(clip, eps, given) {
     area2 += x[k] * y[b] - x[b] * y[k];
   }
   if (x.length < 3 || Math.abs(area2) <= eps * eps) {
-    if (given) throw new Error(`Voronoi2D.cells: options.clip (${clip.length} points) encloses no area; give a ring of at least 3 points that are not all on one line.`);
+    if (given) throw new Error(`Voronoi2D.cells: options.clip (${clip2.length} points) encloses no area; give a ring of at least 3 points that are not all on one line.`);
     throw new Error("Voronoi2D.cells: the default clip encloses no area.");
   }
   if (area2 < 0) {
@@ -5319,6 +5352,62 @@ var VoxelGrid = class _VoxelGrid {
   }
 };
 var MarchingSquares = {
+  /**
+   * The iso-contours as polylines: each `{ points, closed }`, with the inside (values above
+   * `iso`) on the left. A closed loop does not repeat its first point; an open line starts
+   * and ends on the grid's border.
+   */
+  contours(values, nx, ny, iso = 0, cellSize = 1, originX = 0, originY = 0) {
+    const point = /* @__PURE__ */ new Map();
+    const next = /* @__PURE__ */ new Map();
+    const ends = /* @__PURE__ */ new Set();
+    const n = new Float32Array(4);
+    for (let x = 0; x < nx - 1; x++) {
+      for (let y = 0; y < ny - 1; y++) {
+        n[0] = values[x * ny + y];
+        n[1] = values[(x + 1) * ny + y];
+        n[2] = values[(x + 1) * ny + y + 1];
+        n[3] = values[x * ny + y + 1];
+        let caseNum = 0;
+        for (let i = 3; i >= 0; i--) {
+          if (n[i] > iso) caseNum++;
+          if (i > 0) caseNum <<= 1;
+        }
+        const x1 = originX + x * cellSize, y1 = originY + y * cellSize;
+        const keyOf2 = (edge) => edge === 0 ? 2 * (x * ny + y) : edge === 1 ? 2 * ((x + 1) * ny + y) + 1 : edge === 2 ? 2 * (x * ny + y + 1) : 2 * (x * ny + y) + 1;
+        for (let i = caseNum * 4; i < caseNum * 4 + 4; i += 2) {
+          const e1 = MS_EDGE_TABLE[i], e2 = MS_EDGE_TABLE[i + 1];
+          if (e1 < 0 || e2 < 0) break;
+          const a = keyOf2(e1), b = keyOf2(e2);
+          if (!point.has(a)) point.set(a, msEdgePoint(e1, n, x1, y1, x1 + cellSize, y1 + cellSize, iso, cellSize));
+          if (!point.has(b)) point.set(b, msEdgePoint(e2, n, x1, y1, x1 + cellSize, y1 + cellSize, iso, cellSize));
+          next.set(a, b);
+          ends.add(b);
+        }
+      }
+    }
+    const out = [];
+    const walk = (start) => {
+      const keys = [start];
+      let k = next.get(start);
+      next.delete(start);
+      while (k !== void 0 && k !== start) {
+        keys.push(k);
+        const nk = next.get(k);
+        next.delete(k);
+        k = nk;
+      }
+      return { points: keys.map((key) => point.get(key)), closed: k === start };
+    };
+    for (const start of [...next.keys()]) if (!ends.has(start) && next.has(start)) out.push(walk(start));
+    for (const start of [...next.keys()]) if (next.has(start)) out.push(walk(start));
+    return out;
+  },
+  /** `contours` of a `VoxelGrid2D`. */
+  contoursFromGrid(grid, iso = 0) {
+    return MarchingSquares.contours(grid.values, grid.nx, grid.ny, iso, grid.cellSize, grid.x1, grid.y1);
+  },
+  /** The iso-contour as loose segments, in no order (`contours` joins them). Same layout as `contours`. */
   extract(values, nx, ny, iso = 0, cellSize = 1, originX = 0, originY = 0) {
     const segments = [];
     const n = new Float32Array(4);
@@ -5351,6 +5440,7 @@ var MarchingSquares = {
     }
     return segments;
   },
+  /** `extract` of a `VoxelGrid2D`. */
   extractFromGrid(grid, iso = 0) {
     return MarchingSquares.extract(
       grid.values,
@@ -11153,10 +11243,10 @@ var Particles2D = class _Particles2D {
     return total;
   }
   /** `count` seeded-random points inside a ring (rejection sampling in its bounding box). */
-  static scatter(ring, count, random) {
+  static scatter(ring2, count, random) {
     if (!Number.isInteger(count) || count < 0) fail("scatter", `count must be a whole number \u2265 0, got ${count}`);
-    const poly = Polygon2D.openRing(ring);
-    if (poly.length < 3) fail("scatter", `ring needs at least 3 points, got ${ring.length}`);
+    const poly = Polygon2D.openRing(ring2);
+    if (poly.length < 3) fail("scatter", `ring needs at least 3 points, got ${ring2.length}`);
     const area = Polygon2D.area(poly);
     if (!(area > 0)) fail("scatter", `ring has no area (${area})`);
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -11180,12 +11270,12 @@ var Particles2D = class _Particles2D {
    * `steps` steps (default 200) inside the ring, drop any left outside; returns the centres.
    * The points come from `random`, else from `createRandom(seed)` (default seed 1), so a seed always packs the same.
    */
-  static pack(ring, radius, options = {}) {
+  static pack(ring2, radius, options = {}) {
     if (!Number.isFinite(radius) || radius <= 0) fail("pack", `radius must be a finite number > 0, got ${radius}`);
     const steps = options.steps ?? PACK_STEPS;
     if (!Number.isInteger(steps) || steps < 0) fail("pack", `steps must be a whole number \u2265 0, got ${steps}`);
-    const poly = Polygon2D.openRing(ring);
-    if (poly.length < 3) fail("pack", `ring needs at least 3 points, got ${ring.length}`);
+    const poly = Polygon2D.openRing(ring2);
+    if (poly.length < 3) fail("pack", `ring needs at least 3 points, got ${ring2.length}`);
     const random = options.random ?? createRandom(options.seed ?? PACK_SEED);
     const count = Math.round(Polygon2D.area(poly) / (HEX_AREA * radius * radius));
     const sim = new _Particles2D();
@@ -11277,14 +11367,14 @@ var Particles2D = class _Particles2D {
     }
   }
   prepareBoundary(call, boundary) {
-    const ring = Polygon2D.openRing(boundary);
-    const m = ring.length;
+    const ring2 = Polygon2D.openRing(boundary);
+    const m = ring2.length;
     if (m < 3) fail(call, `boundary needs at least 3 points, got ${boundary.length}`);
-    const area = Polygon2D.signedArea(ring);
+    const area = Polygon2D.signedArea(ring2);
     if (!(Math.abs(area) > 0)) fail(call, `boundary has no area (${area})`);
     const inward = area > 0 ? 1 : -1;
     const e = {
-      ring,
+      ring: ring2,
       ax: new Float64Array(m),
       ay: new Float64Array(m),
       ex: new Float64Array(m),
@@ -11294,7 +11384,7 @@ var Particles2D = class _Particles2D {
       ny: new Float64Array(m)
     };
     for (let k = 0; k < m; k++) {
-      const a = ring[k], b = ring[(k + 1) % m];
+      const a = ring2[k], b = ring2[(k + 1) % m];
       const ex = b.x - a.x, ey = b.y - a.y;
       const len = Math.sqrt(ex * ex + ey * ey);
       e.ax[k] = a.x;
@@ -12661,9 +12751,9 @@ var IfcWriter = class {
    */
   addSlab(slab, opts = {}) {
     const storey = this.resolveStorey(opts.storey);
-    const ring = Polygon2D.openRing(slab.boundary);
+    const ring2 = Polygon2D.openRing(slab.boundary);
     const ptRefs = [];
-    for (const p of ring) {
+    for (const p of ring2) {
       ptRefs.push(this.addEntity(`IFCCARTESIANPOINT((${ifcReal(p.x)},${ifcReal(p.y)}))`));
     }
     const closedPts = [...ptRefs, ptRefs[0]];
@@ -12926,9 +13016,9 @@ var IfcWriter = class {
    */
   addSpace(space, opts = {}) {
     const storey = this.resolveStorey(opts.storey);
-    const ring = Polygon2D.openRing(space.boundary);
+    const ring2 = Polygon2D.openRing(space.boundary);
     const ptRefs = [];
-    for (const p of ring) {
+    for (const p of ring2) {
       ptRefs.push(this.addEntity(`IFCCARTESIANPOINT((${ifcReal(p.x)},${ifcReal(p.y)}))`));
     }
     const closedPts = [...ptRefs, ptRefs[0]];
@@ -15154,11 +15244,11 @@ var Slab = class {
       const label = `Slab "${this.name ?? "slab"}": opening ${o.name ?? i}`;
       if (!(o.width > 0 && o.depth > 0)) throw new Error(`${label} needs a width and depth above 0, got ${o.width} \xD7 ${o.depth}.`);
       const c = new Vec2(o.centerX, o.centerY), a = u.mul(o.width / 2), b = v.mul(o.depth / 2);
-      const ring = [c.sub(a).sub(b), c.add(a).sub(b), c.add(a).add(b), c.sub(a).add(b)];
-      if (!ring.every((p) => Polygon2D.pointInPolygon(p, outer))) {
+      const ring2 = [c.sub(a).sub(b), c.add(a).sub(b), c.add(a).add(b), c.sub(a).add(b)];
+      if (!ring2.every((p) => Polygon2D.pointInPolygon(p, outer))) {
         throw new Error(`${label} at (${o.centerX}, ${o.centerY}) is not inside the slab's boundary.`);
       }
-      return ring;
+      return ring2;
     });
   }
   /**
@@ -15191,11 +15281,11 @@ var Slab = class {
       normals.push(0, 0, -1);
     }
     for (const [a, b2, c] of tris) indices.push(botBase + c, botBase + b2, botBase + a);
-    for (const ring of rings) {
-      const n = ring.length;
+    for (const ring2 of rings) {
+      const n = ring2.length;
       for (let i = 0; i < n; i++) {
-        const p0 = ring[i];
-        const p1 = ring[(i + 1) % n];
+        const p0 = ring2[i];
+        const p1 = ring2[(i + 1) % n];
         const dx = p1.x - p0.x;
         const dy = p1.y - p0.y;
         const len = Math.hypot(dx, dy);
@@ -15298,8 +15388,8 @@ function JoistedSlab(options = {}) {
       return hits.length < 2 ? null : [hits[0], hits[hits.length - 1]];
     };
     const w = opts.profile.w;
-    const wells = slab.openingRings(direction).map((ring) => {
-      const ts = ring.map((q) => q.dot(direction)), ps = ring.map((q) => q.dot(perp));
+    const wells = slab.openingRings(direction).map((ring2) => {
+      const ts = ring2.map((q) => q.dot(direction)), ps = ring2.map((q) => q.dot(perp));
       return { t0: Math.min(...ts), t1: Math.max(...ts), p0: Math.min(...ps), p1: Math.max(...ps) };
     });
     const trimmerPs = wells.flatMap((o) => [o.p0 - w / 2, o.p1 + w / 2]);
@@ -15401,15 +15491,15 @@ var Space = class {
   }
 };
 function boundingWalls(space, walls, tol = 0.35) {
-  const ring = space.boundary;
-  const n = ring.length;
+  const ring2 = space.boundary;
+  const n = ring2.length;
   const out = [];
   for (const wall of walls) {
     const cl = wall.centerline;
     let bounds = false;
     for (let e = 0; e < n && !bounds; e++) {
-      const a = ring[e];
-      const b = ring[(e + 1) % n];
+      const a = ring2[e];
+      const b = ring2[(e + 1) % n];
       for (let s = 0; s < cl.length - 1 && !bounds; s++) {
         if (segmentAlongEdge(cl[s], cl[s + 1], a, b, tol)) bounds = true;
       }
@@ -15438,6 +15528,12 @@ function segmentAlongEdge(c, d, a, b, tol) {
 
 // src/bim/stairs.ts
 var BUILT_SHAPES = ["straight_run", "two_straight_run", "quarter_turn", "half_turn"];
+var STRUCTURES = {
+  solid: { landing: 0.2 },
+  concrete: { landing: 0.2 },
+  timber: { landing: 0.12 },
+  steel: { landing: 0.08 }
+};
 var StairType = class {
   constructor(opts) {
     this.name = opts.name;
@@ -15460,7 +15556,9 @@ var Stair = class {
     this.turn = opts.turn ?? "left";
     this.landingAfter = opts.landingAfter;
     this.landingDepth = opts.landingDepth ?? this.width;
-    this.landingThickness = opts.landingThickness ?? 0.2;
+    this.structure = opts.structure ?? "solid";
+    if (!STRUCTURES[this.structure]) throw new Error(`Stair "${this.name}": structure must be ${Object.keys(STRUCTURES).map((k) => `"${k}"`).join(", ")}, got "${this.structure}".`);
+    this.landingThickness = opts.landingThickness ?? STRUCTURES[this.structure].landing;
     this.gap = opts.gap ?? 0.1;
     this.type = opts.type;
     this.properties = opts.properties ?? {};
@@ -15475,35 +15573,24 @@ var Stair = class {
     return this.totalRise / this.risers;
   }
   /**
-   * Compute the flight geometry: one flight per run, each built as a
-   * stepped solid. Tread i of a flight is a box spanning going
-   * [i·tread, (i+1)·tread] across the full width, from the stair's base
-   * level up to its walking surface, (i+1) risers above the flight's start.
+   * The flights' geometry, one closed solid per flight in world coordinates, built as
+   * `structure` says from the parts `parts()` describes, with the code metrics. Tread i of a
+   * flight spans going [i·tread, (i+1)·tread], (i+1) risers above the flight's start.
    */
   flights() {
     const { runs } = this.plan();
     const riser = this.actualRiser;
     const tread = this.treadDepth;
-    const halfW = this.width * 0.5;
-    const z0 = this.start.z;
     return runs.map((run, k) => {
       const across = run.dir.perp();
       const positions = [];
       const indices = [];
-      const push = (along, side, z) => {
-        const p = run.at.add(run.dir.mul(along)).add(across.mul(side));
-        positions.push(p.x, p.y, z);
-        return positions.length / 3 - 1;
-      };
-      for (let i = 0; i < run.risers - 1; i++) {
-        const a0 = i * tread;
-        const a1 = (i + 1) * tread;
-        const z1 = run.z + (i + 1) * riser;
-        const flb = push(a0, -halfW, z0), frb = push(a1, -halfW, z0);
-        const blb = push(a0, +halfW, z0), brb = push(a1, +halfW, z0);
-        const flt = push(a0, -halfW, z1), frt = push(a1, -halfW, z1);
-        const blt = push(a0, +halfW, z1), brt = push(a1, +halfW, z1);
-        pushBox(indices, flb, frb, brb, blb, flt, frt, brt, blt);
+      for (const part of this.flightParts(run, k)) {
+        prism(part, (along2, side, z) => {
+          const p = run.at.add(run.dir.mul(along2)).add(across.mul(side));
+          positions.push(p.x, p.y, z);
+          return positions.length / 3 - 1;
+        }, indices);
       }
       return {
         name: runs.length === 1 ? `${this.name} flight` : `${this.name} flight ${k + 1}`,
@@ -15515,6 +15602,85 @@ var Stair = class {
         treadDepth: tread
       };
     });
+  }
+  /**
+   * Each flight's parts as side profiles: where the flight starts and runs in plan (`at`, the
+   * centre of its width at its first riser; `dir`, a unit vector) and the parts `structure`
+   * builds it from. Draw `outline`s for a section along a flight or an elevation from its side:
+   * a point (x, y) of an outline is at `at + dir·x`, height y.
+   */
+  parts() {
+    return this.plan().runs.map((run, k) => ({ at: run.at, dir: run.dir, parts: this.flightParts(run, k) }));
+  }
+  /** One flight's parts, as `structure` builds it. */
+  flightParts(run, k) {
+    const WAIST = 0.16;
+    const TIMBER = { stringer: 0.06, depth: 0.3, above: 0.05, tread: 0.05, nosing: 0.03 };
+    const STEEL = { plate: 8e-3, stringer: 0.012, depth: 0.2 };
+    const r = this.actualRiser, g = this.treadDepth, halfW = this.width * 0.5;
+    const n = run.risers, z0 = run.z, top = z0 + n * r, L = (n - 1) * g;
+    const base = k === 0 ? this.start.z : Math.max(this.start.z, z0 - this.landingThickness);
+    const cos = g / Math.hypot(g, r);
+    const corner2 = (a) => z0 + a * r / g;
+    const full = [-halfW, halfW];
+    const out = [];
+    const steps = (dx = 0, dz = 0) => {
+      const pts = [];
+      for (let i = 0; i < n; i++) pts.push(new Vec2(i * g + dx, z0 + i * r + dz), new Vec2(i * g + dx, z0 + (i + 1) * r + dz));
+      return pts;
+    };
+    const band2 = (from, to, plumbStart = false) => {
+      const X = L + 2 * (top - base) * (g / r) + 1;
+      let ring2 = [new Vec2(-X, corner2(-X) + from), new Vec2(L, corner2(L) + from), new Vec2(L, corner2(L) + to), new Vec2(-X, corner2(-X) + to)];
+      ring2 = clip(ring2, (p) => p.y - base);
+      ring2 = clip(ring2, (p) => top - p.y);
+      if (plumbStart) ring2 = clip(ring2, (p) => p.x);
+      return ring2;
+    };
+    switch (this.structure) {
+      case "solid":
+        for (let i = 0; i < n - 1; i++) {
+          const a0 = i * g, a1 = (i + 1) * g, z1 = z0 + (i + 1) * r;
+          out.push({ name: "step", outline: [new Vec2(a0, this.start.z), new Vec2(a1, this.start.z), new Vec2(a1, z1), new Vec2(a0, z1)], across: full });
+        }
+        break;
+      case "concrete": {
+        const soffit = -WAIST / cos;
+        let ring2 = [...steps(), new Vec2(L, corner2(L) + soffit), new Vec2(-L - 10, corner2(-L - 10) + soffit)];
+        ring2 = clip(clip(clip(ring2, (p) => p.y - base), (p) => p.x), (p) => top - p.y);
+        out.push({ name: "flight", outline: ring2, across: full });
+        break;
+      }
+      case "timber": {
+        const t = TIMBER, depth = t.depth / cos;
+        const upper = r + t.above / cos;
+        for (const side of [-1, 1]) {
+          const s0 = side < 0 ? -halfW : halfW - t.stringer;
+          out.push({ name: "stringer", outline: band2(upper - depth, upper), across: [s0, s0 + t.stringer] });
+        }
+        for (let i = 0; i < n - 1; i++) {
+          const z1 = z0 + (i + 1) * r, a0 = i * g - t.nosing, a1 = (i + 1) * g;
+          out.push({ name: "tread", outline: [new Vec2(a0, z1 - t.tread), new Vec2(a1, z1 - t.tread), new Vec2(a1, z1), new Vec2(a0, z1)], across: [-halfW + t.stringer, halfW - t.stringer] });
+        }
+        break;
+      }
+      case "steel": {
+        const t = STEEL;
+        const outer = steps();
+        const inner = [];
+        for (let i = 0; i < n; i++) {
+          inner.push(new Vec2(i * g + t.plate, z0 + i * r - (i === 0 ? 0 : t.plate)), new Vec2(i * g + t.plate, z0 + (i + 1) * r - (i === n - 1 ? 0 : t.plate)));
+        }
+        out.push({ name: "plate", outline: [...outer, ...inner.reverse()], across: full });
+        const under = -t.plate / cos;
+        for (const side of [-1, 1]) {
+          const s0 = side < 0 ? -halfW : halfW - t.stringer;
+          out.push({ name: "stringer", outline: band2(under - t.depth / cos, under, true), across: [s0, s0 + t.stringer] });
+        }
+        break;
+      }
+    }
+    return out.map((p) => ({ ...p, outline: tidy(p.outline) })).filter((p) => p.outline.length >= 3);
   }
   /**
    * The landing between the two flights as a `Slab` (written as an `IfcSlab` LANDING): its top
@@ -15604,13 +15770,13 @@ var Stair = class {
     const u = this.direction.normalize();
     const s0 = new Vec2(this.start.x, this.start.y);
     const z0 = this.start.z;
-    const ccw = (ring) => {
-      const clean = Polygon2D.simplify(ring, 1e-9);
+    const ccw = (ring2) => {
+      const clean = Polygon2D.simplify(ring2, 1e-9);
       return Polygon2D.isCCW(clean) ? clean : Polygon2D.reverse(clean);
     };
     if (this.shape === "straight_run") {
       const run = (risers - 1) * tread;
-      const at2 = (along, across) => s0.add(u.mul(along)).add(u.perp().mul(across));
+      const at2 = (along2, across) => s0.add(u.mul(along2)).add(u.perp().mul(across));
       return {
         runs: [{ at: s0, dir: u, z: z0, risers }],
         landing: null,
@@ -15638,7 +15804,7 @@ var Stair = class {
     const run2 = (n2 - 1) * tread;
     const far = run1 + depth;
     const side = this.turn === "left" ? u.perp() : u.perp().neg();
-    const at = (along, across) => s0.add(u.mul(along)).add(side.mul(across));
+    const at = (along2, across) => s0.add(u.mul(along2)).add(side.mul(across));
     const landingTop = z0 + n1 * riser;
     const first = { at: s0, dir: u, z: z0, risers: n1 };
     if (this.shape === "two_straight_run") {
@@ -15679,16 +15845,44 @@ var Stair = class {
     };
   }
 };
-function pushBox(out, flb, frb, brb, blb, flt, frt, brt, blt) {
-  const quad = (a, b, c, d) => {
-    out.push(a, b, c, a, c, d);
-  };
-  quad(flb, blb, brb, frb);
-  quad(flt, frt, brt, blt);
-  quad(flb, frb, frt, flt);
-  quad(brb, blb, blt, brt);
-  quad(frb, brb, brt, frt);
-  quad(blb, flb, flt, blt);
+function clip(ring2, f) {
+  const out = [];
+  for (let i = 0; i < ring2.length; i++) {
+    const a = ring2[i], b = ring2[(i + 1) % ring2.length], fa = f(a), fb = f(b);
+    if (fa >= 0) out.push(a);
+    if (fa >= 0 !== fb >= 0) out.push(a.add(b.sub(a).mul(fa / (fa - fb))));
+  }
+  return out;
+}
+function tidy(ring2) {
+  const EPS3 = 1e-9;
+  let pts = ring2.filter((p, i) => p.sub(ring2[(i + 1) % ring2.length]).len() > EPS3);
+  let changed = true;
+  while (changed && pts.length >= 3) {
+    changed = false;
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[(i - 1 + pts.length) % pts.length], b = pts[i], c = pts[(i + 1) % pts.length];
+      if (Math.abs(Polygon2D.cross2D(a, b, c)) < EPS3) {
+        pts = pts.filter((_, j) => j !== i);
+        changed = true;
+        break;
+      }
+    }
+  }
+  return Polygon2D.signedArea(pts) < 0 ? pts.reverse() : pts;
+}
+function prism(part, at, out) {
+  const ring2 = part.outline, [s0, s1] = part.across, n = ring2.length;
+  const near = ring2.map((p) => at(p.x, s0, p.y));
+  const far = ring2.map((p) => at(p.x, s1, p.y));
+  for (const [a, b, c] of Polygon2D.triangulate2D(ring2)) {
+    out.push(near[a], near[b], near[c]);
+    out.push(far[a], far[c], far[b]);
+  }
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    out.push(near[i], far[i], far[j], near[i], far[j], near[j]);
+  }
 }
 
 // src/bim/roofs.ts
@@ -15826,7 +16020,7 @@ var Roof = class {
       const p = at2(s, t);
       return new Vec3(p.x, p.y, z);
     };
-    const along = (d) => new Vec3(f.u.x * d, f.u.y * d, 0);
+    const along2 = (d) => new Vec3(f.u.x * d, f.u.y * d, 0);
     const out = [];
     const add = (edge, start, end, height, area, mesh) => {
       out.push({ name: `${this.name} gable ${out.length + 1}`, edge: (edge + f.first) % 4, start, end, thickness: wt, height, area, mesh });
@@ -15839,7 +16033,7 @@ var Roof = class {
         at2(L - wt / 2, W),
         h2,
         W * h2 / 2,
-        MeshFactory.extrude([at(L, 0, e), at(L, W, e), at(L, W / 2, e + h2)], along(-wt))
+        MeshFactory.extrude([at(L, 0, e), at(L, W, e), at(L, W / 2, e + h2)], along2(-wt))
       );
       add(
         3,
@@ -15847,7 +16041,7 @@ var Roof = class {
         at2(wt / 2, 0),
         h2,
         W * h2 / 2,
-        MeshFactory.extrude([at(0, W, e), at(0, 0, e), at(0, W / 2, e + h2)], along(wt))
+        MeshFactory.extrude([at(0, W, e), at(0, 0, e), at(0, W / 2, e + h2)], along2(wt))
       );
       return out;
     }
@@ -15858,7 +16052,7 @@ var Roof = class {
       at2(L - wt / 2, W),
       h,
       W * h / 2,
-      MeshFactory.extrude([at(L, 0, e), at(L, W, e), at(L, W, e + h)], along(-wt))
+      MeshFactory.extrude([at(L, 0, e), at(L, W, e), at(L, W, e + h)], along2(-wt))
     );
     add(
       2,
@@ -15866,7 +16060,7 @@ var Roof = class {
       at2(wt, W - wt / 2),
       h,
       (L - 2 * wt) * h,
-      MeshFactory.extrude([at(wt, W, e), at(wt, W, e + h), at(wt, W - wt, e + (W - wt) * tan), at(wt, W - wt, e)], along(L - 2 * wt))
+      MeshFactory.extrude([at(wt, W, e), at(wt, W, e + h), at(wt, W - wt, e + (W - wt) * tan), at(wt, W - wt, e)], along2(L - 2 * wt))
     );
     add(
       3,
@@ -15874,25 +16068,25 @@ var Roof = class {
       at2(wt / 2, 0),
       h,
       W * h / 2,
-      MeshFactory.extrude([at(0, W, e), at(0, 0, e), at(0, W, e + h)], along(wt))
+      MeshFactory.extrude([at(0, W, e), at(0, 0, e), at(0, W, e + h)], along2(wt))
     );
     return out;
   }
   // ── Internals ──
   checkFootprint(label) {
-    const ring = Polygon2D.openRing(this.footprint);
-    if (ring.length < 3) throw new Error(`${label}: footprint needs at least 3 corners, got ${ring.length}.`);
-    ring.forEach((p, i) => {
+    const ring2 = Polygon2D.openRing(this.footprint);
+    if (ring2.length < 3) throw new Error(`${label}: footprint needs at least 3 corners, got ${ring2.length}.`);
+    ring2.forEach((p, i) => {
       if (!Number.isFinite(p.x) || !Number.isFinite(p.y)) throw new Error(`${label}: footprint corner ${i} is not a finite point, got (${p.x}, ${p.y}).`);
-      if (p.distTo(ring[(i + 1) % ring.length]) < 1e-9) throw new Error(`${label}: footprint edge ${i} has no length (corners ${i} and ${(i + 1) % ring.length} coincide).`);
+      if (p.distTo(ring2[(i + 1) % ring2.length]) < 1e-9) throw new Error(`${label}: footprint edge ${i} has no length (corners ${i} and ${(i + 1) % ring2.length} coincide).`);
     });
-    if (!(Polygon2D.area(ring) > 1e-9)) throw new Error(`${label}: footprint encloses no area.`);
+    if (!(Polygon2D.area(ring2) > 1e-9)) throw new Error(`${label}: footprint encloses no area.`);
     if (this.kind === "flat") return;
-    if (ring.length !== 4) {
-      throw new Error(`${label}: a ${this.kind} roof needs a rectangular footprint of 4 corners, got ${ring.length} corners (any polygon takes kind "flat").`);
+    if (ring2.length !== 4) {
+      throw new Error(`${label}: a ${this.kind} roof needs a rectangular footprint of 4 corners, got ${ring2.length} corners (any polygon takes kind "flat").`);
     }
     for (let i = 0; i < 4; i++) {
-      const a = ring[i].sub(ring[(i + 3) % 4]).normalize(), b = ring[(i + 1) % 4].sub(ring[i]).normalize();
+      const a = ring2[i].sub(ring2[(i + 3) % 4]).normalize(), b = ring2[(i + 1) % 4].sub(ring2[i]).normalize();
       const cos = a.dot(b);
       if (Math.abs(cos) > RIGHT_ANGLE_TOL) {
         const deg = 180 - Math.acos(Math.max(-1, Math.min(1, cos))) * 180 / Math.PI;
@@ -15901,15 +16095,15 @@ var Roof = class {
     }
   }
   frame() {
-    const ring = Polygon2D.openRing(this.footprint);
-    const first = this.kind === "hip" && ring[0].distTo(ring[1]) < ring[1].distTo(ring[2]) ? 1 : 0;
-    const q = [0, 1, 2, 3].map((i) => ring[(i + first) % 4]);
+    const ring2 = Polygon2D.openRing(this.footprint);
+    const first = this.kind === "hip" && ring2[0].distTo(ring2[1]) < ring2[1].distTo(ring2[2]) ? 1 : 0;
+    const q = [0, 1, 2, 3].map((i) => ring2[(i + first) % 4]);
     const length = q[0].distTo(q[1]), span = q[0].distTo(q[3]);
     return { o: q[0], u: q[1].sub(q[0]).div(length), v: q[3].sub(q[0]).div(span), length, span, first };
   }
   flatPlane() {
-    const ring = Polygon2D.openRing(this.footprint);
-    const grown = this.overhang > 0 ? Polygon2D.offset(ring, this.overhang) : ring;
+    const ring2 = Polygon2D.openRing(this.footprint);
+    const grown = this.overhang > 0 ? Polygon2D.offset(ring2, this.overhang) : ring2;
     const outer = Polygon2D.signedArea(grown) > 0 ? grown : grown.slice().reverse();
     const z0 = this.eavesElevation, z1 = z0 + this.thickness, n = outer.length;
     const positions = [...outer.map((p) => new Vec3(p.x, p.y, z0)), ...outer.map((p) => new Vec3(p.x, p.y, z1))];
@@ -15948,6 +16142,12 @@ function area3D(pts) {
 }
 
 // src/bim/building.ts
+var STAIR_MATERIAL = {
+  solid: { colour: "#c9a27a" },
+  concrete: { name: "Concrete", colour: "#c4c2bc" },
+  timber: { name: "Timber", colour: "#c9a27a" },
+  steel: { name: "Steel", colour: "#5d6166" }
+};
 var BUILDING_COLLECTIONS = ["storeys", "walls", "openings", "slabs", "spaces", "roofs", "stairs"];
 var POINT = { type: "array", items: { type: "number" }, minItems: 2, maxItems: 2, description: "[x, y] in metres" };
 var LENGTH = (description) => ({ type: "number", exclusiveMinimum: 0, description });
@@ -16073,6 +16273,7 @@ var BUILDING_SCHEMA = {
       landingDepth: LENGTH("Landing depth (m), default the width"),
       gap: { type: "number", minimum: 0, description: "Gap between the flights of a U (m), default 0.1" },
       well: { type: "boolean", description: "Cut the well in the floor above, default true" },
+      structure: { type: "string", enum: ["solid", "concrete", "timber", "steel"], description: "How it is built: solid (default: blocks down to the floor, a massing), concrete (the steps on a 160 mm waist slab), timber (50 mm treads between two stringers, open risers), steel (an 8 mm folded plate on two flat stringers)" },
       name: { type: "string" }
     }
   }
@@ -16258,10 +16459,10 @@ var Building = class {
       const slab = s && build(keyOf("slabs", id), () => {
         const boundary = Polygon2D.closeRing(r.boundary.map(([x, y]) => new Vec2(x, y)));
         const top = (r.level ?? "floor") === "top" ? s.record.elevation + s.record.height : s.record.elevation;
-        const along = joistDirectionFromBounds(boundary);
-        const alongX = Math.abs(along.x) >= Math.abs(along.y);
+        const along2 = joistDirectionFromBounds(boundary);
+        const alongX = Math.abs(along2.x) >= Math.abs(along2.y);
         const openings = (r.openings ?? []).map((o, i) => new SlabOpening(o.x, o.y, alongX ? o.width : o.depth, alongX ? o.depth : o.width, o.name ?? `opening ${i + 1}`));
-        const made = new Slab({ boundary, thickness: r.thickness ?? t.thickness, elevation: top, name: r.name ?? id, type: t.type, openings, joistDirection: along });
+        const made = new Slab({ boundary, thickness: r.thickness ?? t.thickness, elevation: top, name: r.name ?? id, type: t.type, openings, joistDirection: along2 });
         made.openingRings();
         return made;
       });
@@ -16339,7 +16540,8 @@ var Building = class {
           turn: r.turn,
           landingDepth: r.landingDepth,
           gap: r.gap,
-          type: new StairType({ name: shape.replace(/_/g, " "), shape })
+          structure: r.structure,
+          type: new StairType({ name: shape.replace(/_/g, " "), shape, material: STAIR_MATERIAL[r.structure ?? "solid"].name })
         });
         made.flights();
         return made;
@@ -16661,9 +16863,10 @@ function bindBuilding(doc, scene, opts = {}) {
         for (const g of roof.gables(building.gableThickness(s))) add(keyOf("roofs", id), g.mesh, { color: wallColour, layer: "walls" });
       }
       for (const [id, st] of s.stairs) {
-        for (const f of st.flights()) add(keyOf("stairs", id), new Mesh(f.positions, f.indices), { color: "#c9a27a", flatShading: true, layer: "stairs" });
+        const color = STAIR_MATERIAL[st.structure].colour;
+        for (const f of st.flights()) add(keyOf("stairs", id), new Mesh(f.positions, f.indices), { color, flatShading: true, layer: "stairs" });
         const landing = st.landing();
-        if (landing) add(keyOf("stairs", id), landing.toMesh(), { color: "#c9a27a", layer: "stairs" });
+        if (landing) add(keyOf("stairs", id), landing.toMesh(), { color, layer: "stairs" });
       }
       for (const [id, slab] of s.slabs) {
         const rec = building.data.slabs?.[id];
@@ -16732,6 +16935,410 @@ function bindBuilding(doc, scene, opts = {}) {
     }
   };
 }
+
+// src/bim/buildingPlan.ts
+var WALL = "#2b2b2b";
+var SCALES = [20, 50, 100, 200, 500, 1e3];
+function pale(hex, amount) {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  if (!m) return "#f1f1f1";
+  const c = (s) => Math.round(parseInt(s, 16) + (255 - parseInt(s, 16)) * amount).toString(16).padStart(2, "0");
+  return `#${c(m[1])}${c(m[2])}${c(m[3])}`;
+}
+function distanceToSegment(p, a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const len2 = dx * dx + dy * dy;
+  const t = len2 > 0 ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2)) : 0;
+  return Math.hypot(p.x - (a.x + dx * t), p.y - (a.y + dy * t));
+}
+var distanceToLine = (p, line) => {
+  let d = Infinity;
+  for (let i = 0; i + 1 < line.length; i++) d = Math.min(d, distanceToSegment(p, line[i], line[i + 1]));
+  return d;
+};
+function along(line, s) {
+  let rest = s;
+  for (let i = 0; i + 1 < line.length; i++) {
+    const a = line[i], b = line[i + 1];
+    const len = a.distTo(b);
+    if (rest <= len || i === line.length - 2) {
+      const dir = len > 0 ? new Vec2((b.x - a.x) / len, (b.y - a.y) / len) : new Vec2(1, 0);
+      return { p: new Vec2(a.x + dir.x * rest, a.y + dir.y * rest), dir };
+    }
+    rest -= len;
+  }
+  return { p: line[0], dir: new Vec2(1, 0) };
+}
+function piece(line, a, b) {
+  const out = [along(line, a).p];
+  let s = 0;
+  for (let i = 0; i + 1 < line.length; i++) {
+    s += line[i].distTo(line[i + 1]);
+    if (s > a + 1e-9 && s < b - 1e-9) out.push(line[i + 1]);
+  }
+  out.push(along(line, b).p);
+  return out;
+}
+var unit = (a, b) => {
+  const l = a.distTo(b) || 1;
+  return new Vec2((b.x - a.x) / l, (b.y - a.y) / l);
+};
+function corner(p, a, b, h) {
+  let nx = -(a.y + b.y), ny = a.x + b.x;
+  const l = Math.hypot(nx, ny);
+  if (l < 1e-9) return new Vec2(p.x - a.y * h, p.y + a.x * h);
+  nx /= l;
+  ny /= l;
+  const k = h / Math.max(0.3, nx * -a.y + ny * a.x);
+  return new Vec2(p.x + nx * k, p.y + ny * k);
+}
+function band(line, t, extendStart, extendEnd) {
+  const pts = line.map((p) => new Vec2(p.x, p.y));
+  const n = pts.length;
+  const d0 = unit(pts[0], pts[1]), d1 = unit(pts[n - 2], pts[n - 1]);
+  pts[0] = new Vec2(pts[0].x - d0.x * extendStart, pts[0].y - d0.y * extendStart);
+  pts[n - 1] = new Vec2(pts[n - 1].x + d1.x * extendEnd, pts[n - 1].y + d1.y * extendEnd);
+  const left = [], right = [];
+  for (let i = 0; i < n; i++) {
+    const a = unit(pts[Math.max(0, i - 1)], pts[Math.max(1, i)]), b = unit(pts[Math.min(n - 2, i)], pts[Math.min(n - 1, i + 1)]);
+    left.push(corner(pts[i], a, b, t / 2));
+    right.push(corner(pts[i], a, b, -t / 2));
+  }
+  return [...left, ...right.reverse()];
+}
+function ring(pts, h) {
+  const n = pts.length;
+  return pts.map((p, i) => corner(p, unit(pts[(i + n - 1) % n], p), unit(p, pts[(i + 1) % n]), h));
+}
+function tickStep(length) {
+  for (const s of [1, 2, 5, 10, 20, 50, 100, 200, 500]) if (length / s <= 12) return s;
+  return 1e3;
+}
+function storeyBox(s) {
+  const b = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+  const add = (p, pad = 0) => {
+    b.x0 = Math.min(b.x0, p.x - pad);
+    b.y0 = Math.min(b.y0, p.y - pad);
+    b.x1 = Math.max(b.x1, p.x + pad);
+    b.y1 = Math.max(b.y1, p.y + pad);
+  };
+  for (const w of s.walls.values()) for (const p of w.ribbon.centerline) add(p, w.ribbon.width / 2);
+  for (const sl of s.slabs.values()) sl.boundary.forEach((p) => add(p));
+  for (const sp of s.spaces.values()) sp.boundary.forEach((p) => add(p));
+  for (const st of s.stairs.values()) st.footprint().forEach((p) => add(p));
+  return b.x0 === Infinity ? null : b;
+}
+function buildingPlan(building, opts = {}) {
+  const storeys = opts.storey === void 0 ? building.storeys : building.storeys.filter((s) => s.id === opts.storey);
+  if (opts.storey !== void 0 && !storeys.length) {
+    throw new Error(`buildingPlan: no storey "${opts.storey}" (storeys: ${building.storeys.map((s) => s.id).join(", ") || "none"})`);
+  }
+  const boxes = storeys.map((s) => storeyBox(s) ?? { x0: 0, y0: 0, x1: 4, y1: 3 });
+  const extent = Math.max(1, ...boxes.map((b) => Math.max(b.x1 - b.x0, b.y1 - b.y0)));
+  const scale = opts.scale ?? SCALES.find((s) => extent * 1e3 / s <= 200) ?? 1e3;
+  const keys = opts.keys ?? true, coordinates = opts.coordinates ?? true;
+  const marked = new Set(opts.highlight ?? []);
+  const HOT = DRAWING_PALETTE.accent;
+  const sheet = new Sheet({
+    scale,
+    layers: {
+      slab: { color: DRAWING_PALETTE.faint, weight: 0.13 },
+      room: { color: DRAWING_PALETTE.ink },
+      stair: { color: DRAWING_PALETTE.annotation, weight: 0.18 },
+      wall: { color: WALL, weight: 0.25 },
+      opening: { color: WALL, weight: 0.13 },
+      key: { color: DRAWING_PALETTE.accent },
+      grid: { color: DRAWING_PALETTE.faint, weight: 0.13 }
+    }
+  });
+  const mm = (v) => sheet.paper(v);
+  const data = building.data;
+  let shift = 0;
+  storeys.forEach((s, index) => {
+    const box = boxes[index];
+    if (index > 0) shift += boxes[index - 1].x1 - box.x0 + mm(34);
+    const view = sheet.view(s.id, { at: [shift, 0], title: `${s.record.name} \xB7 storeys/${s.id}` });
+    for (const [id, slab] of s.slabs) {
+      if ((data.slabs?.[id]?.level ?? "floor") !== "floor") continue;
+      view.polyline(slab.boundary, { closed: true, layer: "slab", key: `slabs/${id}` });
+      for (const o of data.slabs?.[id]?.openings ?? []) {
+        view.rect(o.x - o.width / 2, o.y - o.depth / 2, o.width, o.depth, { layer: "slab", dash: "dashed", key: `slabs/${id}` });
+      }
+    }
+    for (const [id, space] of s.spaces) {
+      const colour = building.types.spaces?.[(data.spaces?.[id]?.use ?? "").toLowerCase()]?.colour;
+      view.fill(space.boundary, { color: colour ? pale(colour, 0.55) : "#f1f1f1", layer: "room", key: `spaces/${id}` });
+      if (marked.has(`spaces/${id}`)) view.polyline(space.boundary, { closed: true, color: HOT, weight: 0.5, dash: "dashed", key: `spaces/${id}` });
+    }
+    for (const [id, stair] of s.stairs) {
+      const outline = stair.footprint();
+      view.polyline(outline, { closed: true, layer: "stair", key: `stairs/${id}`, ...marked.has(`stairs/${id}`) ? { color: HOT, weight: 0.5 } : {} });
+      if (keys) view.text(id, Polygon2D.centroid2D(outline), { size: 1.6, layer: "key", align: "center", baseline: "middle", key: `stairs/${id}` });
+    }
+    const walls = [...s.walls];
+    for (const [id, wall] of walls) {
+      const line = wall.ribbon.centerline, t = wall.ribbon.width, length = wall.ribbon.length;
+      const closed = wall.ribbon.isClosedPolyline;
+      const meets = (end) => walls.some(([oid, other]) => oid !== id && distanceToLine(end, other.ribbon.centerline) <= (other.ribbon.width + t) / 2 + 0.05);
+      const holes = Object.entries(data.openings ?? {}).filter(([oid, o]) => o.wall === id && s.openings.has(oid)).map(([oid, o]) => ({ id: oid, kind: o.kind, a: Math.max(0, o.at - o.width / 2), b: Math.min(length, o.at + o.width / 2) })).filter((h) => h.b > h.a).sort((p, q) => p.a - q.a);
+      if (closed && !holes.length) {
+        const loop = line.slice(0, -1);
+        view.fill([ring(loop, t / 2), ring(loop, -t / 2)], { color: marked.has(`walls/${id}`) ? HOT : WALL, layer: "wall", key: `walls/${id}` });
+      } else {
+        let run = line, gaps = holes.map((h) => ({ a: h.a, b: h.b }));
+        if (closed) {
+          const start = (holes[0].a + holes[0].b) / 2;
+          run = [...piece(line, start, length), ...piece(line, 0, start).slice(1)];
+          gaps = [{ a: 0, b: holes[0].b - start }, ...holes.slice(1).map((h) => ({ a: h.a - start, b: h.b - start })), { a: length - (start - holes[0].a), b: length }];
+        }
+        let from = 0;
+        for (const gap of [...gaps, { a: length, b: length }]) {
+          if (gap.a - from > 1e-6) {
+            const outline = band(piece(run, from, gap.a), t, from === 0 && !closed && meets(line[0]) ? t / 2 : 0, gap.a === length && !closed && meets(line[line.length - 1]) ? t / 2 : 0);
+            view.fill(outline, { color: marked.has(`walls/${id}`) ? HOT : WALL, layer: "wall", key: `walls/${id}` });
+          }
+          from = Math.max(from, gap.b);
+        }
+      }
+      for (const hole of holes) {
+        const a = along(line, hole.a), b = along(line, hole.b);
+        const n = new Vec2(-a.dir.y, a.dir.x);
+        const key = `openings/${hole.id}`;
+        const h = t / 2;
+        view.fill([[a.p.x + n.x * h, a.p.y + n.y * h], [b.p.x + n.x * h, b.p.y + n.y * h], [b.p.x - n.x * h, b.p.y - n.y * h], [a.p.x - n.x * h, a.p.y - n.y * h]], { color: marked.has(key) ? pale(HOT, 0.6) : "#ffffff", layer: "opening", key });
+        for (const side of hole.kind === "window" ? [-1, 0, 1] : [-1, 1]) {
+          const o = side * t / 2;
+          view.polyline([[a.p.x + n.x * o, a.p.y + n.y * o], [b.p.x + n.x * o, b.p.y + n.y * o]], { layer: "opening", weight: marked.has(key) ? 0.5 : side === 0 ? 0.25 : 0.13, key, ...marked.has(key) ? { color: HOT } : {} });
+        }
+        if (keys) {
+          const m = along(line, (hole.a + hole.b) / 2);
+          const off = t / 2 + mm(2.2);
+          view.text(hole.id, [m.p.x + n.x * off, m.p.y + n.y * off], { size: 1.5, layer: "key", align: "center", baseline: "middle", key });
+        }
+      }
+      if (keys) {
+        const m = along(line, length * (holes.length ? 0.12 : 0.5));
+        const n = new Vec2(-m.dir.y, m.dir.x);
+        const off = -(t / 2 + mm(2.2));
+        view.text(id, [m.p.x + n.x * off, m.p.y + n.y * off], { size: 1.5, layer: "key", align: "center", baseline: "middle", key: `walls/${id}` });
+      }
+    }
+    for (const [id, space] of s.spaces) {
+      const c = Polygon2D.centroid2D(space.boundary);
+      const key = `spaces/${id}`;
+      view.text(space.name, [c.x, c.y + mm(2.6)], { size: 2.4, layer: "room", align: "center", baseline: "middle", key });
+      view.text(`${space.area().toFixed(1)} m\xB2`, [c.x, c.y - mm(0.6)], { size: 1.8, color: DRAWING_PALETTE.annotation, align: "center", baseline: "middle", key });
+      if (keys) view.text(id, [c.x, c.y - mm(3.4)], { size: 1.5, layer: "key", align: "center", baseline: "middle", key });
+    }
+    if (coordinates) {
+      const gap = mm(5), tick = mm(1.2);
+      const y = box.y0 - gap, x = box.x0 - gap;
+      const stepX = tickStep(box.x1 - box.x0), stepY = tickStep(box.y1 - box.y0);
+      view.polyline([[box.x0, y], [box.x1, y]], { layer: "grid" });
+      view.polyline([[x, box.y0], [x, box.y1]], { layer: "grid" });
+      for (let v = Math.ceil(box.x0 - 1e-9); v <= box.x1 + 1e-9; v++) {
+        const major = v % stepX === 0;
+        view.polyline([[v, y], [v, y - (major ? tick : tick / 2)]], { layer: "grid" });
+        if (major) view.text(String(v), [v, y - tick - mm(0.6)], { size: 1.6, layer: "grid", align: "center", baseline: "top" });
+      }
+      for (let v = Math.ceil(box.y0 - 1e-9); v <= box.y1 + 1e-9; v++) {
+        const major = v % stepY === 0;
+        view.polyline([[x, v], [x - (major ? tick : tick / 2), v]], { layer: "grid" });
+        if (major) view.text(String(v), [x - tick - mm(0.6), v], { size: 1.6, layer: "grid", align: "right", baseline: "middle" });
+      }
+      view.text("x (m)", [box.x1 + mm(2), y], { size: 1.6, layer: "grid", align: "left", baseline: "middle" });
+      view.text("y (m)", [x, box.y1 + mm(2.5)], { size: 1.6, layer: "grid", align: "center", baseline: "bottom" });
+    }
+  });
+  return sheet;
+}
+
+// src/bim/buildingSession.ts
+var round = (v, digits = 2) => Math.round(v * 10 ** digits) / 10 ** digits;
+var BuildingSession = class {
+  /**
+   * `source` is a document (a `Doc`: with a shared adapter the session works on the live
+   * model, and its edits reach everyone who has it open), a saved document (`doc.toJSON()`,
+   * what the House app's Save writes), plain building records (`{ storeys, walls, … }`), or
+   * nothing for an empty building.
+   */
+  constructor(source, opts = {}) {
+    this.built = null;
+    this.types = opts.types ?? defaultBuildingTypes();
+    if (source instanceof Doc) {
+      this.doc = source;
+      this.doc.onChange(() => {
+        this.built = null;
+      });
+      return;
+    }
+    const saved = source && source.format !== void 0 ? source : null;
+    if (saved && saved.format !== "tekto-doc/1") throw new Error(`BuildingSession: not a tekto document (format ${String(saved.format)})`);
+    this.doc = new Doc({ name: saved?.name ?? opts.name ?? "building" });
+    const collections = saved ? saved.collections : source ?? {};
+    this.doc.load({ format: "tekto-doc/1", name: this.doc.name, collections: collections ?? {} });
+    this.doc.onChange(() => {
+      this.built = null;
+    });
+  }
+  /** The building's records alone (a document may hold more, e.g. notes). */
+  data() {
+    const all = this.doc.toJSON().collections;
+    const out = {};
+    for (const c of BUILDING_COLLECTIONS) if (all[c]) out[c] = all[c];
+    return out;
+  }
+  /** The building as built from the records now (built once per change). */
+  get building() {
+    return this.built ?? (this.built = realizeBuilding(this.data(), this.types));
+  }
+  /** Each collection's JSON Schema: what `apply` checks a record against. */
+  schema() {
+    return buildingSchema(this.types);
+  }
+  /** What the document is: its name, how many records each collection holds, their schema, and the building in numbers. */
+  info() {
+    const all = this.doc.toJSON().collections;
+    const collections = {};
+    for (const c of BUILDING_COLLECTIONS) collections[c] = Object.keys(all[c] ?? {}).length;
+    for (const [c, rows] of Object.entries(all)) collections[c] ?? (collections[c] = Object.keys(rows).length);
+    return { name: this.doc.name, collections, schema: this.schema(), summary: this.summary() };
+  }
+  /** Collection → id → record; one collection, or all. */
+  records(collection) {
+    const all = this.doc.toJSON().collections;
+    return collection ? { [collection]: all[collection] ?? {} } : all;
+  }
+  /**
+   * Apply a patch (`{ set, update, remove }` by `"collection/id"`) as one undo step. A record
+   * that breaks the schema rejects the whole patch (`ok: false`, `rejected` says why); else
+   * `issues` is what the check says about the building as it is now.
+   */
+  apply(patch, label) {
+    const result = applyPatch(this.doc, patch, { schema: this.schema(), label: label ?? "Agent edit" });
+    return { ...result, issues: this.check() };
+  }
+  /** What is wrong with the building now: `building.check()`, errors and warnings by record. */
+  check() {
+    return this.building.check();
+  }
+  undo() {
+    return this.doc.undo();
+  }
+  redo() {
+    return this.doc.redo();
+  }
+  // ── Proposals: changes that wait for a person ──
+  /** The building as a patch would leave it. Nothing is changed. */
+  preview(patch) {
+    const all = patchedCollections(this.doc.toJSON().collections, patch);
+    const data = {};
+    for (const c of BUILDING_COLLECTIONS) if (all[c]) data[c] = all[c];
+    return realizeBuilding(data, this.types);
+  }
+  /**
+   * Propose a patch instead of applying it: stored in the document as an open proposal for a
+   * person to accept or reject (`proposals.ts`). The answer says what the check would say
+   * with it applied: `issues`, and of those the ones it would newly cause (`added`) and the
+   * current ones it would settle (`resolved`).
+   */
+  propose(patch, label, opts = {}) {
+    const r = propose(this.doc, patch, { label, by: opts.by ?? "Agent", note: opts.note, schema: this.schema() });
+    if (!r.ok) return { ...r, issues: [], added: [], resolved: [] };
+    const now2 = this.check(), then = this.preview(patch).check();
+    const sig = (i) => `${i.code}|${i.keys.join(",")}|${i.message}`;
+    const before = new Set(now2.map(sig)), after = new Set(then.map(sig));
+    return { ...r, issues: then, added: then.filter((i) => !before.has(sig(i))), resolved: now2.filter((i) => !after.has(sig(i))) };
+  }
+  /** The proposals in the document: the open ones, or all with what became of them. */
+  proposals(status = "open") {
+    return listProposals(this.doc, status);
+  }
+  /** Accept an open proposal: its patch as one undo step, then the check's issues. For the person who reviews, not for the agent that proposed. */
+  accept(id, by) {
+    const r = acceptProposal(this.doc, id, { schema: this.schema(), by });
+    return { ...r, issues: this.check() };
+  }
+  /** Reject an open proposal, with the reason for whoever proposed it. */
+  reject(id, opts = {}) {
+    return rejectProposal(this.doc, id, opts);
+  }
+  /** The building in numbers: per storey its parts, its rooms with their areas, its extent. */
+  summary() {
+    const b = this.building;
+    const data = b.data;
+    const issues = this.check();
+    const storeys = b.storeys.map((s) => {
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (const w of s.walls.values()) for (const p of w.ribbon.centerline) {
+        x0 = Math.min(x0, p.x);
+        y0 = Math.min(y0, p.y);
+        x1 = Math.max(x1, p.x);
+        y1 = Math.max(y1, p.y);
+      }
+      const rooms = [...s.spaces].map(([id, sp]) => {
+        const use = data.spaces?.[id]?.use;
+        return { key: `spaces/${id}`, name: sp.name, ...use ? { use } : {}, area: round(sp.area()) };
+      });
+      return {
+        id: s.id,
+        name: s.record.name,
+        elevation: s.record.elevation,
+        height: s.record.height,
+        walls: s.walls.size,
+        openings: s.openings.size,
+        slabs: s.slabs.size,
+        stairs: s.stairs.size,
+        roofs: s.roofs.size,
+        rooms,
+        area: round(rooms.reduce((sum, r) => sum + r.area, 0)),
+        bounds: x0 === Infinity ? null : { min: [round(x0), round(y0)], max: [round(x1), round(y1)] }
+      };
+    });
+    return {
+      storeys,
+      area: round(storeys.reduce((sum, s) => sum + s.area, 0)),
+      issues: { errors: issues.filter((i) => i.severity === "error").length, warnings: issues.filter((i) => i.severity === "warning").length }
+    };
+  }
+  /** The floor plans as a drawing (`buildingPlan`): `toSVG()`, `toDXF()`, `toPNG()`. */
+  plan(opts = {}) {
+    return buildingPlan(this.building, opts);
+  }
+  /**
+   * Look at the building: a floor plan per storey as a PNG image (one storey with `storey`),
+   * each part named by its record, with the summary and the check's issues. A check that
+   * passes is not the same as a plan that looks right. With `proposal` (an id) the plans and
+   * the issues are of the building as that proposal would leave it, its changes in red.
+   */
+  async snapshot(opts = {}) {
+    const { storey, proposal, ...raster } = opts;
+    if (proposal !== void 0) {
+      const p = this.doc.get(PROPOSALS, proposal);
+      if (!p) throw new Error(`no proposal "${proposal}" (open: ${this.proposals().map((x) => x.id).join(", ") || "none"})`);
+      const b2 = this.preview(p.patch);
+      const highlight = [...Object.keys(p.patch.set ?? {}), ...Object.keys(p.patch.update ?? {})];
+      const wanted2 = storey === void 0 ? b2.storeys : b2.storeys.filter((s) => s.id === storey);
+      const plans2 = [];
+      for (const s of wanted2) plans2.push({ storey: s.id, name: s.record.name, png: await buildingPlan(b2, { storey: s.id, highlight }).toPNG({ width: 1400, ...raster }) });
+      return { plans: plans2, summary: this.summary(), issues: b2.check() };
+    }
+    const b = this.building;
+    const wanted = storey === void 0 ? b.storeys : b.storeys.filter((s) => s.id === storey);
+    if (storey !== void 0 && !wanted.length) throw new Error(`no storey "${storey}" (storeys: ${b.storeys.map((s) => s.id).join(", ") || "none"})`);
+    const plans = [];
+    for (const s of wanted) plans.push({ storey: s.id, name: s.record.name, png: await buildingPlan(b, { storey: s.id }).toPNG({ width: 1400, ...raster }) });
+    return { plans, summary: this.summary(), issues: this.check() };
+  }
+  /** The document as the House app saves and opens it. */
+  toJSON() {
+    return this.doc.toJSON();
+  }
+  /** The building as an IFC file (`building.toIfc`). */
+  toIfc(opts = {}) {
+    return this.building.toIfc({ projectName: this.doc.name, ...opts });
+  }
+};
 
 // src/bim/adjacency.ts
 function boxOf(positions) {
@@ -16875,7 +17482,7 @@ var StepTrace = class {
     for (const s of this.steps) if (s.parent) childMs.set(s.parent, (childMs.get(s.parent) ?? 0) + s.ms);
     const own = (s) => Math.max(0, s.ms - (childMs.get(s.id) ?? 0));
     const totalMs = this.steps.filter((s) => !s.parent).reduce((t, s) => t + s.ms, 0);
-    const slowest = [...this.steps].sort((a, b) => own(b) - own(a)).slice(0, 3).map((s) => ({ id: s.id, ms: round(own(s)), share: totalMs > 0 ? round(own(s) / totalMs) : 0 }));
+    const slowest = [...this.steps].sort((a, b) => own(b) - own(a)).slice(0, 3).map((s) => ({ id: s.id, ms: round2(own(s)), share: totalMs > 0 ? round2(own(s) / totalMs) : 0 }));
     const best = /* @__PURE__ */ new Map();
     for (const s of this.steps) {
       let base = { ms: 0 };
@@ -16894,15 +17501,15 @@ var StepTrace = class {
     const drew = (s) => s.objects.length > 0 || this.steps.some((c) => c.parent === s.id && drew(c));
     const unused = this.steps.filter((s) => this.followed.has(s.id) && !s.error && !used.has(s.id) && !drew(s) && byId.get(s.id) !== this.steps[this.steps.length - 1] && !(s.parent && used.has(s.parent))).map((s) => s.id);
     return {
-      totalMs: round(totalMs),
+      totalMs: round2(totalMs),
       slowest,
-      slowestChain: { ids: chain, ms: round(end ? best.get(end).ms : 0) },
+      slowestChain: { ids: chain, ms: round2(end ? best.get(end).ms : 0) },
       unused,
       errors: this.steps.filter((s) => s.error).map((s) => ({ id: s.id, error: s.error }))
     };
   }
   toJSON() {
-    return { steps: this.steps.map((s) => ({ ...s, ms: round(s.ms) })), edges: this.edges(), analysis: this.analyse() };
+    return { steps: this.steps.map((s) => ({ ...s, ms: round2(s.ms) })), edges: this.edges(), analysis: this.analyse() };
   }
   /**
    * Remember an output (and the objects in it, one level down) as this step's. The latest step
@@ -16938,7 +17545,7 @@ var StepTrace = class {
   }
 };
 var now = () => typeof performance !== "undefined" ? performance.now() : Date.now();
-var round = (v) => Math.round(v * 100) / 100;
+var round2 = (v) => Math.round(v * 100) / 100;
 var num = (v) => Number.isInteger(v) ? v.toLocaleString("en-US") : String(Math.round(v * 1e3) / 1e3);
 function describeValue(v) {
   if (v === void 0) return "undefined";
@@ -17112,6 +17719,8 @@ export {
   Building,
   realizeBuilding,
   bindBuilding,
+  buildingPlan,
+  BuildingSession,
   boxOf,
   contactBetween,
   reverse,

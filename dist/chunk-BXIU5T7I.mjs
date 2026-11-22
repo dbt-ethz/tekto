@@ -1,24 +1,28 @@
 import {
   applyPatch,
-  download
-} from "./chunk-56LGGW6L.mjs";
+  download,
+  listProposals,
+  patchedCollections,
+  propose
+} from "./chunk-K6X6LVYU.mjs";
 
 // src/gui/theme.ts
 var DARK = {
   isDark: true,
-  bg: "#07080e",
-  panelBg: "#0c0d16",
-  popupBg: "#0d0f1e",
-  border: "#16182a",
-  controlBorder: "#1e2140",
-  text: "#b8bdd4",
-  textDim: "#7a80a0",
-  textFaint: "#5a6080",
+  bg: "#0b0b0b",
+  panelBg: "#1e1e1e",
+  popupBg: "#252526",
+  border: "#303030",
+  controlBorder: "#444444",
+  text: "#cccccc",
+  textDim: "#a8a8a8",
+  textFaint: "#808080",
   accent: "#ffffff",
-  hoverBg: "rgba(255,255,255,.06)",
-  fieldBg: "#07080e",
+  hoverBg: "rgba(255,255,255,.08)",
+  fieldBg: "#141414",
   font: "'IBM Plex Mono',ui-monospace,monospace"
 };
+var VIEW_BG_DARK = 723723;
 var LIGHT = {
   isDark: false,
   bg: "#f4f5f8",
@@ -34,8 +38,24 @@ var LIGHT = {
   fieldBg: "#f4f5f8",
   font: "'IBM Plex Mono',ui-monospace,monospace"
 };
+var PAPER = {
+  isDark: false,
+  bg: "#ffffff",
+  panelBg: "#ffffff",
+  popupBg: "#ffffff",
+  border: "#d9d9d9",
+  controlBorder: "#c4c4c4",
+  text: "#111111",
+  textDim: "#111111",
+  textFaint: "#111111",
+  accent: "#111111",
+  hoverBg: "rgba(0,0,0,.05)",
+  fieldBg: "#ffffff",
+  font: "'IBM Plex Mono',ui-monospace,monospace",
+  plain: true
+};
 function getTheme(mode = "dark") {
-  return mode === "light" ? LIGHT : DARK;
+  return mode === "paper" ? PAPER : mode === "light" ? LIGHT : DARK;
 }
 
 // src/render/snapshot.ts
@@ -149,6 +169,12 @@ function agentDoc(doc, opts = {}) {
       await settled();
       return [...opts.check?.() ?? []];
     },
+    propose: (patch, label, by, note) => {
+      const r = propose(doc, patch, { label, by, note, schema: opts.schema });
+      if (!r.ok || !opts.preview) return r;
+      return { ...r, issues: [...opts.preview(patchedCollections(collections(), patch))] };
+    },
+    proposals: (status) => listProposals(doc, status ?? "open").map(({ patch: _patch, base: _base, ...p }) => p),
     undo: () => doc.undo(),
     redo: () => doc.redo()
   };
@@ -189,6 +215,10 @@ function doingOf(op, args) {
   switch (op) {
     case "apply":
       return typeof args.label === "string" && args.label ? args.label : "editing";
+    case "propose":
+      return `proposing: ${typeof args.label === "string" && args.label ? args.label : "a change"}`;
+    case "proposals":
+      return "reading the proposals";
     case "undo":
       return "undo";
     case "redo":
@@ -272,6 +302,13 @@ async function runRelayed(op, args, agent) {
       return needDoc().apply(args.patch, args.label);
     case "check":
       return needDoc().check();
+    case "propose": {
+      const label = String(args.label ?? "").trim();
+      if (!label) throw new Error("label is required: a few words saying what the proposal does");
+      return needDoc().propose(args.patch, label, agent, String(args.note ?? "").trim() || void 0);
+    }
+    case "proposals":
+      return needDoc().proposals(args.status === "all" ? "all" : "open");
     case "undo":
       return { undone: needDoc().undo() };
     case "redo":
@@ -296,7 +333,7 @@ async function runRelayed(op, args, agent) {
       return { viewPng: b.viewPng, camera: m.camera ?? null, scene: m.scene ?? null, logs: m.logs ?? [], errors: m.errors ?? [] };
     }
     default:
-      throw new Error(`unknown call "${op}" (info, records, apply, check, notes, noteReply, noteResolve, undo, redo, setParams, run, camera, section, steps, snapshot)`);
+      throw new Error(`unknown call "${op}" (info, records, apply, check, propose, proposals, notes, noteReply, noteResolve, undo, redo, setParams, run, camera, section, steps, snapshot)`);
   }
 }
 function paramSchema(store) {
@@ -451,6 +488,7 @@ function callSite() {
 }
 
 export {
+  VIEW_BG_DARK,
   getTheme,
   snapshotWithOverlays,
   downloadSnapshot,

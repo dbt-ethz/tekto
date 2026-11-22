@@ -5,19 +5,24 @@ import {
   createRandom,
   noise,
   pickPrim
-} from "./chunk-TR2ZDYFK.mjs";
+} from "./chunk-MPAWQFRS.mjs";
 import {
   getTheme,
   installAgentBridge,
   plainBundle
-} from "./chunk-OZQQS4QH.mjs";
+} from "./chunk-BXIU5T7I.mjs";
 import {
   MathUtils,
   Vec2
-} from "./chunk-56LGGW6L.mjs";
+} from "./chunk-K6X6LVYU.mjs";
 
 // src/gui/ControlPanel.ts
 var DEFAULT_GROUP = "Parameters";
+var LABEL_MIN = 56;
+var LABEL_MAX = 170;
+var CONTROL_MIN = 150;
+var CONTROL_MAX = 220;
+var SECTION_PAD = 14;
 var SLIDER_STYLE_ID = "tekto-slider-style";
 function ensureSliderStyle(doc) {
   if (doc.getElementById(SLIDER_STYLE_ID)) return;
@@ -25,12 +30,16 @@ function ensureSliderStyle(doc) {
   el.id = SLIDER_STYLE_ID;
   el.textContent = `
     .tekto-slider{-webkit-appearance:none;appearance:none;background:transparent;cursor:pointer;height:16px;outline:none;padding:0;}
-    .tekto-slider::-webkit-slider-runnable-track{height:4px;background:var(--tekto-track,#2a2d44);}
+    .tekto-slider::-webkit-slider-runnable-track{height:4px;background:var(--tekto-track,#444444);}
     .tekto-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:7px;height:14px;margin-top:-5px;border-radius:0;background:var(--tekto-thumb,#ffffff);}
-    .tekto-slider::-moz-range-track{height:4px;background:var(--tekto-track,#2a2d44);}
+    .tekto-slider::-moz-range-track{height:4px;background:var(--tekto-track,#444444);}
     .tekto-slider::-moz-range-thumb{width:7px;height:14px;border-radius:0;border:none;background:var(--tekto-thumb,#ffffff);}
   `;
   doc.head.appendChild(el);
+}
+function labelFromKey(key) {
+  const words = key.replace(/[_-]+/g, " ").replace(/([a-z0-9])([A-Z])/g, "$1 $2").trim().toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 var ControlPanel = class {
   constructor(cfg) {
@@ -42,6 +51,10 @@ var ControlPanel = class {
     this.customRows = [];
     this.extraTabs = [];
     this.updaters = /* @__PURE__ */ new Map();
+    // ── Width ──
+    this.measureCtx = null;
+    this.labelWidth = LABEL_MIN;
+    this.railWidth = 0;
     this.cfg = cfg;
     this.store = cfg.store;
     this.theme = cfg.theme ?? getTheme();
@@ -53,6 +66,12 @@ var ControlPanel = class {
     });
     this.docClick = () => this.closeMenus();
     document.addEventListener("click", this.docClick);
+    document.fonts?.ready.then(() => {
+      if (this.items.length) {
+        this.fitLabels();
+        this.cfg.onRender?.();
+      }
+    });
   }
   dispose() {
     this.unsubStore();
@@ -66,6 +85,7 @@ var ControlPanel = class {
     this.extraTabs = extraTabs;
     this.updaters.clear();
     this.el.innerHTML = "";
+    this.railWidth = 0;
     const t = this.theme;
     const buttons = this.cfg.getButtons?.() ?? [];
     const menuNames = [];
@@ -85,7 +105,7 @@ var ControlPanel = class {
     const pinnedButtons = hasTabs ? buttons.filter((b) => !b.tab && !b.menu) : [];
     if (pinnedItems.length || pinnedButtons.length) {
       const strip = document.createElement("div");
-      strip.style.cssText = `padding:4px 8px 2px;border-bottom:1px solid ${t.border};`;
+      strip.style.cssText = `padding:4px 8px 2px 8px;border-bottom:1px solid ${t.border};`;
       for (const it of pinnedItems) {
         const row = this.buildControl(it);
         if (row) strip.appendChild(row);
@@ -93,7 +113,19 @@ var ControlPanel = class {
       for (const b of pinnedButtons) strip.appendChild(this.buildButtonRow(b));
       this.el.appendChild(strip);
     }
-    if (hasTabs) this.el.appendChild(this.buildTabBar(tabOrder));
+    const side = hasTabs && this.cfg.tabs === "side";
+    let body = this.el;
+    this.el.style.display = side ? "flex" : "";
+    this.el.style.flexDirection = side ? "column" : "";
+    this.el.style.minHeight = side ? "100%" : "";
+    if (side) {
+      const row = document.createElement("div");
+      row.style.cssText = "display:flex;align-items:stretch;flex:1;";
+      body = document.createElement("div");
+      body.style.cssText = "flex:1;min-width:0;";
+      row.append(this.buildTabList(tabOrder, items, buttons), body);
+      this.el.appendChild(row);
+    } else if (hasTabs) this.el.appendChild(this.buildTabBar(tabOrder));
     const activeExtra = hasTabs ? this.extraTabs.find((et) => et.name === this.activeTab) : void 0;
     const inTab = (tab, menu) => !menu && (hasTabs ? !!tab && tab === this.activeTab : true);
     const groups = /* @__PURE__ */ new Map();
@@ -105,15 +137,56 @@ var ControlPanel = class {
     for (const it of items) if (inTab(it.tab, it.menu)) groupOf(it.group).items.push(it);
     for (const b of buttons) if (inTab(b.tab, b.menu)) groupOf(b.group).buttons.push(b);
     for (const r of customRows) if (inTab(r.tab)) groupOf(r.group).rows.push(r);
+    const bare = groups.size === 1 && groups.has(DEFAULT_GROUP);
     for (const [name, content] of groups) {
-      this.el.appendChild(this.buildSection(name, content));
+      body.appendChild(this.buildSection(name, content, bare));
     }
     if (activeExtra) {
       const host = document.createElement("div");
       activeExtra.render(host);
-      this.el.appendChild(host);
+      body.appendChild(host);
     }
-    this.el.appendChild(this.footer);
+    body.appendChild(this.footer);
+    this.fitLabels();
+    this.cfg.onRender?.();
+  }
+  /** The width of `text` in the panel's font at `px`, in CSS pixels. */
+  textWidth(text, px) {
+    this.measureCtx ?? (this.measureCtx = document.createElement("canvas").getContext("2d"));
+    if (!this.measureCtx) return text.length * px * 0.6;
+    this.measureCtx.font = `${px}px ${this.theme.font}`;
+    return this.measureCtx.measureText(text).width;
+  }
+  /** Size the label column to the longest label of any tab (between LABEL_MIN and LABEL_MAX; longer ones wrap). */
+  fitLabels() {
+    let w = LABEL_MIN;
+    for (const it of this.items) {
+      const def = this.store.getDef(it.key);
+      if (!def || it.menu || def.type === "button") continue;
+      w = Math.max(w, Math.ceil(this.textWidth(def.label ?? labelFromKey(it.key), 11)) + 2);
+    }
+    this.labelWidth = Math.min(w, LABEL_MAX);
+    this.el.style.setProperty("--tekto-label-w", `${this.labelWidth}px`);
+  }
+  /**
+   * The panel width its controls ask for, in px: the label column, a control beside it
+   * (wider for a select with long options), a button's text, and the tab list when the tabs
+   * are on the side. A frame with `panelWidth: "auto"` asks after every render.
+   */
+  preferredWidth() {
+    let control = CONTROL_MIN;
+    let lone = 0;
+    for (const it of this.items) {
+      const def = this.store.getDef(it.key);
+      if (def?.type === "select") {
+        for (const opt of def.options ?? []) control = Math.max(control, this.textWidth(String(opt), 11) + 36);
+      } else if (def?.type === "button") {
+        lone = Math.max(lone, this.textWidth(def.label ?? it.key, 10) + 24);
+      }
+    }
+    for (const b of this.cfg.getButtons?.() ?? []) if (!b.menu) lone = Math.max(lone, this.textWidth(b.label, 10) + 24);
+    const row = this.labelWidth + 8 + Math.min(control, CONTROL_MAX);
+    return Math.ceil(this.railWidth + 2 * SECTION_PAD + Math.max(row, lone)) + 1;
   }
   /** Push a value into a live control without going through the store. */
   applyValue(key, value) {
@@ -298,12 +371,60 @@ var ControlPanel = class {
     }
     return bar;
   }
+  /** The tabs as a list down the panel's left side: a name, and how many controls it holds. */
+  buildTabList(tabOrder, items, buttons) {
+    const t = this.theme;
+    const list = document.createElement("nav");
+    list.dataset.tektoTabs = "side";
+    let w = 0;
+    for (const tab of tabOrder) w = Math.max(w, this.textWidth(tab, 11));
+    this.railWidth = Math.min(Math.max(Math.ceil(w) + 26, 72), 160);
+    list.style.cssText = `flex:0 0 ${this.railWidth}px;box-sizing:border-box;padding:6px 0;border-right:1px solid ${t.border};`;
+    for (const tab of tabOrder) {
+      const on = tab === this.activeTab;
+      const n = items.filter((it) => it.tab === tab).length + buttons.filter((b) => b.tab === tab).length;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.setAttribute("aria-pressed", String(on));
+      btn.style.cssText = `
+        display:block;width:100%;box-sizing:border-box;padding:7px 10px 7px 12px;border:none;
+        border-left:2px solid ${on ? t.accent : "transparent"};text-align:left;cursor:pointer;
+        background:${on ? t.hoverBg : "transparent"};color:${on ? t.accent : t.textDim};
+        font-family:inherit;font-size:11px;line-height:1.3;transition:background .12s;
+      `;
+      const name = document.createElement("span");
+      name.style.cssText = `display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:${on ? 600 : 400};`;
+      name.textContent = tab;
+      btn.appendChild(name);
+      if (n > 0) {
+        const count = document.createElement("span");
+        count.style.cssText = `display:block;font-size:9px;color:${t.textFaint};`;
+        count.textContent = `${n} control${n === 1 ? "" : "s"}`;
+        btn.appendChild(count);
+      }
+      if (!on) {
+        btn.addEventListener("mouseenter", () => {
+          btn.style.background = t.hoverBg;
+        });
+        btn.addEventListener("mouseleave", () => {
+          btn.style.background = "transparent";
+        });
+      }
+      btn.addEventListener("click", () => {
+        this.activeTab = tab;
+        this.render(this.items, this.customRows, this.extraTabs);
+        this.cfg.onTabChange?.(tab);
+      });
+      list.appendChild(btn);
+    }
+    return list;
+  }
   // ── Sections ──
-  buildSection(name, content) {
+  buildSection(name, content, bare = false) {
     const t = this.theme;
     const section = document.createElement("div");
     section.style.cssText = `border-bottom:1px solid ${t.border};`;
-    const collapsed = this.collapsedGroups.has(name);
+    const collapsed = !bare && this.collapsedGroups.has(name);
     const header = document.createElement("div");
     header.style.cssText = `
       padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:6px;
@@ -317,15 +438,19 @@ var ControlPanel = class {
     });
     const arrow = document.createElement("span");
     arrow.style.cssText = `font-size:8px;color:${t.textFaint};transition:transform .15s;width:10px;`;
-    arrow.textContent = collapsed ? "\u25B6" : "\u25BC";
+    const paintArrow = (c) => {
+      arrow.textContent = c ? "\u25B6" : "\u25BC";
+      if (t.plain) arrow.style.display = c ? "" : "none";
+    };
+    paintArrow(collapsed);
     header.appendChild(arrow);
     const title = document.createElement("span");
     title.style.cssText = `font-size:9px;font-weight:500;text-transform:uppercase;letter-spacing:1.8px;color:${t.textFaint};`;
     title.textContent = name;
     header.appendChild(title);
-    section.appendChild(header);
+    if (!bare) section.appendChild(header);
     const body = document.createElement("div");
-    body.style.cssText = `padding:0 14px 10px;${collapsed ? "display:none;" : ""}`;
+    body.style.cssText = `padding:${bare ? 10 : 0}px ${SECTION_PAD}px 10px;${collapsed ? "display:none;" : ""}`;
     for (const it of content.items) {
       const row = this.buildControl(it);
       if (row) body.appendChild(row);
@@ -333,7 +458,7 @@ var ControlPanel = class {
     for (const r of content.rows) {
       if (r.fullBleed) {
         const wrap = document.createElement("div");
-        wrap.style.cssText = "margin:0 -14px;";
+        wrap.style.cssText = `margin:0 -${SECTION_PAD}px;`;
         wrap.appendChild(r.el);
         body.appendChild(wrap);
       } else {
@@ -349,7 +474,7 @@ var ControlPanel = class {
       if (isCollapsed) this.collapsedGroups.delete(name);
       else this.collapsedGroups.add(name);
       body.style.display = isCollapsed ? "" : "none";
-      arrow.textContent = isCollapsed ? "\u25BC" : "\u25B6";
+      paintArrow(!isCollapsed);
     });
     return section;
   }
@@ -394,8 +519,8 @@ var ControlPanel = class {
     const row = document.createElement("div");
     row.style.cssText = "display:flex;align-items:center;gap:8px;margin-bottom:5px;min-height:26px;";
     const label = document.createElement("span");
-    label.style.cssText = `width:80px;flex-shrink:0;font-size:11px;color:${t.textDim};text-transform:capitalize;`;
-    label.textContent = def.label ?? it.key;
+    label.style.cssText = `width:var(--tekto-label-w,80px);flex-shrink:0;font-size:11px;color:${t.textDim};`;
+    label.textContent = def.label ?? labelFromKey(it.key);
     row.appendChild(label);
     switch (def.type) {
       case "float":
@@ -408,7 +533,7 @@ var ControlPanel = class {
         input.step = String(step);
         input.value = String(this.store.get(it.key));
         input.className = "tekto-slider";
-        input.style.cssText = `flex:1;--tekto-track:${t.controlBorder};--tekto-thumb:${it.accent || t.accent};`;
+        input.style.cssText = `flex:1;width:0;min-width:40px;--tekto-track:${t.controlBorder};--tekto-thumb:${it.accent || t.accent};`;
         const valueSpan = document.createElement("span");
         valueSpan.style.cssText = `width:42px;text-align:right;font-size:10px;color:${t.accent};`;
         const isInt = def.type === "int" || step >= 1;
@@ -548,15 +673,558 @@ var ControlPanel = class {
   }
 };
 
+// src/gui/Commands.ts
+var isMacPlatform = () => typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || "");
+function keyMatches(binding, e, mac = isMacPlatform()) {
+  const parts = binding.split("+").map((s) => s.trim()).filter(Boolean);
+  const key = binding.endsWith("++") ? "+" : parts.pop();
+  if (!key) return false;
+  const want = { meta: false, ctrl: false, alt: false, shift: false };
+  for (const m of parts) {
+    const k = m.toLowerCase();
+    if (k === "mod") mac ? want.meta = true : want.ctrl = true;
+    else if (k === "meta" || k === "cmd") want.meta = true;
+    else if (k === "ctrl" || k === "control") want.ctrl = true;
+    else if (k === "alt" || k === "option") want.alt = true;
+    else if (k === "shift") want.shift = true;
+  }
+  if (e.metaKey !== want.meta || e.ctrlKey !== want.ctrl || e.altKey !== want.alt) return false;
+  const letterOrNamed = key.length > 1 || /^[a-z0-9]$/i.test(key);
+  if (letterOrNamed && e.shiftKey !== want.shift) return false;
+  return e.key.length === 1 ? e.key.toLowerCase() === key.toLowerCase() : e.key === key;
+}
+function formatKeys(binding, mac = isMacPlatform()) {
+  const parts = binding.split("+").map((s) => s.trim()).filter(Boolean);
+  const key = binding.endsWith("++") ? "+" : parts.pop() ?? "";
+  const has = (...names) => parts.some((p) => names.includes(p.toLowerCase()));
+  const named = mac ? { ArrowUp: "\u2191", ArrowDown: "\u2193", ArrowLeft: "\u2190", ArrowRight: "\u2192", Delete: "\u2326", Backspace: "\u232B", Escape: "\u238B", Enter: "\u21A9" } : { ArrowUp: "\u2191", ArrowDown: "\u2193", ArrowLeft: "\u2190", ArrowRight: "\u2192", Escape: "Esc" };
+  const k = named[key] ?? (key.length === 1 ? key.toUpperCase() : key);
+  if (mac) {
+    return (has("ctrl", "control") ? "\u2303" : "") + (has("alt", "option") ? "\u2325" : "") + (has("shift") ? "\u21E7" : "") + (has("mod", "meta", "cmd") ? "\u2318" : "") + k;
+  }
+  const mods = [has("mod", "ctrl", "control") && "Ctrl", has("meta", "cmd") && "Win", has("alt", "option") && "Alt", has("shift") && "Shift"].filter(Boolean);
+  return [...mods, k].join("+");
+}
+function typing(target) {
+  const el = target;
+  if (!el || typeof el.tagName !== "string") return false;
+  return el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable;
+}
+function viewCommands(view) {
+  const v = (id, label) => ({ id: `view.${id}`, label, group: "View", run: () => view.setView(id) });
+  return [
+    { id: "view.fitAll", label: "Frame all", group: "View", run: () => view.fitAll() },
+    v("top", "Plan (top)"),
+    v("front", "Front"),
+    v("right", "Right"),
+    v("back", "Back"),
+    v("left", "Left"),
+    v("iso", "Iso"),
+    {
+      id: "view.toggleProjection",
+      label: "Perspective / orthographic",
+      group: "View",
+      run: () => view.setProjection(view.projection === "perspective" ? "orthographic" : "perspective")
+    },
+    ...view.setHiddenLineInverse ? [{
+      id: "view.hiddenLineInverse",
+      label: "Hidden line: paper / inverse",
+      group: "View",
+      run: () => view.setHiddenLineInverse(!view.hiddenLineInverse)
+    }] : []
+  ];
+}
+var Commands = class {
+  constructor() {
+    this.byId = /* @__PURE__ */ new Map();
+    this.listeners = /* @__PURE__ */ new Set();
+  }
+  /** Add commands (an id already there is replaced). Returns a function that removes them. */
+  add(commands) {
+    const list = Array.isArray(commands) ? commands : [commands];
+    for (const c of list) {
+      if (!c.id || typeof c.run !== "function") throw new Error(`Commands.add: a command needs an id and run(), got ${JSON.stringify(c)}`);
+      this.byId.set(c.id, c);
+    }
+    this.emit();
+    return () => {
+      for (const c of list) if (this.byId.get(c.id) === c) this.byId.delete(c.id);
+      this.emit();
+    };
+  }
+  remove(id) {
+    if (this.byId.delete(id)) this.emit();
+  }
+  get(id) {
+    return this.byId.get(id);
+  }
+  has(id) {
+    return this.byId.has(id);
+  }
+  /** Every command, in the order added, with its keys and whether it can run now. */
+  list() {
+    return [...this.byId.values()].map((c) => ({
+      id: c.id,
+      label: c.label,
+      group: c.group,
+      keys: c.keys === void 0 ? [] : typeof c.keys === "string" ? [c.keys] : [...c.keys],
+      enabled: this.canRun(c)
+    }));
+  }
+  /** Run a command by id. False if there is none or it can't run now. */
+  async run(id) {
+    const c = this.byId.get(id);
+    if (!c || !this.canRun(c)) return false;
+    await c.run();
+    return true;
+  }
+  /** The command a key event presses, if any (and enabled). */
+  match(e, mac) {
+    for (const c of this.byId.values()) {
+      const keys = c.keys === void 0 ? [] : typeof c.keys === "string" ? [c.keys] : c.keys;
+      if (keys.some((k) => keyMatches(k, e, mac)) && this.canRun(c)) return c;
+    }
+    return void 0;
+  }
+  /**
+   * Run commands from their keys on `target` (default: the window). Keys typed into a
+   * field stay with the field; a matched key's default is prevented. Returns the unbind.
+   */
+  bindKeys(target = window) {
+    const onKey = (ev) => {
+      const e = ev;
+      if (e.defaultPrevented || typing(e.target)) return;
+      const c = this.match(e);
+      if (!c) return;
+      e.preventDefault();
+      void Promise.resolve(c.run()).catch((err) => console.error(`command ${c.id}:`, err));
+    };
+    target.addEventListener("keydown", onKey);
+    return () => target.removeEventListener("keydown", onKey);
+  }
+  /** Hear when commands are added or removed. Returns the unsubscribe. */
+  onChange(cb) {
+    this.listeners.add(cb);
+    return () => this.listeners.delete(cb);
+  }
+  canRun(c) {
+    try {
+      return c.enabled ? c.enabled() !== false : true;
+    } catch {
+      return false;
+    }
+  }
+  emit() {
+    for (const l of this.listeners) l();
+  }
+};
+
+// src/gui/MenuBar.ts
+var STANDARD = ["File", "Edit", "View"];
+function menuOf(c) {
+  if (c.group) return c.group;
+  const head = c.id.includes(".") ? c.id.slice(0, c.id.indexOf(".")) : "tools";
+  return head.charAt(0).toUpperCase() + head.slice(1);
+}
+var familyOf = (id) => id.split(".").length > 2 ? id.slice(0, id.lastIndexOf(".")) : "";
+function menuBar(commands, opts = {}) {
+  const t = opts.theme ?? getTheme();
+  const el = document.createElement("nav");
+  el.dataset.tektoMenubar = "";
+  el.setAttribute("aria-label", "Menus");
+  el.style.cssText = `display:flex;align-items:center;gap:2px;font:12px ${t.font};user-select:none;`;
+  let open = null;
+  let signature = "";
+  const close = () => {
+    if (!open) return;
+    open.list.remove();
+    open.btn.style.background = "transparent";
+    open.btn.style.color = t.textDim;
+    open.btn.setAttribute("aria-expanded", "false");
+    open = null;
+  };
+  const show = (name, btn) => {
+    close();
+    const list = document.createElement("div");
+    list.setAttribute("role", "menu");
+    list.dataset.tektoMenu = name;
+    list.style.cssText = `position:fixed;z-index:100000;min-width:200px;max-height:70vh;overflow-y:auto;padding:4px;
+      background:${t.popupBg};border:1px solid ${t.controlBorder};border-radius:6px;
+      box-shadow:0 6px 22px rgba(0,0,0,${t.isDark ? ".45" : ".16"});font:12px ${t.font};color:${t.text};`;
+    let family = null;
+    for (const c of commands.list()) {
+      if (menuOf(c) !== name) continue;
+      const fam = familyOf(c.id);
+      if (family !== null && fam !== family) {
+        const rule = document.createElement("div");
+        rule.style.cssText = `height:1px;margin:4px 2px;background:${t.border};`;
+        list.appendChild(rule);
+      }
+      family = fam;
+      const item = document.createElement("button");
+      item.type = "button";
+      item.setAttribute("role", "menuitem");
+      item.dataset.command = c.id;
+      item.setAttribute("aria-label", c.label);
+      item.disabled = !c.enabled;
+      item.style.cssText = `display:flex;width:100%;align-items:center;gap:24px;padding:6px 10px;border:0;border-radius:4px;
+        background:transparent;color:${c.enabled ? t.text : t.textFaint};opacity:${c.enabled ? 1 : 0.55};
+        font:inherit;text-align:left;cursor:${c.enabled ? "pointer" : "default"};`;
+      const label = document.createElement("span");
+      label.style.cssText = "flex:1;white-space:nowrap;";
+      label.textContent = c.label;
+      item.appendChild(label);
+      if (c.keys.length) {
+        const keys = document.createElement("span");
+        keys.style.cssText = `color:${t.textFaint};font-size:11px;white-space:nowrap;`;
+        keys.textContent = formatKeys(c.keys[0]);
+        item.setAttribute("aria-keyshortcuts", c.keys[0]);
+        item.appendChild(keys);
+      }
+      if (c.enabled) {
+        item.addEventListener("mouseenter", () => {
+          item.style.background = t.hoverBg;
+        });
+        item.addEventListener("mouseleave", () => {
+          item.style.background = "transparent";
+        });
+        item.addEventListener("click", () => {
+          close();
+          void commands.run(c.id).catch((err) => console.error(`command ${c.id}:`, err));
+        });
+      }
+      list.appendChild(item);
+    }
+    document.body.appendChild(list);
+    const r = btn.getBoundingClientRect();
+    list.style.top = `${r.bottom + 2}px`;
+    list.style.left = `${Math.max(4, Math.min(r.left, window.innerWidth - list.offsetWidth - 4))}px`;
+    btn.style.background = t.hoverBg;
+    btn.style.color = t.accent;
+    btn.setAttribute("aria-expanded", "true");
+    open = { name, list, btn };
+  };
+  const render = () => {
+    const list = commands.list();
+    const names = [];
+    for (const c of list) {
+      const m = menuOf(c);
+      if (!names.includes(m)) names.push(m);
+    }
+    names.sort((a, b) => {
+      const ia = STANDARD.indexOf(a), ib = STANDARD.indexOf(b);
+      return (ia < 0 ? STANDARD.length : ia) - (ib < 0 ? STANDARD.length : ib);
+    });
+    const sig = names.join("|");
+    if (sig === signature) return;
+    signature = sig;
+    close();
+    el.replaceChildren();
+    for (const name of names) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = name;
+      btn.dataset.menu = name;
+      btn.setAttribute("aria-haspopup", "menu");
+      btn.setAttribute("aria-expanded", "false");
+      btn.style.cssText = `padding:4px 9px;border:0;border-radius:4px;background:transparent;color:${t.textDim};font:inherit;cursor:pointer;`;
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (open?.name === name) close();
+        else show(name, btn);
+      });
+      btn.addEventListener("mouseenter", () => {
+        if (open && open.name !== name) show(name, btn);
+      });
+      el.appendChild(btn);
+    }
+  };
+  let pending = 0;
+  const off = commands.onChange(() => {
+    if (!pending) pending = requestAnimationFrame(() => {
+      pending = 0;
+      render();
+    });
+  });
+  const onDoc = (e) => {
+    if (open && !open.list.contains(e.target)) close();
+  };
+  const onKey = (e) => {
+    if (e.key === "Escape") close();
+  };
+  document.addEventListener("click", onDoc);
+  document.addEventListener("keydown", onKey);
+  render();
+  return {
+    el,
+    dispose() {
+      off();
+      if (pending) cancelAnimationFrame(pending);
+      document.removeEventListener("click", onDoc);
+      document.removeEventListener("keydown", onKey);
+      close();
+      el.remove();
+    }
+  };
+}
+function menuSlot(own) {
+  return own ?? document.querySelector("[data-tekto-menu-slot]");
+}
+
+// src/gui/ParamHistory.ts
+var same = (a, b) => a === b || JSON.stringify(a) === JSON.stringify(b);
+var ParamHistory = class {
+  constructor(store, limit = 200) {
+    this.store = store;
+    this.limit = limit;
+    this.past = [];
+    this.future = [];
+    this.applying = false;
+    this.last = this.snapshot();
+  }
+  snapshot() {
+    return JSON.parse(JSON.stringify(this.store.getAll() ?? {}));
+  }
+  /** Controls that appeared since (a sketch declared them) start from their current value: no step. */
+  adopt() {
+    const now = this.snapshot();
+    for (const k of Object.keys(now)) if (!(k in this.last)) this.last[k] = now[k];
+  }
+  /** Whether the values differ from the last step (a change made in code, not yet committed). */
+  dirty(now = this.snapshot()) {
+    return Object.keys(now).some((k) => k in this.last && !same(now[k], this.last[k]));
+  }
+  /** A change is complete: one undo step, if anything differs from the last one. */
+  commit() {
+    if (this.applying) return;
+    const now = this.snapshot();
+    const changed = this.dirty(now);
+    this.adopt();
+    if (!changed) return;
+    this.past.push(this.last);
+    if (this.past.length > this.limit) this.past.shift();
+    this.future = [];
+    this.last = { ...this.last, ...now };
+  }
+  canUndo() {
+    return this.past.length > 0 || this.dirty();
+  }
+  canRedo() {
+    return this.future.length > 0;
+  }
+  undo() {
+    this.commit();
+    const target = this.past.pop();
+    if (!target) return;
+    this.future.push(this.last);
+    this.restore(target);
+  }
+  redo() {
+    this.commit();
+    const target = this.future.pop();
+    if (!target) return;
+    this.past.push(this.last);
+    this.restore(target);
+  }
+  restore(target) {
+    this.apply(target);
+    this.last = { ...this.last, ...target };
+  }
+  /** Write a snapshot's values back; controls that no longer exist are left out. */
+  apply(target) {
+    this.applying = true;
+    try {
+      for (const [k, v] of Object.entries(target)) {
+        if (this.store.has(k) && !same(this.store.get(k), v)) this.store.set(k, v);
+      }
+    } finally {
+      this.applying = false;
+    }
+  }
+  /** The Edit menu's Undo and Redo, with their keys. */
+  commands() {
+    return [
+      { id: "edit.undo", label: "Undo", keys: "Mod+Z", group: "Edit", run: () => this.undo(), enabled: () => this.canUndo() },
+      { id: "edit.redo", label: "Redo", keys: ["Shift+Mod+Z", "Mod+Y"], group: "Edit", run: () => this.redo(), enabled: () => this.canRedo() }
+    ];
+  }
+};
+
+// src/sketch/panelFrame.ts
+var MIN_WIDTH = 180;
+var MAX_WIDTH = 800;
+var FOLDED_INSET = 32;
+function ensureFoldedStyle() {
+  if (document.getElementById("tekto-panel-folded")) return;
+  const style = document.createElement("style");
+  style.id = "tekto-panel-folded";
+  style.textContent = `[data-tekto-panel=folded] [data-tekto-viewer-header]{padding-left:${FOLDED_INSET}px !important}[data-tekto-panel=folded] [data-tekto-shading-bar]:not([data-tekto-viewer-header]){margin-left:${FOLDED_INSET - 6}px}`;
+  document.head.appendChild(style);
+}
+var PANEL_TOP_H = 34;
+function read(key) {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+function write(key, value) {
+  try {
+    if (value === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, value);
+  } catch {
+  }
+}
+function panelFrame(o) {
+  const { root, panelEl, theme: t } = o;
+  const widthKey = `tekto.panelWidth.${o.storageKey}`;
+  const foldKey = `tekto.panelCollapsed.${o.storageKey}`;
+  const clamp = (w) => Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, Math.round(w)));
+  const dragged = parseInt(read(widthKey) ?? "", 10);
+  let chosen = Number.isFinite(dragged) ? clamp(dragged) : null;
+  let folded = read(foldKey) === "1";
+  const defaultWidth = () => clamp(o.width === "auto" ? o.preferred?.() ?? 260 : o.width);
+  let width = chosen ?? defaultWidth();
+  const handle = document.createElement("div");
+  handle.title = "Drag to resize the panel \xB7 double-click to reset";
+  const idle = "transparent", hover = t.isDark ? "rgba(255,255,255,.3)" : "rgba(0,0,0,.25)";
+  handle.style.cssText = `position:absolute;top:${o.top}px;bottom:0;width:6px;cursor:col-resize;z-index:10;background:${idle};transition:background .15s;`;
+  handle.addEventListener("mouseenter", () => {
+    handle.style.background = hover;
+  });
+  handle.addEventListener("mouseleave", () => {
+    handle.style.background = idle;
+  });
+  handle.addEventListener("dblclick", () => {
+    chosen = null;
+    write(widthKey, null);
+    width = defaultWidth();
+    apply();
+  });
+  handle.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    const x0 = e.clientX, w0 = width;
+    const move = (ev) => {
+      chosen = width = clamp(w0 + ev.clientX - x0);
+      write(widthKey, String(width));
+      apply();
+    };
+    const up = () => {
+      document.removeEventListener("mousemove", move);
+      document.removeEventListener("mouseup", up);
+      document.body.style.cursor = "";
+    };
+    document.body.style.cursor = "col-resize";
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", up);
+  });
+  const top = document.createElement("div");
+  top.dataset.tektoPanelTop = "";
+  const named = !!o.title;
+  top.style.cssText = `
+    position:absolute; left:0; top:${o.top}px; height:${PANEL_TOP_H}px; box-sizing:border-box; z-index:9;
+    display:flex; align-items:center; padding:0 32px 0 14px; overflow:hidden; user-select:none;
+    background:${t.panelBg}; border-right:1px solid ${t.border};
+    border-bottom:1px solid ${t.plain && !named ? "transparent" : t.border};
+  `;
+  const name = document.createElement("span");
+  name.textContent = o.title ?? "";
+  name.title = o.title ?? "";
+  name.style.cssText = t.plain ? `font:600 13px/1 ${t.font};color:${t.text};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;` : `font:500 10px/1 ${t.font};letter-spacing:1.6px;text-transform:uppercase;color:${t.textDim};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;`;
+  top.appendChild(name);
+  panelEl.style.marginTop = `${PANEL_TOP_H}px`;
+  const chevron = document.createElement("button");
+  chevron.type = "button";
+  chevron.dataset.tektoPanelFold = "";
+  chevron.style.cssText = `
+    position:absolute; top:${o.top + (PANEL_TOP_H - 24) / 2}px; width:20px; height:24px; z-index:11; padding:0;
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+    font:13px/1 ui-monospace,monospace; border-radius:4px;
+    border:1px solid ${t.controlBorder}; background:${t.panelBg}; color:${t.accent};
+  `;
+  chevron.addEventListener("click", () => {
+    folded = !folded;
+    write(foldKey, folded ? "1" : "0");
+    apply();
+  });
+  const isEmpty = () => !panelEl.textContent?.trim() && !panelEl.querySelector("input,button,select,textarea,canvas,svg,img");
+  let empty = isEmpty();
+  ensureFoldedStyle();
+  const apply = () => {
+    root.style.gridTemplateColumns = `${empty || folded ? 0 : width}px 1fr`;
+    root.dataset.tektoPanel = empty ? "none" : folded ? "folded" : "open";
+    panelEl.style.display = folded || empty ? "none" : "";
+    chevron.style.display = empty ? "none" : "flex";
+    top.style.display = empty || folded ? "none" : "flex";
+    top.style.width = `${width}px`;
+    chevron.style.zIndex = folded ? "30" : "11";
+    handle.style.display = folded || empty ? "none" : "";
+    handle.style.left = `${width - 3}px`;
+    chevron.style.left = `${folded ? 6 : width - 26}px`;
+    chevron.textContent = folded ? "\u203A" : "\u2039";
+    chevron.title = folded ? "Show the panel" : "Hide the panel";
+    chevron.setAttribute("aria-label", chevron.title);
+    chevron.setAttribute("aria-expanded", String(!folded));
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new Event("resize"));
+      o.onResize?.();
+    });
+  };
+  root.append(top, handle, chevron);
+  apply();
+  const sync = () => {
+    const now = isEmpty();
+    if (now !== empty) {
+      empty = now;
+      apply();
+    }
+  };
+  let queued = 0;
+  const watch = new MutationObserver(() => {
+    if (!queued) queued = requestAnimationFrame(() => {
+      queued = 0;
+      sync();
+    });
+  });
+  watch.observe(panelEl, { childList: true, subtree: true, characterData: true });
+  return {
+    fit() {
+      sync();
+      if (chosen !== null || o.width !== "auto") return;
+      const w = defaultWidth();
+      if (w !== width) {
+        width = w;
+        apply();
+      }
+    },
+    dispose() {
+      watch.disconnect();
+      if (queued) cancelAnimationFrame(queued);
+      top.remove();
+      handle.remove();
+      chevron.remove();
+      panelEl.style.marginTop = "";
+    }
+  };
+}
+
 // src/sketch/Sketch2D.ts
 function sketch2d(fn, config) {
   return new Sketch2DInstance(fn, config ?? {});
 }
 var Sketch2DInstance = class {
   constructor(fn, config) {
+    this.logColors = ["", ""];
+    this._logHtml = "";
     // Param model: values in the ParamStore, placement in `items` — rendered
     // by the shared ControlPanel.
     this.store = new ParamStore({});
+    /** What the sketch can do, with its keys: Undo and Redo over its controls, to begin with. */
+    this.commands = new Commands();
+    this.history = new ParamHistory(this.store);
+    this.menus = null;
+    this.unbindKeys = null;
     this.items = /* @__PURE__ */ new Map();
     this.buttons = [];
     this.logs = [];
@@ -567,6 +1235,12 @@ var Sketch2DInstance = class {
     this.pointerMoveFns = [];
     this.pointerUpFns = [];
     this.continuous = false;
+    this.drawQueued = 0;
+    /** Handle name → its position, and the `x, y` it was declared with (it follows those until dragged). */
+    this.handleState = /* @__PURE__ */ new Map();
+    /** The handles this run declared, in order. */
+    this.handleList = [];
+    this.dragging = null;
     this._prevFingerprint = "";
     this._baseLogCount = 0;
     this._onceRan = [];
@@ -600,6 +1274,7 @@ var Sketch2DInstance = class {
       owner: this,
       harness: "sketch2d",
       store: this.store,
+      commands: this.commands,
       snapshot: (opts) => plainBundle({
         ...opts,
         title: this.config.title ?? "sketch2d",
@@ -617,95 +1292,97 @@ var Sketch2DInstance = class {
   }
   // ── DOM ──
   buildDOM() {
-    const pw = this.config.panelWidth ?? 280;
-    const t = getTheme(this.config.theme);
+    const paper = this.config.style === "paper";
+    const t = getTheme(paper ? "paper" : this.config.theme);
+    const inShell = this.container.dataset.shell != null;
+    const showHeader = this.config.showHeader ?? (!paper && !inShell);
+    const headerH = showHeader ? 44 : 0;
     const root = document.createElement("div");
     root.style.cssText = `
-      display:grid; grid-template-columns:${pw}px 1fr; grid-template-rows:44px 1fr;
+      display:grid; grid-template-columns:280px 1fr; grid-template-rows:${showHeader ? "44px " : ""}1fr;
       height:100%; width:100%; overflow:hidden; position:relative;
       background:${t.bg}; color:${t.text};
       font-family:${t.font};
     `;
-    const header = document.createElement("div");
-    header.style.cssText = `
-      grid-column:1/-1; display:flex; align-items:center; padding:0 16px; gap:12px;
-      background:${t.panelBg}; border-bottom:1px solid ${t.border};
-    `;
-    header.innerHTML = `
-      <span style="font-weight:600;font-size:14px;color:${t.accent}">
-        &#x2B21; ${this.config.title ?? "Tekto Sketch2D"}
-      </span>
-      <span style="font-size:9px;padding:2px 6px;border-radius:3px;
-        background:${t.hoverBg};color:${t.accent}">2D</span>
-    `;
-    root.appendChild(header);
+    let menuHost = null;
+    if (showHeader) {
+      const header = document.createElement("div");
+      header.style.cssText = `
+        grid-column:1/-1; display:flex; align-items:center; padding:0 16px; gap:12px;
+        background:${t.panelBg}; border-bottom:1px solid ${t.border};
+      `;
+      header.innerHTML = `
+        <span style="font-weight:600;font-size:14px;color:${t.accent}">
+          &#x2B21; ${this.config.title ?? "Tekto Sketch2D"}
+        </span>
+        <span style="font-size:9px;padding:2px 6px;border-radius:3px;
+          background:${t.hoverBg};color:${t.accent}">2D</span>
+      `;
+      root.appendChild(header);
+      menuHost = header;
+    }
+    this.commands.add(this.history.commands());
+    this.unbindKeys = this.commands.bindKeys();
+    const slot = paper ? null : menuSlot(menuHost);
+    if (slot) {
+      this.menus = menuBar(this.commands, { theme: t });
+      slot.appendChild(this.menus.el);
+    }
     this.panelEl = document.createElement("div");
     this.panelEl.style.cssText = `
-      grid-column:1; grid-row:2; overflow-y:auto; overflow-x:hidden; padding:0;
+      grid-column:1; grid-row:${showHeader ? 2 : 1}; overflow-y:auto; overflow-x:hidden; padding:0;
       background:${t.panelBg}; border-right:1px solid ${t.border};
     `;
     root.appendChild(this.panelEl);
+    let frame = null;
     this.panel = new ControlPanel({
       store: this.store,
       theme: t,
       getButtons: () => this.buttons,
-      onAction: () => this.scheduleRerun()
+      onAction: () => this.scheduleRerun(),
+      onCommit: () => this.history.commit(),
+      // a finished change: one undo step
+      tabs: this.config.tabs,
+      onRender: () => frame?.fit()
     });
     this.panelEl.appendChild(this.panel.el);
     this.store.onChange(() => this.scheduleRerun());
-    const collapseKey = "tekto.sketch2d.collapsed";
-    let collapsed = false;
-    try {
-      collapsed = localStorage.getItem(collapseKey) === "1";
-    } catch {
-    }
-    const toggleBtn = document.createElement("button");
-    toggleBtn.style.cssText = `
-      margin-left:auto; cursor:pointer; width:28px; height:26px; border-radius:6px;
-      border:1px solid ${t.border}; background:transparent; color:${t.text};
-      font-size:15px; line-height:1; padding:0; flex:none;
-    `;
-    const applyCollapse = () => {
-      root.style.gridTemplateColumns = collapsed ? "0 1fr" : `${pw}px 1fr`;
-      this.panelEl.style.display = collapsed ? "none" : "";
-      toggleBtn.textContent = collapsed ? "\u203A" : "\u2039";
-      toggleBtn.title = collapsed ? "Show controls" : "Hide controls";
-    };
-    toggleBtn.addEventListener("click", () => {
-      collapsed = !collapsed;
-      try {
-        localStorage.setItem(collapseKey, collapsed ? "1" : "0");
-      } catch {
-      }
-      applyCollapse();
-      this.resizeCanvas();
-    });
-    header.appendChild(toggleBtn);
+    const view = document.createElement("div");
+    view.style.cssText = `grid-column:2;grid-row:${showHeader ? 2 : 1};display:flex;flex-direction:column;min-width:0;min-height:0;`;
     const vpWrap = document.createElement("div");
-    vpWrap.style.cssText = "grid-column:2;grid-row:2;position:relative;overflow:hidden;";
+    vpWrap.style.cssText = "flex:1;min-height:0;position:relative;overflow:hidden;";
     this.canvas.style.cssText = `
       width:100%; height:100%; display:block;
-      background:${this.config.background ?? (t.isDark ? "#0a0a10" : "#ffffff")};
+      background:${this.config.background ?? (t.isDark ? "#0b0b0b" : "#ffffff")};
     `;
     vpWrap.appendChild(this.canvas);
     this.logEl = document.createElement("div");
+    this.logEl.dataset.tektoStatus = "";
     this.logEl.style.cssText = `
-      position:absolute; bottom:12px; left:12px;
-      padding:8px 12px; border-radius:6px;
-      background:rgba(7,8,14,.85); backdrop-filter:blur(8px);
-      font-size:11px; line-height:1.7; color:${t.textDim};
-      pointer-events:none; max-width:300px;
-      border:1px solid rgba(22,24,42,.8); display:none;
+      flex:none; display:none; flex-wrap:wrap; column-gap:20px; padding:5px 12px;
+      background:${t.panelBg}; border-top:1px solid ${t.border};
+      font-size:11px; line-height:1.55; color:${t.text};
     `;
-    vpWrap.appendChild(this.logEl);
-    root.appendChild(vpWrap);
+    this.logColors = [t.textFaint, t.text];
+    view.append(vpWrap, this.logEl);
+    root.appendChild(view);
     if (this.container === document.body) {
       this.container.style.margin = "0";
       this.container.style.height = "100vh";
       this.container.style.overflow = "hidden";
     }
     this.container.appendChild(root);
-    applyCollapse();
+    frame = panelFrame({
+      root,
+      panelEl: this.panelEl,
+      theme: t,
+      top: headerH,
+      width: this.config.panelWidth ?? (paper ? "auto" : 280),
+      // A paper figure has no bar: its title is the panel's name (a shell names it already).
+      title: this.config.panelTitle ?? (paper ? inShell ? "" : this.config.title ?? "" : "Parameters"),
+      storageKey: this.config.title ?? "sketch2d",
+      preferred: () => this.panel.preferredWidth()
+    });
     const ro = new ResizeObserver(() => this.resizeCanvas());
     ro.observe(vpWrap);
     this.resizeCanvas();
@@ -728,25 +1405,57 @@ var Sketch2DInstance = class {
       const rect = this.canvas.getBoundingClientRect();
       return { x: e.clientX - rect.left, y: e.clientY - rect.top, id: e.pointerId };
     };
+    const run = (fns, p) => {
+      if (!fns.length) return;
+      for (const fn of fns) fn(p);
+      this.queueDraw();
+    };
     this.canvas.addEventListener("pointerdown", (e) => {
       const p = sample(e);
       this._mouseX = p.x;
       this._mouseY = p.y;
       this._mousePressed = true;
-      for (const fn of this.pointerDownFns) fn(p);
+      const hit = this.handleAt(p.x, p.y);
+      if (hit) {
+        this.dragging = { name: hit.name, id: p.id };
+        try {
+          this.canvas.setPointerCapture(p.id);
+        } catch {
+        }
+        this.canvas.style.cursor = "grabbing";
+        this.queueDraw();
+        return;
+      }
+      run(this.pointerDownFns, p);
     });
     this.canvas.addEventListener("pointermove", (e) => {
       const p = sample(e);
       this._mouseX = p.x;
       this._mouseY = p.y;
-      for (const fn of this.pointerMoveFns) fn(p);
+      if (this.dragging && this.dragging.id === p.id) {
+        const h = this.handleList.find((x) => x.name === this.dragging.name);
+        const st = this.handleState.get(this.dragging.name);
+        if (h && st) {
+          st.value = this.fromScreen(p.x, p.y, h.opts);
+          this.scheduleRerun();
+        }
+        return;
+      }
+      if (this.handleList.length) this.canvas.style.cursor = this.handleAt(p.x, p.y) ? "grab" : "";
+      run(this.pointerMoveFns, p);
     });
     const onUp = (e) => {
       const p = sample(e);
       this._mouseX = p.x;
       this._mouseY = p.y;
       this._mousePressed = false;
-      for (const fn of this.pointerUpFns) fn(p);
+      if (this.dragging && this.dragging.id === p.id) {
+        this.dragging = null;
+        this.canvas.style.cursor = this.handleAt(p.x, p.y) ? "grab" : "";
+        this.queueDraw();
+        return;
+      }
+      run(this.pointerUpFns, p);
     };
     this.canvas.addEventListener("pointerup", onUp);
     this.canvas.addEventListener("pointercancel", onUp);
@@ -761,6 +1470,7 @@ var Sketch2DInstance = class {
     this.pointerDownFns = [];
     this.pointerMoveFns = [];
     this.pointerUpFns = [];
+    this.handleList = [];
     this._onceSeq = 0;
     const usedParams = /* @__PURE__ */ new Set();
     const lab = this.buildLab(usedParams);
@@ -783,6 +1493,7 @@ var Sketch2DInstance = class {
       this._prevFingerprint = fingerprint;
       this.panel.render([...this.items.values()]);
     }
+    this.history.adopt();
     this._baseLogCount = this.logs.length;
     this.updateLog();
     this.redraw();
@@ -796,6 +1507,69 @@ var Sketch2DInstance = class {
       this.drawFn(this.ctx, w, h);
       this.ctx.restore();
     }
+    if (w > 0 && h > 0) this.drawHandles();
+  }
+  /** Draw on the next frame, once however often it is asked for. */
+  queueDraw() {
+    if (this.drawQueued || this.disposed) return;
+    this.drawQueued = requestAnimationFrame(() => {
+      this.drawQueued = 0;
+      if (!this.continuous) {
+        this.redraw();
+        this.updateLog();
+      }
+    });
+  }
+  // ── Drag handles ──
+  viewOf(opts) {
+    return typeof opts.view === "function" ? opts.view() : opts.view ?? null;
+  }
+  toScreen(p, opts) {
+    const v = this.viewOf(opts);
+    return v ? new Vec2(v.x + p.x * v.scale, v.y - p.y * v.scale) : p;
+  }
+  fromScreen(x, y, opts) {
+    const v = this.viewOf(opts);
+    const p = v ? new Vec2((x - v.x) / v.scale, (v.y - y) / v.scale) : new Vec2(x, y);
+    if (!opts.constrain) return p;
+    const [cx, cy] = opts.constrain(p.x, p.y);
+    return new Vec2(cx, cy);
+  }
+  /** The topmost handle within reach of a canvas point, or null. */
+  handleAt(x, y) {
+    for (let i = this.handleList.length - 1; i >= 0; i--) {
+      const h = this.handleList[i];
+      const st = this.handleState.get(h.name);
+      if (!st) continue;
+      const q = this.toScreen(st.value, h.opts);
+      if (Math.hypot(q.x - x, q.y - y) <= (h.opts.size ?? 6) + 5) return h;
+    }
+    return null;
+  }
+  drawHandles() {
+    if (!this.handleList.length) return;
+    const ctx = this.ctx;
+    ctx.save();
+    for (const h of this.handleList) {
+      const st = this.handleState.get(h.name);
+      if (!st) continue;
+      const q = this.toScreen(st.value, h.opts);
+      const r = h.opts.size ?? 6;
+      const active = this.dragging?.name === h.name;
+      ctx.beginPath();
+      ctx.arc(q.x, q.y, active ? r + 1.5 : r, 0, Math.PI * 2);
+      ctx.fillStyle = h.opts.color ?? "#ffffff";
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = "#1a1a1a";
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(q.x, q.y, (active ? r + 1.5 : r) + 1.5, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(255,255,255,.85)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+    ctx.restore();
   }
   scheduleRerun() {
     if (this._running || this.rerunTimer) return;
@@ -825,13 +1599,13 @@ var Sketch2DInstance = class {
         return makeParam(
           key,
           { type: "float", min, max, default: def, step: opts?.step ?? (max - min) / 100, label },
-          { key, group }
+          { key, group, tab: opts?.tab }
         );
       },
       toggle(label, def = false, opts) {
         const group = opts?.group ?? "Parameters";
         const key = `toggle:${opts?.group ?? ""}:${label}`;
-        return makeParam(key, { type: "bool", default: def, label }, { key, group });
+        return makeParam(key, { type: "bool", default: def, label }, { key, group, tab: opts?.tab });
       },
       select(label, options, def, opts) {
         const group = opts?.group ?? "Parameters";
@@ -839,19 +1613,45 @@ var Sketch2DInstance = class {
         return makeParam(
           key,
           { type: "select", options, default: def ?? options[0], label },
-          { key, group }
+          { key, group, tab: opts?.tab }
         );
       },
       colorPicker(label, def = "#38d9a9", opts) {
         const group = opts?.group ?? "Display";
         const key = `color:${opts?.group ?? ""}:${label}`;
-        return makeParam(key, { type: "color", default: def, label }, { key, group });
+        return makeParam(key, { type: "color", default: def, label }, { key, group, tab: opts?.tab });
       },
       button(label, action, opts) {
-        self.buttons.push({ label, action, group: opts?.group ?? "Actions" });
+        self.buttons.push({ label, action, group: opts?.group ?? "Actions", tab: opts?.tab });
       },
       draw(fn) {
         self.drawFn = fn;
+      },
+      redraw() {
+        self.queueDraw();
+      },
+      dragHandle(x, y, opts = {}) {
+        const name = opts.name ?? `handle:${self.handleList.length}`;
+        if (self.handleList.some((h) => h.name === name)) throw new Error(`lab.dragHandle: two handles named "${name}"; give each its own name`);
+        const declared = new Vec2(x, y);
+        let st = self.handleState.get(name);
+        if (!st || self.dragging?.name !== name && st.declared.distTo(declared) > 1e-12) {
+          st = { value: declared, declared };
+          self.handleState.set(name, st);
+        }
+        self.handleList.push({ name, opts });
+        return {
+          get value() {
+            return self.handleState.get(name)?.value ?? declared;
+          },
+          set(v) {
+            const cur = self.handleState.get(name);
+            if (cur) {
+              cur.value = new Vec2(v.x, v.y);
+              self.scheduleRerun();
+            }
+          }
+        };
       },
       animate(fn) {
         self.animateFn = fn;
@@ -931,14 +1731,14 @@ var Sketch2DInstance = class {
     };
   }
   updateLog() {
-    if (this.logs.length === 0) {
-      this.logEl.style.display = "none";
-      return;
-    }
-    this.logEl.style.display = "block";
-    this.logEl.innerHTML = this.logs.map(
-      (l) => `<div style="display:flex;gap:8px;"><span style="color:#4a5070">${l.label}</span><span style="color:#b8bdd4">${l.value}</span></div>`
+    const [dim, ink] = this.logColors;
+    const html = this.logs.map(
+      (l) => `<div style="display:flex;gap:8px;white-space:nowrap;"><span style="color:${dim}">${l.label}</span><span style="color:${ink}">${l.value}</span></div>`
     ).join("");
+    if (html === this._logHtml) return;
+    this._logHtml = html;
+    this.logEl.style.display = this.logs.length ? "flex" : "none";
+    this.logEl.innerHTML = html;
   }
   // ── Animation Loop ──
   startLoop() {
@@ -968,7 +1768,10 @@ var Sketch2DInstance = class {
   /** Tear down the sketch */
   dispose() {
     this.disposed = true;
+    if (this.drawQueued) cancelAnimationFrame(this.drawQueued);
     this.bridge?.dispose();
+    this.unbindKeys?.();
+    this.menus?.dispose();
     this.panel.dispose();
     this.container.innerHTML = "";
   }
@@ -1236,6 +2039,14 @@ var SheetCanvas = class {
 export {
   ensureSliderStyle,
   ControlPanel,
+  panelFrame,
+  keyMatches,
+  formatKeys,
+  viewCommands,
+  Commands,
+  menuBar,
+  menuSlot,
+  ParamHistory,
   sketch2d,
   Sketch2DInstance,
   fitSheet,

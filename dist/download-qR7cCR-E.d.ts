@@ -1,4 +1,4 @@
-import { M as Mesh, V as Vec3, s as Vec2, A as AABB } from './Scene-BsOKEQXC.js';
+import { M as Mesh, V as Vec3, d as Vec2, A as AABB } from './Scene-D4ExzRe1.js';
 
 /**
  * Tekto HMath — Scalar math utilities.
@@ -53,6 +53,9 @@ type GridMesh = Mesh & {
  * `grid` (heightfield, with `.update(fn)`); sweeps `extrude`, `revolve`, `loft`, `pipe`;
  * modifiers `subdivide` (Catmull-Clark), `midpointSubdivide`, `triangulate`.
  * Primitives are Y-up (three.js); faces point outward. Impossible arguments throw.
+ * Round shapes are closed and welded: the seam, the poles and a point on a revolve's axis
+ * are one vertex each, so `sphere`, `torus`, a capped `cylinder` and a full `revolve` of a
+ * profile that starts and ends on the axis have no open edges (`mesh.validate()`).
  *
  *   const wall = MeshFactory.extrude(outline, new Vec3(0, 0, 3));
  */
@@ -519,6 +522,51 @@ declare function segmentSegmentClosest(a1: Vec3, a2: Vec3, b1: Vec3, b2: Vec3): 
 };
 
 /**
+ * A Sheet as pixels — the PNG output beside `toSVG` and `toDXF`, with no browser.
+ *
+ * An agent working on a file in Node cannot open an SVG and look at it; an image it can see.
+ * `rasterizeSheet` draws the sheet's exploded primitives (the same list every output draws)
+ * into an RGBA buffer, and `sheetToPNG` packs it as a PNG file. Text is drawn with a small
+ * built-in stroke font (Latin letters, digits, the usual signs, umlauts), so the result is the
+ * same on every machine and needs no fonts installed.
+ *
+ *   const png = await sheet.toPNG({ width: 1600 });      // Uint8Array, in Node and in the browser
+ */
+
+/** Options for `rasterizeSheet` and `sheet.toPNG`: the image's size, its margin and its paper colour. */
+interface SheetRasterOptions {
+    /** Width of the image in pixels (default 1600). The height follows from the drawing. */
+    width?: number;
+    /** The image is scaled down to stay under this height in pixels (default 2400). */
+    maxHeight?: number;
+    /** Margin around the drawing in paper millimetres (default 8). */
+    margin?: number;
+    /** Paper colour (default "#ffffff"). */
+    background?: string;
+}
+/** A drawn sheet: `data` is RGBA, row by row from the top, as `ImageData` takes it. */
+interface SheetRaster {
+    width: number;
+    height: number;
+    data: Uint8ClampedArray;
+    /** Sheet (model) coordinates → pixel, for finding a drawn thing in the image. */
+    toPixel(p: Pt): Pt;
+}
+/** The sheet as pixels: its primitives in order, anti-aliased, on `background`. */
+declare function rasterizeSheet(sheet: Sheet, opts?: SheetRasterOptions): SheetRaster;
+/**
+ * RGBA pixels as a PNG file (8-bit RGB: the alpha channel is dropped, a drawing is opaque).
+ * Uses the platform's `CompressionStream`: browsers and Node 18 or later.
+ */
+declare function encodePNG(image: {
+    width: number;
+    height: number;
+    data: ArrayLike<number>;
+}): Promise<Uint8Array>;
+/** The sheet as a PNG file: `rasterizeSheet`, then `encodePNG`. */
+declare function sheetToPNG(sheet: Sheet, opts?: SheetRasterOptions): Promise<Uint8Array>;
+
+/**
  * Sheet — a 2D drawing drawn on screen and exported to SVG and DXF from one source.
  *
  * Apps drew their plans, elevations and unrolled strips twice: once for the screen, once in
@@ -529,7 +577,7 @@ declare function segmentSegmentClosest(a1: Vec3, a2: Vec3, b1: Vec3, b2: Vec3): 
  * export, by construction.
  *
  * Units, the way CAD does it: geometry in model units (metres), annotation in paper
- * millimetres at the sheet's scale (`scale: 50` = 1:50). A 2.5 mm label stays 2.5 mm on
+ * millimetres at the sheet's scale (`scale: 50` = 1:50). A 2 mm label stays 2 mm on
  * paper whether the view is a site plan or a joint detail.
  *
  *   const sheet = new Sheet({ scale: 50, layers: { cut: { weight: 0.5 }, hidden: { dash: "hidden" } } });
@@ -539,6 +587,11 @@ declare function segmentSegmentClosest(a1: Vec3, a2: Vec3, b1: Vec3, b2: Vec3): 
  *   const east = sheet.view("east", { at: [0, 12], project: { right: new Vec3(0, 1, 0), up: new Vec3(0, 0, 1) } });
  *   east.polyline(points3D, { layer: "cut" });                   // 3D points, projected into the view
  *   download(sheet.toDXF(), "drawings.dxf"); download(sheet.toSVG(), "drawings.svg");
+ *
+ * The graphic language is a plan's, kept minimal: a view's title sits above it on the left
+ * with its scale ("Plan 1:50"), annotation is small (2 mm text, 1.8 mm dimensions and levels),
+ * and `titleBlock` adds the title block (Plankopf) — office, project, drawing, plan number,
+ * dates, revisions, notes. Colour is for meaning, sparingly: `DRAWING_PALETTE`.
  */
 
 /** A point in a view or on the sheet. `Vec2` fits, or any `{ x, y }`. */
@@ -563,7 +616,7 @@ interface DrawOptions extends LineStyle {
 }
 /** Style, size and placement of a view's `text` and of a `leader`'s label. */
 interface TextOptions extends DrawOptions {
-    /** Height in paper millimetres (default 2.5). */
+    /** Height in paper millimetres (default 2; a leader's label 1.8). */
     size?: number;
     /** Degrees, counter-clockwise, in the view. */
     rotation?: number;
@@ -582,7 +635,7 @@ interface DimOptions extends DrawOptions {
     /** Unit of the measured text (default "mm", the drawing convention). */
     unit?: "mm" | "cm" | "m";
     decimals?: number;
-    /** Text height in paper mm (default 2.5). */
+    /** Text height in paper mm (default 1.8). */
     size?: number;
 }
 /** Options for a `level` mark: the value it writes (metres) and the text's format and size. */
@@ -593,7 +646,7 @@ interface LevelOptions extends DrawOptions {
     text?: string;
     /** Decimals of the value in metres (default 3: "+2.450"). */
     decimals?: number;
-    /** Text height in paper mm (default 2.5). */
+    /** Text height in paper mm (default 1.8). */
     size?: number;
 }
 /** How a view sits on the sheet (`sheet.view(name, opts)`): position, rotation, enlargement, the 3D projection of its input, and a title. */
@@ -612,8 +665,12 @@ interface ViewOptions {
         up: Vec3;
         origin?: Vec3;
     } | ((p: Vec3) => PtIn);
-    /** Title drawn under the view's bounds ("Plan 1:50"); sized in paper mm. */
+    /** The view's title, above it on the left ("Plan", "Section A-A"), 3.5 mm on paper. Its
+     *  scale follows ("Plan 1:50", from the sheet's and the view's scale) unless the title
+     *  already gives one or `titleScale` is false. */
     title?: string;
+    /** Write the view's scale after its title (default true). */
+    titleScale?: boolean;
 }
 /** Options for `new Sheet(...)`: the drawing scale and the named layer styles. */
 interface SheetOptions {
@@ -671,6 +728,67 @@ type SheetPrim = {
 };
 /** Dash patterns in paper mm (dash, gap, …). */
 declare const DASH_PATTERNS: Record<Exclude<Dash, "solid">, number[]>;
+/**
+ * Colours for drawings in a minimal graphic language: black and greys carry the drawing,
+ * a few pale fills say what is cut and of what, and one strong colour is kept for what must
+ * stand out (loads, a change). Suggestions, not rules: pass them as layer and fill colours.
+ *
+ *   new Sheet({ layers: { cut: { weight: 0.35 }, dims: { weight: 0.13, color: DRAWING_PALETTE.annotation } } });
+ *   plan.fill(section, { color: DRAWING_PALETTE.cut });
+ */
+declare const DRAWING_PALETTE: {
+    /** Lines and text. */
+    readonly ink: "#1a1a1a";
+    /** Dimensions, levels, leaders, secondary text. */
+    readonly annotation: "#6b6b6b";
+    /** Hidden and overhead lines, axes. */
+    readonly faint: "#a6a6a6";
+    /** What is cut, in general (pale blue). */
+    readonly cut: "#cfe2f2";
+    /** Cut steel or metal. */
+    readonly steel: "#9fb4c7";
+    /** Cut concrete or masonry (pale green). */
+    readonly concrete: "#dbe9d2";
+    /** Cut timber. */
+    readonly timber: "#ead9bd";
+    /** Poché in greyscale. */
+    readonly poche: "#d4d4d4";
+    /** The one strong colour: loads, forces, what changed. */
+    readonly accent: "#d0453b";
+};
+/** The title block (Plankopf) of a sheet: who, what, which drawing — `sheet.titleBlock(…)`. */
+interface TitleBlockOptions {
+    /** The drawing: "Stair details". The sheet's scale follows unless `scale` is given. */
+    title: string;
+    /** The office, first and small. */
+    office?: string;
+    /** The project: "Schloss Buchholz, stair". */
+    project?: string;
+    /** The phase or purpose under the title: "Submission", "For construction". */
+    phase?: string;
+    /** The plan number, large in its box: "2471.012". */
+    number?: string;
+    date?: string;
+    drawn?: string;
+    checked?: string;
+    /** Default the scales of the sheet's views, largest first: "1:50", "1:100 / 1:20". */
+    scale?: string;
+    /** Paper format: "A1", "84 x 59 cm". */
+    format?: string;
+    /** Revisions, oldest first: index, date, by whom, what changed. */
+    revisions?: {
+        index: string;
+        date?: string;
+        by?: string;
+        note?: string;
+    }[];
+    /** Notes under the block, one line each; an empty string leaves a gap. */
+    notes?: string[];
+    /** Width in paper mm (default 150). */
+    width?: number;
+    /** Its top-left corner on the sheet (sheet units). Default: left of the drawing, level with its top. */
+    at?: PtIn;
+}
 type Entity = {
     t: "polyline";
     points: Pt[];
@@ -756,10 +874,11 @@ declare class SheetView {
         angle?: number;
     }): this;
     /** A leader: an arrow at `points[0]` (what it points at), lines through the rest, and the
-     *  text beside the last point. */
+     *  text beside the last point, level with it. A leader that does not end level gets a short
+     *  level shoulder (3 mm), so its text always continues a level line. */
     leader(points: readonly (PtIn | Vec3)[], text: string, opts?: TextOptions): this;
-    /** A level mark: a triangle standing on the level at `at`, and the level in metres with
-     *  its sign ("+2.450", "±0.000"). */
+    /** A level mark: a triangle with its tip on the level at `at`, a level line under it, and on
+     *  that line the level in metres with its sign ("+2.450", "±0.000"). */
     level(at: PtIn | Vec3, opts?: LevelOptions): this;
     /** Projected segments, e.g. from `DxfExporter.toSegments(view)` (hidden lines removed). */
     segments(segs: readonly {
@@ -780,6 +899,7 @@ declare class Sheet {
     readonly scale: number;
     private layerStyles;
     private views;
+    private block;
     constructor(opts?: SheetOptions);
     /** Define or change a layer's style. */
     layer(name: string, style: LineStyle & {
@@ -790,6 +910,8 @@ declare class Sheet {
     }>;
     /** The view named `name` — created with `opts` the first time. */
     view(name: string, opts?: ViewOptions): SheetView;
+    /** The sheet's title block (Plankopf): drawn left of the views, level with their top, unless `at` places it. */
+    titleBlock(opts: TitleBlockOptions): this;
     /** The default view at the origin (`sheet.main.polyline(…)`). */
     get main(): SheetView;
     viewNames(): string[];
@@ -797,6 +919,10 @@ declare class Sheet {
     paper(mm: number): number;
     /** Everything as plain primitives in sheet coordinates — what every output draws. */
     explode(): SheetPrim[];
+    /** "1:20" for a view enlarged `k` times on this sheet. */
+    private ratio;
+    /** The title block's lines and text, in sheet units, top-left at `at` (or left of `drawing`). */
+    private explodeTitleBlock;
     /** Bounds of the exploded drawing (text estimated), or null when empty. */
     bounds(): {
         min: Pt;
@@ -809,6 +935,11 @@ declare class Sheet {
         margin?: number;
         background?: string;
     }): string;
+    /**
+     * The sheet as a PNG file, drawn without a browser (so an agent in Node can look at it):
+     * `width` pixels wide (default 1600), text in a built-in stroke font. See `rasterizeSheet`.
+     */
+    toPNG(opts?: SheetRasterOptions): Promise<Uint8Array>;
     /**
      * The sheet as DXF R12: lines, polylines, arcs, circles, text with its alignment, dashed
      * line types, layers with their colours; fills as SOLID triangles. `units: "mm"` (default)
@@ -826,6 +957,111 @@ declare class Sheet {
  * fill containing `p`, else null. Its `key` names the record it shows.
  */
 declare function pickPrim(prims: readonly SheetPrim[], p: Pt, tolerance: number): SheetPrim | null;
+
+/**
+ * Axonometric — a parallel view of 3D geometry for a 2D canvas or a Sheet.
+ *
+ * Drawing a model as a figure (an axonometry in a book, a mesh on paper) needs the same few
+ * steps every time: turn the model by an azimuth, tilt it by an elevation, leave out the
+ * faces turned away, sort the rest from far to near so the near ones are painted over the
+ * far ones, and fit the result into the drawing area. `Axonometric` does those steps; the
+ * app draws the polygons it returns in any style.
+ *
+ *   const axo = new Axonometric({ azimuth: 225, elevation: 30 });     // from the south-west, Z up
+ *   const faces = axo.polygons(walls.map((w) => ({ points: w.corners, data: w })));
+ *   const view = axo.fit(faces.flatMap((f) => f.points), width, height, 24);
+ *   for (const f of faces) { path(ctx, f.points.map((p) => [view.x + p.x * view.scale, view.y - p.y * view.scale])); … }
+ *
+ * The view's coordinates are y up (as a Sheet's): a 2D point (u, v) is drawn on a canvas at
+ * (`view.x + u * view.scale`, `view.y - v * view.scale`), the convention of `fitSheet` and
+ * of a 2D sketch's drag handles. For a Sheet, pass `axo.sheetProjection()` as a view's
+ * `project`.
+ *
+ * Sorting whole polygons by their mean depth (the painter's algorithm) is right for the
+ * convex, non-intersecting faces of most models; faces that interpenetrate or overlap
+ * cyclically can come out in the wrong order.
+ */
+
+/** Options for `new Axonometric(…)`: the direction the model is seen from, and which axis is up. */
+interface AxonometricOptions {
+    /**
+     * Where the viewer stands around the model, in degrees counter-clockwise from +x seen from
+     * above: 270 looks from the front (−y in a Z-up model), 225 from the front left (default).
+     */
+    azimuth?: number;
+    /** How far the viewer looks down, in degrees above the horizon (default 30; 90 is a plan). */
+    elevation?: number;
+    /** The model's up axis (default "z", as tekto's buildings; "y" for three.js and MeshFactory). */
+    up?: "z" | "y";
+}
+/** A polygon of the view, as `polygons` and `meshFaces` return them: far ones first. */
+interface AxoPolygon<T = undefined> {
+    /** The corners in the view (y up). */
+    points: Vec2[];
+    /** The mean depth: larger is farther away. */
+    depth: number;
+    /** The face's normal in the model (unit length), from its first corners when not given. */
+    normal: Vec3;
+    /** 0 to 1: how much the face turns to the light (`shade`), for a grey of its own. */
+    light: number;
+    data: T;
+}
+/** A parallel projection of 3D points onto a view plane, with depth, back-face culling and painter's order. */
+declare class Axonometric {
+    /** The view's x axis in the model. */
+    readonly right: Vec3;
+    /** The view's y axis in the model. */
+    readonly upward: Vec3;
+    /** The direction the viewer looks in (into the drawing). */
+    readonly forward: Vec3;
+    readonly azimuth: number;
+    readonly elevation: number;
+    readonly up: "z" | "y";
+    /** Where the light comes from (unit vector towards the light): above, over the viewer's left shoulder. */
+    light: Vec3;
+    constructor(opts?: AxonometricOptions);
+    /** An isometric view: the three axes equally foreshortened (elevation 35.26°), from the front left unless `azimuth` says otherwise. */
+    static isometric(opts?: Omit<AxonometricOptions, "elevation">): Axonometric;
+    /** A model point in the view (y up). */
+    project(p: Vec3): Vec2;
+    /** How far a point is from the viewer, along the view: larger is farther. */
+    depth(p: Vec3): number;
+    /** Whether a face with this outward normal is turned towards the viewer. */
+    facing(normal: Vec3): boolean;
+    /** 0 to 1: how much a face with this normal turns to the light (0 when it turns away). */
+    shade(normal: Vec3): number;
+    /**
+     * Polygons in painter's order (far first), each projected, with its depth, normal and light.
+     * `cull` (default true) leaves out the faces turned away; a polygon's normal comes from its
+     * corners (counter-clockwise seen from outside), or from `normal` when given.
+     */
+    polygons<T = undefined>(list: readonly {
+        points: readonly Vec3[];
+        normal?: Vec3;
+        data?: T;
+    }[], opts?: {
+        cull?: boolean;
+    }): AxoPolygon<T>[];
+    /** A mesh's faces as `polygons`: projected, culled, far first; `data` is the face's id. */
+    meshFaces(mesh: Mesh, opts?: {
+        cull?: boolean;
+    }): AxoPolygon<number>[];
+    /**
+     * The view that fits points (already projected) into a `width × height` area with `margin`
+     * around them: `{ scale, x, y }`, a point (u, v) drawn at (`x + u * scale`, `y - v * scale`).
+     * `maxScale` caps the scale (a small model is not blown up).
+     */
+    fit(points: readonly Vec2[], width: number, height: number, margin?: number, maxScale?: number): {
+        scale: number;
+        x: number;
+        y: number;
+    };
+    /** The projection for a Sheet's view (`sheet.view(name, { project: axo.sheetProjection() })`). */
+    sheetProjection(): {
+        right: Vec3;
+        up: Vec3;
+    };
+}
 
 /**
  * Pure DXF text writers — no three.js, no DOM, so they run in Node and in `tekto/core`.
@@ -1012,4 +1248,4 @@ declare function download(data: string | Blob | ArrayBuffer | Uint8Array, fileNa
     type?: string;
 }): void;
 
-export { writeDxf2D as $, Algo as A, Segment as B, Sheet as C, type DxfLayerDef as D, type SheetOptions as E, type FilletResult as F, type SheetPrim as G, HMath as H, SheetView as I, aciFromHex as J, closestPointOnSegment as K, type LevelOptions as L, MathUtils as M, createRandom as N, OBB2D as O, type Poly2 as P, download as Q, type ResolvedStyle as R, type SeededRandom as S, type TextOptions as T, noise as U, type ViewOptions as V, pickPrim as W, polygonIntersection as X, segmentSegmentClosest as Y, setClipSnap as Z, stampName as _, DASH_PATTERNS as a, writeDxf3D as a0, type Dash as b, type DimOptions as c, type DrawOptions as d, type Dxf2DArc as e, type Dxf2DCircle as f, type Dxf2DContent as g, type Dxf2DLine as h, type Dxf2DLook as i, type Dxf2DPoint as j, type Dxf2DPolyline as k, type Dxf2DSolid as l, type Dxf2DText as m, type Dxf3DArc as n, type Dxf3DCircle as o, type Dxf3DContent as p, type Dxf3DLine as q, type Dxf3DPoint as r, type Dxf3DPolyline as s, type LineStyle as t, MeshFactory as u, type MultiPoly2 as v, Polygon2D as w, PolygonBool as x, type Pt as y, type Ring2 as z };
+export { download as $, Algo as A, Polygon2D as B, PolygonBool as C, type DxfLayerDef as D, type Pt as E, type FilletResult as F, type Ring2 as G, HMath as H, Segment as I, Sheet as J, type SheetOptions as K, type LevelOptions as L, MathUtils as M, type SheetPrim as N, OBB2D as O, type Poly2 as P, type SheetRaster as Q, type ResolvedStyle as R, type SeededRandom as S, type SheetRasterOptions as T, SheetView as U, type TextOptions as V, type TitleBlockOptions as W, type ViewOptions as X, aciFromHex as Y, closestPointOnSegment as Z, createRandom as _, type AxoPolygon as a, encodePNG as a0, noise as a1, pickPrim as a2, polygonIntersection as a3, rasterizeSheet as a4, segmentSegmentClosest as a5, setClipSnap as a6, sheetToPNG as a7, stampName as a8, writeDxf2D as a9, writeDxf3D as aa, Axonometric as b, type AxonometricOptions as c, DASH_PATTERNS as d, DRAWING_PALETTE as e, type Dash as f, type DimOptions as g, type DrawOptions as h, type Dxf2DArc as i, type Dxf2DCircle as j, type Dxf2DContent as k, type Dxf2DLine as l, type Dxf2DLook as m, type Dxf2DPoint as n, type Dxf2DPolyline as o, type Dxf2DSolid as p, type Dxf2DText as q, type Dxf3DArc as r, type Dxf3DCircle as s, type Dxf3DContent as t, type Dxf3DLine as u, type Dxf3DPoint as v, type Dxf3DPolyline as w, type LineStyle as x, MeshFactory as y, type MultiPoly2 as z };

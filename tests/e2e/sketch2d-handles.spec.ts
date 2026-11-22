@@ -44,5 +44,5 @@ test("lab.dragHandle: a block dragged in the plan moves in model metres, snapped
   await page.mouse.move(from.x + 3.2 * view.scale, from.y - 4.9 * view.scale, { steps: 6 });
   await page.mouse.up();
   await expect.poll(async () => (await status()).find((l: any) => l.label === "Hall at")?.value).toBe("5, 7 m");   // snapped to 0.5 m
-  await page.screenshot({ path: process.env.TEKTO_SHOT ?? "test-results/axonometric.png" });
+  await page.screenshot({ path: test.info().outputPath("axonometric.png") });
 });

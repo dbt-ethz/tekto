@@ -6,6 +6,25 @@ before 1.0, breaking changes bump the minor version. See
 
 ## Unreleased
 
+- **An agent on the live model, with nobody's app open.** `tools/mcp.mjs --doc house` makes the
+  MCP server join a shared document as one more participant instead of reaching into an open
+  tab: people who have the app open see the agent's edits arrive, it sees theirs, and there is
+  one model, not copies of a file. `--file house.json` does the same on a file when there is no
+  server (the document the House app saves and opens, created with the first edit). Both offer
+  `tekto_info`, `tekto_records`, `tekto_apply`, `tekto_check`, `tekto_undo`, `tekto_snapshot`
+  (a floor plan per storey as an image, every part labelled with its record id, the model's
+  coordinates along the edges) and the new `tekto_export` (IFC, or the plans as SVG or DXF).
+  In code: `BuildingSession` (in `tekto/core`, no three.js) holds a `Doc`, saved JSON or plain
+  records and gives `info`, `records`, `apply`, `check`, `undo`, `snapshot`, `toJSON`, `toIfc`.
+  `devServerAdapter({ endpoint, user })` now also runs in Node (a fixed `user`, the event
+  stream read with fetch). The page mode of the server is unchanged.
+
+- **Floor plans of a building, and drawings as PNG.** `buildingPlan(building, { storey })`
+  draws a building's plans as a `Sheet`: walls solid between their openings, windows with their
+  glass line, rooms in their colour with name and area, stairs, each part keyed by its record.
+  `sheet.toPNG({ width })` (and `rasterizeSheet`, `encodePNG`) draws any sheet into pixels with
+  no browser, text in a built-in stroke font, so an agent in Node can look at what it drew.
+
 - **Stairs built as timber, steel or concrete.** `new Stair({ structure })`, and `structure` on
   a building's stair record, choose how the flights are built: `"concrete"` puts the steps on a
   160 mm waist slab, `"timber"` sets 50 mm treads between two 60 × 300 mm stringers with open

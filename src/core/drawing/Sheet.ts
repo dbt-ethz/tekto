@@ -28,6 +28,7 @@
 import type { Vec3 } from "../math/vectors";
 import { Polygon2D } from "../geometry/Polygon2D";
 import { writeDxf2D, aciFromHex, type Dxf2DContent, type DxfLayerDef } from "../../io/DxfWriter";
+import { sheetToPNG, type SheetRasterOptions } from "./sheetRaster";
 
 /** A point in a view or on the sheet. `Vec2` fits, or any `{ x, y }`. */
 export interface Pt { x: number; y: number; }
@@ -441,6 +442,14 @@ export class Sheet {
   }
 
   /**
+   * The sheet as a PNG file, drawn without a browser (so an agent in Node can look at it):
+   * `width` pixels wide (default 1600), text in a built-in stroke font. See `rasterizeSheet`.
+   */
+  toPNG(opts: SheetRasterOptions = {}): Promise<Uint8Array> {
+    return sheetToPNG(this, opts);
+  }
+
+  /**
    * The sheet as DXF R12: lines, polylines, arcs, circles, text with its alignment, dashed
    * line types, layers with their colours; fills as SOLID triangles. `units: "mm"` (default)
    * writes model metres as millimetres. Pen weights have no place in R12 — they travel with
@@ -608,6 +617,7 @@ function textCorners(t: Extract<SheetPrim, { kind: "text" }>): Pt[] {
   return [[x0, y0], [x0 + w, y0], [x0 + w, y0 + h], [x0, y0 + h]].map(([x, y]) => ({ x: t.at.x + x * c - y * s, y: t.at.y + x * s + y * c }));
 }
 
+/** The box around primitives (sheet coordinates), text by its approximate box; null for none. */
 export function boundsOf(prims: readonly SheetPrim[]): { min: Pt; max: Pt } | null {
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   const add = (p: Pt) => { x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); };

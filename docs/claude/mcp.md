@@ -53,6 +53,25 @@ claude mcp add tekto -- node node_modules/tekto/tools/mcp.mjs
 | `tekto_set_params`, `tekto_run_command`, `tekto_undo` | controls, commands and undo, as a person would |
 | `tekto_steps` | the program as its [steps](/claude/steps) |
 
+## Without the app open
+
+The server can also hold the building itself, so an agent works while nobody has the app open: overnight checks, a batch of layout options, a fix for what the check reports.
+
+```bash
+# the shared document "house" on the dev server: the live model people have open
+claude mcp add tekto -- node node_modules/tekto/tools/mcp.mjs --doc house
+# a building file on disk, with no server at all
+claude mcp add tekto -- node node_modules/tekto/tools/mcp.mjs --file house.json
+```
+
+Prefer `--doc`. The agent joins the shared document as one more participant, named in the presence bar: people who have the app open see its edits arrive, it sees theirs, and there is one model instead of copies of a file. It needs the collab plugin in the dev server (`tekto/collab-vite`) and an app that opens the document with `devServerAdapter()`: the House page does with `?shared=1`.
+
+`--file` is for when there is no server. The file is the document the House app saves and opens (Save JSON, Open JSON); it is created with the first edit, and read again when someone else changed it.
+
+In both modes the tools are the document's: `tekto_info`, `tekto_records`, `tekto_apply`, `tekto_check`, `tekto_undo` (the agent's own steps), `tekto_snapshot` and `tekto_export`. A snapshot is a floor plan per storey as an image, each part labelled with its record id and the model's coordinates along the edges, with the building in numbers. `tekto_export` writes IFC, or the plans as SVG or DXF. The tools that need a view or a panel (camera, section, controls, commands, notes) are not offered.
+
+In code, the same thing is a [`BuildingSession`](/buildings/records#without-a-browser).
+
 ## Build a house from a brief
 
 1. `npm run playground`, open the House page and press **Empty site** (or open it with `&empty`).

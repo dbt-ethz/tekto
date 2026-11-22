@@ -24,7 +24,7 @@ test("a proposal waits in the bar with what it changes; Accept is one undo step,
   await expect(bar.getByRole("button", { name: "Changes openings/entry" })).toContainText("width: 1.1 → 1.3");
   await expect(bar.getByRole("button", { name: "Adds openings/nw9" })).toBeVisible();
   expect(await width(page)).toBe(1.1);                                  // nothing has changed yet
-  await page.screenshot({ path: process.env.TEKTO_SHOT ?? "test-results/proposal-bar.png" });
+  await page.screenshot({ path: test.info().outputPath("proposal-bar.png") });
 
   await bar.getByRole("button", { name: "Changes openings/entry" }).click();   // a click selects the record in the view
   expect(await page.evaluate(() => (window as any).house.selection.keys())).toEqual(["openings/entry"]);

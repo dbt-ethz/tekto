@@ -6,6 +6,14 @@ before 1.0, breaking changes bump the minor version. See
 
 ## Unreleased
 
+From the lecture apps' upgrade to 0.11.0 (29 `sketch2d` figures in one book):
+
+- **Agents find the docs from a consuming project.** The README's first screen says to read `node_modules/tekto/llms.txt`; every entry's `.d.ts` starts with a pointer to `llms.txt`, `llms-full.txt` and `CHANGELOG.md`; the package now ships `CHANGELOG.md` and exports `tekto/llms.txt`, `tekto/llms-full.txt`, `tekto/CHANGELOG.md` and `tekto/package.json`. The llms.txt link to CLAUDE.md (rules for editing tekto itself) goes to GitHub, as the file is not shipped.
+- **Start-here table:** rows for 3D booleans (`BspTree` → `Mesh.fromArrays`), contours (`MarchingSquares.contours`), distance fields (`Sdf*` → `VoxelGrid` → `MarchingCubes`) and hidden-line drawings.
+- **`sketch2d({ keys: "app" | false })`**: keys only while the app has focus, or none, so several apps on one page each undo their own. `Commands.bindKeys(target)` takes any `EventTarget`.
+- **Panel styling hooks, stable:** `[data-tekto-controls]` on the controls column, and the CSS variables `--tekto-panel-bg`, `--tekto-panel-border`, `--tekto-status-bg` beside the existing `data-tekto-panel*`, `data-tekto-status` and `--tekto-label-w` (docs: Sketch 2D → Several apps on one page).
+- **Panel:** the first group, when it is the default "Parameters", has no heading under the panel's own "Parameters" row. In a narrow panel the label column gives way to the control (down to 40 % of the row), so a long label wraps instead of cutting the slider's value off; the value never shrinks.
+
 ## 0.11.0 — 2026-11-22
 
 An agent on the live model and a person who decides: the MCP server joins a shared document with nobody's app open (or works on a file), looks at floor plans it draws itself, and proposes changes that wait for a person to accept or reject. One interface for every app: a shared panel frame, a paper style for 2D figures, a menu bar with Undo, the viewer header in every 3D view, a grey dark theme, the sun by date and place, hidden line on paper. Also: closed round meshes, contours as polylines, drag handles and axonometric views for 2D sketches, timber/steel/concrete stairs, drawings in an architectural graphic language, and the 28 lecture apps in the playground.

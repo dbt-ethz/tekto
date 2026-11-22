@@ -79,6 +79,29 @@ sketch2d(fn, {
 
 `sketch()` and `appShell()` take `tabs` and `panelWidth` the same way.
 
+## Several apps on one page
+
+A book chapter can hold several figures. Each one's Undo must stay its own, so pass `keys: "app"`: the app then hears its keys only while it has focus, and a click in it gives it focus. `keys: false` binds none (the Edit menu still runs them). The default, `"page"`, hears them anywhere on the page.
+
+```ts
+sketch2d(fn, { container: "#figure-3", style: "paper", keys: "app" });
+```
+
+To restyle an embedded app, use these hooks, which stay the same across releases. The DOM between them may change.
+
+| Hook | What |
+|---|---|
+| `[data-tekto-panel="open" \| "folded" \| "none"]` | the app's root, by the panel's state |
+| `[data-tekto-panel-top]` | the panel's top row (its name) |
+| `[data-tekto-panel-fold]` | the chevron that folds the panel |
+| `[data-tekto-controls]` | the column of controls |
+| `[data-tekto-status]` | the status line under the canvas |
+| `--tekto-panel-bg`, `--tekto-panel-border` | the panel's background and its border lines |
+| `--tekto-status-bg` | the status line's background |
+| `--tekto-label-w` | the label column's width; in a narrow panel it gives way to the control, down to 40 % of the row |
+
+Set the variables on the container or any element above it: `#figure-3 { --tekto-panel-bg: transparent; }`.
+
 ::: tip Playground
 [Panel options](https://github.com/dbt-ethz/tekto/blob/main/playground/pages/panel-tabs.ts): `?page=panel-tabs`, a façade with side tabs and an automatic width. The [lecture apps](/interface/playground#the-lecture-apps) are in the paper style.
 :::

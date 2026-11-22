@@ -11,6 +11,13 @@
  * the viewer header, which moves its own content aside for it). A dragged width and the folded state are remembered per
  * `storageKey`. A panel with nothing in it is not there at all: no column, no row, no
  * chevron, and the view has the whole width — until the app puts something in it.
+ *
+ * Stable hooks for restyling an embedded app (they stay across releases; the DOM between
+ * them may change): on the root `data-tekto-panel="open" | "folded" | "none"`; the top row
+ * `[data-tekto-panel-top]`; the chevron `[data-tekto-panel-fold]`; the controls column
+ * `[data-tekto-controls]`; a sketch2d's status line `[data-tekto-status]`. CSS variables, set
+ * on the app's container or any ancestor: `--tekto-panel-bg`, `--tekto-panel-border`,
+ * `--tekto-status-bg`, and `--tekto-label-w` (the label column; in a narrow panel it gives way to the control, down to 40 % of a row).
  */
 import type { Theme } from "../gui/theme";
 
@@ -106,8 +113,8 @@ export function panelFrame(o: PanelFrameOptions): PanelFrame {
   top.style.cssText = `
     position:absolute; left:0; top:${o.top}px; height:${PANEL_TOP_H}px; box-sizing:border-box; z-index:9;
     display:flex; align-items:center; padding:0 32px 0 14px; overflow:hidden; user-select:none;
-    background:${t.panelBg}; border-right:1px solid ${t.border};
-    border-bottom:1px solid ${t.plain && !named ? "transparent" : t.border};
+    background:var(--tekto-panel-bg, ${t.panelBg}); border-right:1px solid var(--tekto-panel-border, ${t.border});
+    border-bottom:1px solid ${t.plain && !named ? "transparent" : `var(--tekto-panel-border, ${t.border})`};
   `;
   const name = document.createElement("span");
   name.textContent = o.title ?? "";
@@ -117,6 +124,10 @@ export function panelFrame(o: PanelFrameOptions): PanelFrame {
     : `font:500 10px/1 ${t.font};letter-spacing:1.6px;text-transform:uppercase;color:${t.textDim};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;`;
   top.appendChild(name);
   panelEl.style.marginTop = `${PANEL_TOP_H}px`;
+  // Stable hooks for an embedder (see the frame's doc): the controls column, its colours as variables.
+  panelEl.dataset.tektoControls = "";
+  panelEl.style.background = `var(--tekto-panel-bg, ${t.panelBg})`;
+  panelEl.style.borderRightColor = `var(--tekto-panel-border, ${t.border})`;
 
   // The chevron: at the right of the top row, and in the view's top left corner when folded.
   const chevron = document.createElement("button");

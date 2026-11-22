@@ -172,10 +172,11 @@ export class Commands {
   }
 
   /**
-   * Run commands from their keys on `target` (default: the window). Keys typed into a
-   * field stay with the field; a matched key's default is prevented. Returns the unbind.
+   * Run commands from their keys on `target`: the window (default), or an element, which hears
+   * only the keys typed while focus is inside it. Keys typed into a field stay with the field;
+   * a matched key's default is prevented. Returns the unbind.
    */
-  bindKeys(target: Pick<Window, "addEventListener" | "removeEventListener"> = window): () => void {
+  bindKeys(target: EventTarget = window): () => void {
     const onKey = (ev: Event) => {
       const e = ev as KeyboardEvent;
       if (e.defaultPrevented || typing(e.target)) return;

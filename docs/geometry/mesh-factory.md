@@ -43,6 +43,10 @@ console.log(ball.faceCount, cone, terrain, prism, vase, tower, smooth, tube);
 | `subdivide(mesh)` | Catmull-Clark, with creases and pinned nodes |
 | `midpointSubdivide(mesh)`, `triangulate(mesh)` | 1→4 triangle refinement, fan triangulation |
 
+## What to know
+
+- The round shapes are closed: a sphere's seam and poles, a torus's two seams, a cylinder's seam and a cone's tip are one vertex each, and a full `revolve` makes one vertex of every profile point on the axis. `mesh.validate()` finds no open edge on a sphere, a torus, a capped cylinder or a revolve of a profile that starts and ends on the axis, so subdivision, curvature and booleans work on them without `weldVertices`.
+
 ::: tip Playground
 [MeshFactory](https://github.com/dbt-ethz/tekto/blob/main/playground/pages/mesh-factory.ts): `?page=mesh-factory`.
 :::

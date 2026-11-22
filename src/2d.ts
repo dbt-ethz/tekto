@@ -9,7 +9,7 @@
 
 export { sketch2d, Sketch2DInstance } from "./sketch/Sketch2D";
 export type {
-  Lab2D, Sketch2DConfig, Sketch2DFn, DrawFn, AnimateFn, Pointer2D, PointerFn,
+  Lab2D, Sketch2DConfig, Sketch2DFn, DrawFn, AnimateFn, Pointer2D, PointerFn, View2D, DragHandle2DOpts,
   Reactive, SliderOpts, SelectOpts,
 } from "./sketch/Sketch2D";
 
@@ -26,6 +26,9 @@ export { Segment, closestPointOnSegment, segmentSegmentClosest } from "./core/ge
 
 // Drawings: a Sheet (views at a scale, dimensions) on screen and in SVG/DXF from one source
 export { Sheet, SheetView, pickPrim } from "./core/drawing/Sheet";
+// Axonometric views: 3D geometry projected for a 2D canvas or a Sheet, culled and depth-sorted.
+export { Axonometric } from "./core/drawing/Axonometric";
+export type { AxonometricOptions, AxoPolygon } from "./core/drawing/Axonometric";
 export type { SheetPrim, ViewOptions, DrawOptions, TextOptions, DimOptions, LevelOptions, SheetOptions } from "./core/drawing/Sheet";
 export { SheetCanvas, drawSheet, fitSheet } from "./render/SheetCanvas";
 export type { SheetCanvasOptions, SheetTransform, DrawSheetOptions } from "./render/SheetCanvas";

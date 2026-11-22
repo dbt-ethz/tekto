@@ -22,6 +22,9 @@ const isCount = (n: number, min: number) => Number.isInteger(n) && n >= min;
  * `grid` (heightfield, with `.update(fn)`); sweeps `extrude`, `revolve`, `loft`, `pipe`;
  * modifiers `subdivide` (Catmull-Clark), `midpointSubdivide`, `triangulate`.
  * Primitives are Y-up (three.js); faces point outward. Impossible arguments throw.
+ * Round shapes are closed and welded: the seam, the poles and a point on a revolve's axis
+ * are one vertex each, so `sphere`, `torus`, a capped `cylinder` and a full `revolve` of a
+ * profile that starts and ends on the axis have no open edges (`mesh.validate()`).
  *
  *   const wall = MeshFactory.extrude(outline, new Vec3(0, 0, 3));
  */
@@ -121,6 +124,9 @@ export const MeshFactory = {
     const isClosed = Math.abs(angleRange - Math.PI * 2) < 1e-6;
     const slices = isClosed ? segments : segments + 1;
 
+    // A profile point on the axis is the same point at every angle: one node.
+    const onAxis = profile.map((p) => Math.abs(p.x) < 1e-9);
+    const axisNode = profile.map((p, i) => (onAxis[i] ? mesh.addNode(new Vec3(0, p.y, 0)) : -1));
     for (let s = 0; s < slices; s++) {
       ids[s] = [];
       const angle = (s / segments) * angleRange;
@@ -128,14 +134,18 @@ export const MeshFactory = {
       const sin = Math.sin(angle);
       for (let i = 0; i < n; i++) {
         const p = profile[i];
-        ids[s][i] = mesh.addNode(new Vec3(p.x * cos, p.y, p.x * sin));
+        ids[s][i] = onAxis[i] ? axisNode[i] : mesh.addNode(new Vec3(p.x * cos, p.y, p.x * sin));
       }
     }
 
     for (let s = 0; s < segments; s++) {
       const ns = (s + 1) % slices;
       for (let i = 0; i < n - 1; i++) {
-        mesh.addQuad(ids[s][i], ids[s][i + 1], ids[ns][i + 1], ids[ns][i]);
+        const a = ids[s][i], b = ids[s][i + 1], c = ids[ns][i + 1], d = ids[ns][i];
+        if (onAxis[i] && onAxis[i + 1]) continue;                 // a piece of the axis: no surface
+        if (onAxis[i]) mesh.addTriangle(a, b, c);                   // a fan around the axis point
+        else if (onAxis[i + 1]) mesh.addTriangle(a, b, d);
+        else mesh.addQuad(a, b, c, d);
       }
     }
 
@@ -200,30 +210,33 @@ export const MeshFactory = {
   sphere(radius = 1, segments = 24, rings = 16): Mesh {
     need(isCount(segments, 3) && isCount(rings, 2), `sphere: needs whole numbers, segments ≥ 3 and rings ≥ 2, got ${segments} and ${rings}`);
     const mesh = new Mesh();
-    const ids: number[][] = [];
-
-    for (let r = 0; r <= rings; r++) {
-      ids[r] = [];
+    const ring: number[][] = [];
+    // One node per pole, `segments` per ring: the seam closes on the ring's first node.
+    const north = mesh.addNode(new Vec3(0, radius, 0));
+    for (let r = 1; r < rings; r++) {
+      ring[r] = [];
       const phi = (r / rings) * Math.PI;
       const sinPhi = Math.sin(phi);
       const cosPhi = Math.cos(phi);
-      for (let s = 0; s <= segments; s++) {
+      for (let s = 0; s < segments; s++) {
         const theta = (s / segments) * Math.PI * 2;
-        ids[r][s] = mesh.addNode(new Vec3(
+        ring[r][s] = mesh.addNode(new Vec3(
           radius * sinPhi * Math.cos(theta),
           radius * cosPhi,
           radius * sinPhi * Math.sin(theta)
         ));
       }
     }
+    const south = mesh.addNode(new Vec3(0, -radius, 0));
+    const id = (r: number, s: number) => (r === 0 ? north : r === rings ? south : ring[r][s % segments]);
 
     for (let r = 0; r < rings; r++) {
       for (let s = 0; s < segments; s++) {
         if (r > 0) {
-          mesh.addTriangle(ids[r][s], ids[r][s + 1], ids[r + 1][s + 1]);
+          mesh.addTriangle(id(r, s), id(r, s + 1), id(r + 1, s + 1));
         }
         if (r < rings - 1) {
-          mesh.addTriangle(ids[r][s], ids[r + 1][s + 1], ids[r + 1][s]);
+          mesh.addTriangle(id(r, s), id(r + 1, s + 1), id(r + 1, s));
         }
       }
     }
@@ -236,28 +249,38 @@ export const MeshFactory = {
     need(isCount(segments, 3), `cylinder: segments must be a whole number ≥ 3, got ${segments}`);
     const mesh = new Mesh();
     const h2 = height / 2;
-    const bottomIds: number[] = [];
-    const topIds: number[] = [];
-
-    for (let s = 0; s <= segments; s++) {
-      const angle = (s / segments) * Math.PI * 2;
-      const cos = Math.cos(angle);
-      const sin = Math.sin(angle);
-      bottomIds.push(mesh.addNode(new Vec3(radiusBottom * cos, -h2, radiusBottom * sin)));
-      topIds.push(mesh.addNode(new Vec3(radiusTop * cos, h2, radiusTop * sin)));
-    }
+    // `segments` nodes per rim, the seam closing on the first; a rim of radius 0 (a cone's
+    // tip) is one node.
+    const rim = (r: number, y: number): number[] => {
+      if (r === 0) { const tip = mesh.addNode(new Vec3(0, y, 0)); return Array(segments).fill(tip); }
+      const out: number[] = [];
+      for (let s = 0; s < segments; s++) {
+        const angle = (s / segments) * Math.PI * 2;
+        out.push(mesh.addNode(new Vec3(r * Math.cos(angle), y, r * Math.sin(angle))));
+      }
+      return out;
+    };
+    const bottomIds = rim(radiusBottom, -h2);
+    const topIds = rim(radiusTop, h2);
+    const next = (s: number) => (s + 1) % segments;
 
     // The angle runs +x → +z, clockwise seen from +y, so the outward winding is s → s−1.
     for (let s = 0; s < segments; s++) {
-      mesh.addQuad(bottomIds[s], topIds[s], topIds[s + 1], bottomIds[s + 1]);
+      const a = bottomIds[s], b = topIds[s], c = topIds[next(s)], d = bottomIds[next(s)];
+      if (radiusTop === 0 && radiusBottom === 0) continue;
+      if (radiusTop === 0) mesh.addTriangle(a, b, d);
+      else if (radiusBottom === 0) mesh.addTriangle(a, b, c);
+      else mesh.addQuad(a, b, c, d);
     }
 
     if (cap) {
-      const bottomCenter = mesh.addNode(new Vec3(0, -h2, 0));
-      const topCenter = mesh.addNode(new Vec3(0, h2, 0));
-      for (let s = 0; s < segments; s++) {
-        mesh.addTriangle(bottomCenter, bottomIds[s], bottomIds[s + 1]);
-        mesh.addTriangle(topCenter, topIds[s + 1], topIds[s]);
+      if (radiusBottom !== 0) {
+        const bottomCenter = mesh.addNode(new Vec3(0, -h2, 0));
+        for (let s = 0; s < segments; s++) mesh.addTriangle(bottomCenter, bottomIds[s], bottomIds[next(s)]);
+      }
+      if (radiusTop !== 0) {
+        const topCenter = mesh.addNode(new Vec3(0, h2, 0));
+        for (let s = 0; s < segments; s++) mesh.addTriangle(topCenter, topIds[next(s)], topIds[s]);
       }
     }
 
@@ -270,12 +293,13 @@ export const MeshFactory = {
     const mesh = new Mesh();
     const ids: number[][] = [];
 
-    for (let s = 0; s <= segments; s++) {
+    // Both directions close on themselves: `segments` × `sides` nodes, indices wrap.
+    for (let s = 0; s < segments; s++) {
       ids[s] = [];
       const theta = (s / segments) * Math.PI * 2;
       const cosT = Math.cos(theta);
       const sinT = Math.sin(theta);
-      for (let r = 0; r <= sides; r++) {
+      for (let r = 0; r < sides; r++) {
         const phi = (r / sides) * Math.PI * 2;
         const x = (majorRadius + minorRadius * Math.cos(phi)) * cosT;
         const y = minorRadius * Math.sin(phi);
@@ -285,8 +309,10 @@ export const MeshFactory = {
     }
 
     for (let s = 0; s < segments; s++) {
+      const ns = (s + 1) % segments;
       for (let r = 0; r < sides; r++) {
-        mesh.addQuad(ids[s][r], ids[s][r + 1], ids[s + 1][r + 1], ids[s + 1][r]);
+        const nr = (r + 1) % sides;
+        mesh.addQuad(ids[s][r], ids[s][nr], ids[ns][nr], ids[ns][r]);
       }
     }
 

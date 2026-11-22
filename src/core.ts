@@ -115,6 +115,9 @@ export type { DxfLayerDef, Dxf3DContent, Dxf3DPolyline, Dxf3DLine, Dxf3DPoint, D
 export type { Dxf2DContent, Dxf2DPolyline, Dxf2DLine, Dxf2DCircle, Dxf2DArc, Dxf2DText, Dxf2DPoint, Dxf2DSolid, Dxf2DLook } from "./io/DxfWriter";
 // Drawings: views, entities and dimensions on a sheet — one source for screen, SVG and DXF.
 export { Sheet, SheetView, DASH_PATTERNS, DRAWING_PALETTE, pickPrim } from "./core/drawing/Sheet";
+// Axonometric views: 3D geometry projected for a 2D canvas or a Sheet, culled and depth-sorted.
+export { Axonometric } from "./core/drawing/Axonometric";
+export type { AxonometricOptions, AxoPolygon } from "./core/drawing/Axonometric";
 export type { Pt, Dash, LineStyle, DrawOptions, TextOptions, DimOptions, LevelOptions, ViewOptions, SheetOptions, SheetPrim, ResolvedStyle, TitleBlockOptions } from "./core/drawing/Sheet";
 // A sheet as pixels (PNG), drawn without a browser: what an agent in Node looks at.
 export { rasterizeSheet, sheetToPNG, encodePNG } from "./core/drawing/sheetRaster";

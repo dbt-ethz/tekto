@@ -103,7 +103,7 @@ export type { Note, NotesRenderer, NoteReply, NoteInfo } from "./sketch/Notes";
 // Sketch2D API (Level 1 — 2D canvas variant, no Three.js)
 export { sketch2d, Sketch2DInstance } from "./sketch/Sketch2D";
 export type {
-  Lab2D, Sketch2DConfig, Sketch2DFn, DrawFn, AnimateFn, Pointer2D, PointerFn,
+  Lab2D, Sketch2DConfig, Sketch2DFn, DrawFn, AnimateFn, Pointer2D, PointerFn, View2D, DragHandle2DOpts,
 } from "./sketch/Sketch2D";
 
 // React (Level 3 — advanced) lives in its own entry point so the main "tekto"

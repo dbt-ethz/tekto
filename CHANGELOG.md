@@ -6,6 +6,31 @@ before 1.0, breaking changes bump the minor version. See
 
 ## Unreleased
 
+- **Round meshes are closed.** `MeshFactory.sphere`, `torus`, `cylinder` (and a cone, a top
+  or bottom radius of 0) and a full `revolve` no longer repeat the seam, the poles, a cone's tip
+  or a profile point on the axis: each is one vertex, so these meshes have no open edges and
+  subdivision, curvature and booleans work on them without `weldVertices`. They have fewer
+  vertices than before (a torus `segments × sides`, was `(segments + 1) × (sides + 1)`), and
+  vertex normals are now smooth across the seam. Code that counted vertices or read them by
+  index in the old layout needs updating.
+
+- **Contours as polylines.** `MarchingSquares.contours(values, nx, ny, iso, …)` and
+  `contoursFromGrid(grid, iso)` join the iso-lines into `{ points, closed }` polylines: closed
+  loops (counter-clockwise around values above `iso`, clockwise around a hole) and open lines
+  from border to border. The grid layout (`values[x * ny + y]`) is now documented.
+
+- **2D sketches redraw after pointer input, and have drag handles.** After an
+  `onPointerDown/Move/Up` handler runs, the canvas is drawn again, so a drag shows live without
+  `lab.animate(() => {})`. `lab.redraw()` draws once more after other changes.
+  `lab.dragHandle(x, y, { name, view, constrain })` is a point the person drags: drawn over the
+  drawing, found under the pointer, its moves re-run the sketch; with `view` (`{ scale, x, y }`,
+  what `fitSheet` returns) it works in model coordinates, y up.
+
+- **Axonometric views for 2D drawings.** `Axonometric({ azimuth, elevation, up })` (and
+  `Axonometric.isometric()`) projects 3D points for a canvas or a Sheet: `polygons` and
+  `meshFaces` cull the faces turned away, sort the rest far to near and give each a light value;
+  `fit` places them in an area; `sheetProjection()` is a Sheet view's `project`. In
+  `tekto/core` and `tekto/2d`. New playground page: Axonometric.
 - **Proposals: an agent's change waits for a person.** `tekto_propose` (in every mode of the
   MCP server) stores a patch in the document as an open proposal instead of applying it, with a
   label and a note saying why, and answers with what the check would say if it were applied:

@@ -29,6 +29,8 @@ console.log(triangles.length, outlines.length);
 - `PolygonBool` takes and returns multipolygons: union, difference and intersection of any number of them. `polygonIntersection` handles only two simple rings.
 - For a planar subdivision with faces and twin half-edges, use `PlanarGraph` (`PlanarGraphRepair.fromSegments` builds one from raw segments); `Delaunay2D.triangulate` returns one. `NoFitPolygon` gives Minkowski sums and no-fit polygons for nesting.
 
+- Outlines from a scalar field: `MarchingSquares.contoursFromGrid(grid, iso)` returns `{ points, closed }` polylines, the values above `iso` on the left (a loop around a high region runs counter-clockwise, around a hole clockwise); an open line runs from border to border. The grid is stored x-major: the sample at column `x`, row `y` is `values[x * ny + y]`, at `(x1 + x * cellSize, y1 + y * cellSize)`.
+
 ::: tip Playground
 [Planar Graph](https://github.com/dbt-ethz/tekto/blob/main/playground/pages/planar-graph.ts): `?page=planar-graph`.
 :::

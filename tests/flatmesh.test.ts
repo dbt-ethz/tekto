@@ -169,7 +169,7 @@ describe("MeshFactory (array side)", () => {
 
   it("generates a torus", () => {
     const fm = MeshFactory.torus(1, 0.3, 16, 8);
-    expect(fm.vertexCount).toBe(17 * 9);
+    expect(fm.vertexCount).toBe(16 * 8);                    // closed both ways: no seam duplicates
     expect(fm.triangleCount).toBe(16 * 8 * 2);
   });
 

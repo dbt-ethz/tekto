@@ -5,6 +5,7 @@
  * and top-bar controls that follow the state wherever it was changed.
  */
 import { expect, test, type Page } from "@playwright/test";
+import { mountTextToolbar } from "./textToolbar";
 
 async function open(page: Page) {
   await page.goto("/testbench.html?page=framed-wall");
@@ -50,15 +51,16 @@ test("fitTo frames a selection, in perspective and in orthographic", async ({ pa
   await expect.poll(async () => (await cam()).target.map((v, i) => Math.round((v - centre[i]) * 100))).toEqual([0, 0, 0]);
   expect((await cam()).dist).toBeLessThan(before.dist);
 
-  await page.getByRole("button", { name: "Ortho", exact: true }).click();
+  await (await mountTextToolbar(page)).getByRole("button", { name: "Ortho", exact: true }).click();
   const z0 = (await cam()).zoom;
   await page.getByRole("button", { name: "Frame all" }).click();
   await expect.poll(async () => (await cam()).zoom).not.toBe(z0);
 });
 
-test("the top bar follows render mode and lighting changed from code", async ({ page }) => {
+test("the text toolbar follows render mode and lighting changed from code", async ({ page }) => {
   await open(page);
-  const lit = (name: string) => page.getByRole("button", { name, exact: true }).evaluate((b: HTMLElement) => b.style.background !== "transparent");
+  const bar = await mountTextToolbar(page);
+  const lit = (name: string) => bar.getByRole("button", { name, exact: true }).evaluate((b: HTMLElement) => b.style.background !== "transparent");
   await page.evaluate(() => (window as any).__tekto.owner.scene.setRenderMode("ghost"));
   expect(await lit("Ghost")).toBe(true);
   expect(await lit("Solid")).toBe(false);
@@ -74,12 +76,13 @@ test("the toolbar's AO button and the Sun popover's daylight box drive the rende
     return { ao: r.ambientOcclusion, daylight: r.daylight };
   });
   expect(await state()).toEqual({ ao: false, daylight: false });
-  await page.getByRole("button", { name: "AO", exact: true }).click();
+  const bar = await mountTextToolbar(page);
+  await bar.getByRole("button", { name: "AO", exact: true }).click();
   expect(await state()).toMatchObject({ ao: true });
-  await expect(page.getByRole("button", { name: "AO", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await page.getByRole("button", { name: /Sun/ }).click();
-  await page.getByLabel("Light follows the sun (Studio)").check();
+  await expect(bar.getByRole("button", { name: "AO", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await bar.getByRole("button", { name: /Sun/ }).click();
+  await bar.getByLabel("Light follows the sun (Studio)").check();
   expect(await state()).toEqual({ ao: true, daylight: true });
-  await page.getByRole("button", { name: "AO", exact: true }).click();
+  await bar.getByRole("button", { name: "AO", exact: true }).click();
   expect(await state()).toMatchObject({ ao: false });
 });

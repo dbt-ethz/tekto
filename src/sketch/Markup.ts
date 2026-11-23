@@ -40,10 +40,15 @@ export interface MarkupHost {
   /** Record creation sites for objects (costs a stack trace per object, so only while needed). */
   setTracking(on: boolean): void;
   title: string;
-  /** Keep marks as notes with the model; with it the bar offers "Keep as notes". */
-  keep?(notes: Note[]): void;
+  /** Keep marks as notes with the model, returning their record keys (`"notes/k3f9x2"`). With
+   *  it the bar offers "Pin notes to the model", and "Save for Claude" pins the marks as notes too. */
+  keep?(notes: Note[]): string[] | void;
   /** Who is drawing, written into a kept note. */
   author?: string;
+  /** Where the ✎ Markup button goes (a viewer header's slot) instead of the view's top-right corner. */
+  buttonHost?: HTMLElement;
+  /** Pixels from the top of the view where the overlay's bar starts (below a viewer header). */
+  top?: number;
 }
 
 /** A scene object as a mark or snapshot names it: id, type, layer, label, pick tag, colour, the source line that created it, and its document `key`. */
@@ -68,6 +73,8 @@ interface Mark {
   strokes: Pt[][];
   note: string;
   resolved?: ResolvedMark;
+  /** The note it was kept as (`"notes/k3f9x2"`), once "Save for Claude" or "Pin notes to the model" kept it. */
+  noteKey?: string;
 }
 
 interface ResolvedMark {
@@ -97,6 +104,7 @@ export interface MarkupBundle {
 }
 
 const INK = "#ff00d4";         // a colour no model uses, so marks never read as geometry
+const TOGGLE_TITLE = "Draw on the view what should change. Each mark is saved with the parts it touches, for Claude (or a colleague) to read.";
 
 export class MarkupOverlay {
   private host: MarkupHost;
@@ -105,6 +113,12 @@ export class MarkupOverlay {
   private bar: HTMLDivElement;
   private noteBox: HTMLInputElement;
   private status: HTMLSpanElement;
+  /** Buttons that act on marks: greyed out while there is none. */
+  private needMarks: HTMLButtonElement[] = [];
+  /** What the last Save or Pin did, shown until the next mark is drawn. */
+  private message = "";
+  /** The mark whose text is being typed, if any. */
+  private noting: number | null = null;
   private chips: HTMLDivElement;
   private toggleBtn: HTMLButtonElement;
   private marks: Mark[] = [];
@@ -128,33 +142,51 @@ export class MarkupOverlay {
     const btnCss = "font:12px system-ui,sans-serif;padding:5px 10px;border-radius:5px;border:1px solid #d0d0d6;background:#fff;color:#222;cursor:pointer;";
     this.toggleBtn = document.createElement("button");
     this.toggleBtn.textContent = "✎ Markup";
-    this.toggleBtn.title = "Draw on the view to give instructions (saved as screenshot + JSON)";
-    this.toggleBtn.style.cssText = `position:absolute;top:10px;right:10px;z-index:22;${btnCss}`;
+    this.toggleBtn.title = TOGGLE_TITLE;
+    this.toggleBtn.style.cssText = host.buttonHost ? `${btnCss}padding:3px 9px;` : `position:absolute;top:10px;right:10px;z-index:22;${btnCss}`;
     this.toggleBtn.addEventListener("click", () => this.setActive(!this.active));
-    vp.appendChild(this.toggleBtn);
+    (host.buttonHost ?? vp).appendChild(this.toggleBtn);
 
+    // The bar says what to do next in a sentence (the first line), then the controls in the
+    // order they are used: the general instruction, the marks, where they go.
+    const right = host.buttonHost ? 10 : 100;
     this.bar = document.createElement("div");
-    this.bar.style.cssText = "position:absolute;top:10px;right:100px;z-index:22;display:none;gap:6px;align-items:center;background:#fff;border:1px solid #d0d0d6;border-radius:7px;padding:5px;box-shadow:0 2px 8px rgba(0,0,0,.12);";
+    this.bar.dataset.markupBar = "";
+    this.bar.style.cssText = `position:absolute;top:${(host.top ?? 0) + 10}px;right:${right}px;max-width:calc(100% - ${right + 10}px);box-sizing:border-box;z-index:22;display:none;flex-direction:column;gap:6px;background:#fff;border:1px solid #d0d0d6;border-radius:7px;padding:7px 8px;box-shadow:0 2px 8px rgba(0,0,0,.12);font:12px system-ui,sans-serif;color:#222;`;
+    const lead = document.createElement("div");
+    // No width of its own: the sentence wraps to the row of controls below it.
+    lead.style.cssText = "width:0;min-width:100%;line-height:1.35;";
+    const name = document.createElement("b");
+    name.textContent = "Markup";
+    this.status = document.createElement("span");
+    this.status.dataset.markupHint = "";
+    this.status.style.cssText = "color:#444;margin-left:8px;";
+    lead.append(name, this.status);
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;align-items:center;";
     this.noteBox = document.createElement("input");
-    this.noteBox.placeholder = "Instruction for the whole view…";
-    this.noteBox.style.cssText = "font:12px system-ui,sans-serif;width:260px;padding:5px 8px;border:1px solid #d0d0d6;border-radius:5px;";
+    this.noteBox.placeholder = "General instruction, not tied to a mark (optional)";
+    this.noteBox.title = "Something to change that no single mark shows, e.g. “make the whole roof steeper”. It is saved with the marks; a mark without a text of its own takes it.";
+    this.noteBox.style.cssText = "font:12px system-ui,sans-serif;width:290px;flex:1 1 200px;min-width:0;padding:5px 8px;border:1px solid #d0d0d6;border-radius:5px;";
     this.noteBox.addEventListener("keydown", (e) => { e.stopPropagation(); if (e.key === "Enter") void this.save(); });
-    const mk = (label: string, title: string, fn: () => void) => {
+    const mk = (label: string, title: string, fn: () => void, primary = false) => {
       const b = document.createElement("button");
-      b.textContent = label; b.title = title; b.style.cssText = btnCss;
+      b.textContent = label; b.title = title; b.style.cssText = btnCss + (primary ? "background:#222;border-color:#222;color:#fff;" : "");
       b.addEventListener("click", fn);
       return b;
     };
-    this.status = document.createElement("span");
-    this.status.style.cssText = "font:11px system-ui,sans-serif;color:#666;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
-    this.bar.append(
-      this.noteBox,
-      mk("Undo", "Remove last mark (⌘Z)", () => this.undo()),
-      mk("Clear", "Remove all marks", () => { this.marks = []; this.redraw(); }),
-      mk("Save", "Save view.png + markup.json (⌘S)", () => void this.save()),
-      ...(host.keep ? [mk("Keep as notes", "Keep the marks as notes with the model: saved, undoable, shared", () => this.keepNotes())] : []),
-      this.status,
-    );
+    const undo = mk("Undo mark", "Remove the last mark (⌘Z)", () => this.undo());
+    const clear = mk("Clear marks", "Remove all marks", () => { this.marks = []; this.message = ""; this.redraw(); });
+    const pin = host.keep
+      ? mk("Pin notes to the model", "Keep each mark with its text as a note on the model: a numbered pin, saved with the model, undoable, seen by everyone on a shared model. Claude answers open notes.", () => this.keepNotes())
+      : null;
+    const save = mk("Save for Claude",
+      "Save the view with the marks and a file naming the parts each mark touches (⌘S), for Claude to read: in .tekto/markup/, or as downloads without the dev server."
+        + (host.keep ? " The marks are pinned to the model as notes too." : ""),
+      () => void this.save(), true);
+    this.needMarks = [undo, clear, ...(pin ? [pin] : [])];
+    row.append(this.noteBox, undo, clear, ...(pin ? [pin] : []), save);
+    this.bar.append(lead, row);
     vp.appendChild(this.bar);
 
     this.canvas.addEventListener("pointerdown", (e) => this.down(e));
@@ -170,10 +202,11 @@ export class MarkupOverlay {
     this.chips.style.display = on ? "block" : "none";
     this.bar.style.display = on ? "flex" : "none";
     this.toggleBtn.textContent = on ? "Done" : "✎ Markup";
+    this.toggleBtn.title = on ? "Close Markup (Esc). Marks that were not saved or pinned are dropped." : TOGGLE_TITLE;
+    this.message = "";
     if (on) {
-      this.resize();
       window.addEventListener("keydown", this.onKey, true);
-      this.setStatus("Drag to mark · Shift adds to the last mark");
+      this.resize();
     } else {
       window.removeEventListener("keydown", this.onKey, true);
       // Marks are screen-space: once the camera moves they point at nothing.
@@ -198,6 +231,7 @@ export class MarkupOverlay {
     if (e.button !== 0) return;
     this.canvas.setPointerCapture(e.pointerId);
     this.drawing = [this.local(e)];
+    this.message = "";
     // Shift continues the previous mark (an arrow head, a second loop, a cross).
     if (!(e.shiftKey && this.marks.length)) {
       this.marks.push({ n: this.marks.length + 1, strokes: [], note: "" });
@@ -229,19 +263,32 @@ export class MarkupOverlay {
     else if (e.key === "Escape") { e.stopPropagation(); this.setActive(false); }
   }
 
-  private undo() { this.marks.pop(); this.redraw(); }
+  private undo() { this.marks.pop(); this.message = ""; this.redraw(); }
 
   /** Each mark as a note: its strokes laid on the model (or the ground), its text, the
    *  records it touched and this view. */
   private keepNotes() {
     if (!this.host.keep) return;
-    if (!this.marks.length) { this.setStatus("Draw a mark first"); return; }
+    if (!this.marks.length) { this.setStatus("Draw a mark first."); return; }
+    const kept = this.marksToNotes();
+    if (!kept) { this.setStatus("The marks lie on nothing: draw them on the model or the ground to pin them."); return; }
+    this.marks = [];
+    this.noteBox.value = "";
+    this.redraw();
+    this.setStatus(`${kept} note${kept > 1 ? "s" : ""} pinned to the model. Click a pin to read it.`);
+  }
+
+  /** Keep the marks that lie on the model (or the ground) as notes; each remembers its note's key. Returns how many. */
+  private marksToNotes(): number {
+    if (!this.host.keep) return 0;
     const r = this.canvas.getBoundingClientRect();
     const onModel = (p: Pt) => this.host.hitAt(r.left + p[0], r.top + p[1])?.point ?? this.host.groundAt(r.left + p[0], r.top + p[1]);
     const cam = (this.host.context().camera ?? {}) as { position?: number[]; target?: number[]; projection?: "perspective" | "orthographic" };
     const instruction = this.noteBox.value.trim();
     const notes: Note[] = [];
+    const from: Mark[] = [];
     for (const m of this.marks) {
+      if (m.noteKey) continue;                                       // kept already
       const strokes = m.strokes
         .map((s) => (s.length === 1 ? s : resample(s, 6, 60)).map(onModel).filter((p): p is Vec3 => !!p).map((p) => round3(p) as [number, number, number]))
         .filter((s) => s.length > 0);
@@ -257,23 +304,24 @@ export class MarkupOverlay {
         keys: [...new Set((m.resolved?.hits ?? []).map((h) => h.key).filter((k): k is string => !!k))],
         view: { position: cam.position ?? [0, 0, 10], target: cam.target ?? [0, 0, 0], ...(cam.projection ? { projection: cam.projection } : {}) },
       });
+      from.push(m);
     }
-    if (!notes.length) { this.setStatus("The marks lie on nothing to keep them on"); return; }
-    this.host.keep(notes);
-    this.marks = [];
-    this.noteBox.value = "";
-    this.redraw();
-    this.setStatus(`Kept ${notes.length} note${notes.length > 1 ? "s" : ""}`);
+    if (!notes.length) return 0;
+    const keys = this.host.keep(notes);
+    if (keys) from.forEach((m, i) => { m.noteKey = keys[i]; });
+    return notes.length;
   }
 
   /** A small input at the mark's badge; Enter keeps it, Escape leaves the mark without a note. */
   private askNote(mark: Mark) {
     const [x, y] = badgeAt(mark);
     const inp = document.createElement("input");
-    inp.placeholder = `note for ${mark.n}…`;
-    inp.style.cssText = `position:absolute;left:${x + 16}px;top:${y - 12}px;z-index:23;font:12px system-ui,sans-serif;width:200px;padding:4px 7px;border:2px solid ${INK};border-radius:5px;background:#fff;`;
+    inp.placeholder = `Mark ${mark.n}: what should change here?`;
+    inp.style.cssText = `position:absolute;left:${x + 16}px;top:${y - 12}px;z-index:23;font:12px system-ui,sans-serif;width:230px;padding:4px 7px;border:2px solid ${INK};border-radius:5px;background:#fff;`;
     let closed = false;   // Enter removes the input, which fires blur: finish once
-    const done = () => { if (closed) return; closed = true; mark.note = inp.value.trim(); inp.remove(); this.redraw(); };
+    const done = () => { if (closed) return; closed = true; mark.note = inp.value.trim(); inp.remove(); this.noting = null; this.redraw(); };
+    this.noting = mark.n;
+    this.refresh();
     inp.addEventListener("keydown", (e) => {
       e.stopPropagation();
       if (e.key === "Enter") done();
@@ -361,17 +409,40 @@ export class MarkupOverlay {
       chip.style.cssText = `position:absolute;left:${x + 16}px;top:${y + 14}px;font:11px system-ui,sans-serif;color:#222;background:rgba(255,255,255,.9);border:1px solid #ddd;border-radius:4px;padding:2px 6px;max-width:320px;`;
       this.chips.appendChild(chip);
     }
+    this.refresh();
   }
 
-  private setStatus(s: string) { this.status.textContent = s; this.status.title = s; }
+  private setStatus(s: string) { this.message = s; this.refresh(); }
+
+  /** What to do next, in a sentence. */
+  private hint(): string {
+    if (this.message) return this.message;
+    if (this.noting !== null) return `Type what should change at mark ${this.noting}, then press Enter.`;
+    const n = this.marks.length;
+    if (!n) return "Draw on the view what should change: circle a part, or click a point.";
+    return `${n} mark${n > 1 ? "s" : ""}. Draw the next one, then ${this.host.keep ? "pin or save" : "save"}. Shift-drag adds a stroke to the last mark.`;
+  }
+
+  /** The bar's sentence, and the buttons that need a mark. */
+  private refresh() {
+    this.status.textContent = this.hint();
+    for (const b of this.needMarks) { b.disabled = !this.marks.length; b.style.opacity = b.disabled ? "0.45" : "1"; b.style.cursor = b.disabled ? "default" : "pointer"; }
+  }
 
   // ── Capture ──
 
   private async save() {
     this.setStatus("Saving…");
     try {
+      // With notes in the app, the marks are kept as notes first: shared with everyone on the
+      // model, and an agent can list, answer and resolve them. The bundle names each mark's note.
+      const kept = this.marksToNotes();
       const b = await this.capture({ note: this.noteBox.value.trim() });
-      this.setStatus(b.dir ? `Saved → ${b.dir}` : "Downloaded (no dev-server plugin)");
+      if (kept) { this.marks = this.marks.filter((m) => !m.noteKey); this.redraw(); }
+      const notes = kept ? ` ${kept} note${kept > 1 ? "s" : ""} pinned to the model.` : "";
+      this.setStatus((b.dir
+        ? `Saved to ${b.dir}. Ask Claude to look at the markup.`
+        : "Downloaded two pictures of the view and markup.json (no dev server to save to). Give them to Claude.") + notes);
     } catch (e) {
       this.setStatus(`Save failed: ${e}`);
     }
@@ -398,6 +469,7 @@ export class MarkupOverlay {
         marks: this.marks.map((m) => ({
           n: m.n,
           note: m.note,
+          ...(m.noteKey ? { noteKey: m.noteKey } : {}),
           kind: m.resolved?.kind,
           summary: m.resolved?.summary,
           hits: m.resolved?.hits ?? [],
@@ -629,7 +701,7 @@ export function markup(
   scene: Scene,
   opts: {
     title?: string; context?: () => Record<string, unknown>; host?: HTMLElement;
-    /** Offer "Keep as notes", keeping marks in this layer's document. */
+    /** Offer "Pin notes to the model", keeping marks in this layer's document. */
     notes?: NotesLayer;
     /** Who is drawing, written into kept notes. */
     author?: string;
@@ -648,7 +720,7 @@ export function markup(
     describe,
     context: () => ({ ...sceneSummary(scene, renderer, describe), ...(opts.context?.() ?? {}) }),
     setTracking: () => { /* objects carry their record key; no creation sites to track */ },
-    ...(opts.notes ? { keep: (ns: Note[]) => { opts.notes!.keep(ns); } } : {}),
+    ...(opts.notes ? { keep: (ns: Note[]) => opts.notes!.keep(ns).map((id) => `${opts.notes!.collection}/${id}`) } : {}),
     ...(opts.author ? { author: opts.author } : {}),
   });
   return { capture: (o) => overlay.capture(o), dispose: () => overlay.dispose() };

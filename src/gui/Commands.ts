@@ -99,6 +99,9 @@ export interface ViewControl {
   setView(view: StandardView): void;
   setProjection(projection: "perspective" | "orthographic"): void;
   readonly projection: "perspective" | "orthographic";
+  /** Hidden line drawn inverse (light lines on a dark page), where the view has it. */
+  readonly hiddenLineInverse?: boolean;
+  setHiddenLineInverse?(on: boolean): void;
 }
 
 /**
@@ -115,6 +118,10 @@ export function viewCommands(view: ViewControl): Command[] {
       id: "view.toggleProjection", label: "Perspective / orthographic", group: "View",
       run: () => view.setProjection(view.projection === "perspective" ? "orthographic" : "perspective"),
     },
+    ...(view.setHiddenLineInverse ? [{
+      id: "view.hiddenLineInverse", label: "Hidden line: paper / inverse", group: "View",
+      run: () => view.setHiddenLineInverse!(!view.hiddenLineInverse),
+    }] : []),
   ];
 }
 
@@ -165,10 +172,11 @@ export class Commands {
   }
 
   /**
-   * Run commands from their keys on `target` (default: the window). Keys typed into a
-   * field stay with the field; a matched key's default is prevented. Returns the unbind.
+   * Run commands from their keys on `target`: the window (default), or an element, which hears
+   * only the keys typed while focus is inside it. Keys typed into a field stay with the field;
+   * a matched key's default is prevented. Returns the unbind.
    */
-  bindKeys(target: Pick<Window, "addEventListener" | "removeEventListener"> = window): () => void {
+  bindKeys(target: EventTarget = window): () => void {
     const onKey = (ev: Event) => {
       const e = ev as KeyboardEvent;
       if (e.defaultPrevented || typing(e.target)) return;

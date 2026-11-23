@@ -8,7 +8,7 @@
 import * as THREE from "three";
 import type { SceneObject } from "../scene/Scene";
 import { Mesh as GMesh } from "../core/geometry/mesh/Mesh";
-import { surfaceAppearance, edgeStyle } from "./viewRules";
+import { surfaceAppearance, edgeStyle, inkOn } from "./viewRules";
 import type { RendererCore } from "./RendererCore";
 import type { Lighting } from "./Lighting";
 
@@ -75,12 +75,17 @@ export class ObjectBuilder {
   }
 
 
+  /** A colour as drawn: its own, except in a hidden-line drawing where it would vanish into the page. */
+  private ink<C extends THREE.ColorRepresentation>(colour: C): C | string {
+    return this.core.gScene.renderMode === "hiddenline" ? inkOn(this.core.pageColor(), colour) : colour;
+  }
+
   /** Build a THREE.Line for a line-type object — dashed material (+ line distances)
    *  when the style requests it, else a basic line material. */
   private _makeLine(geo: THREE.BufferGeometry, s: SceneObject["style"]): THREE.Line {
     const mat = s.dash
-      ? new THREE.LineDashedMaterial({ color: s.color, opacity: s.opacity, transparent: s.opacity < 1, dashSize: s.dash.size, gapSize: s.dash.gap })
-      : new THREE.LineBasicMaterial({ color: s.color, opacity: s.opacity, transparent: s.opacity < 1 });
+      ? new THREE.LineDashedMaterial({ color: this.ink(s.color), opacity: s.opacity, transparent: s.opacity < 1, dashSize: s.dash.size, gapSize: s.dash.gap })
+      : new THREE.LineBasicMaterial({ color: this.ink(s.color), opacity: s.opacity, transparent: s.opacity < 1 });
     const line = new THREE.Line(geo, mat);
     if (s.dash) line.computeLineDistances();
     return line;
@@ -93,7 +98,7 @@ export class ObjectBuilder {
       case "point": {
         const geo = new THREE.SphereGeometry(s.pointSize, 12, 12);
         const mat = this.makeMaterial({
-          color: s.color, emissive: s.color, emissiveIntensity: 0.3,
+          color: this.ink(s.color), emissive: this.ink(s.color), emissiveIntensity: 0.3,
           opacity: s.opacity, transparent: s.opacity < 1,
           metalness: s.metalness, roughness: s.roughness,
         });
@@ -103,7 +108,7 @@ export class ObjectBuilder {
         if (s.label) {
           const group = new THREE.Group();
           group.add(mesh);
-          const sprite = this.createTextSprite(s.label, s.labelColor ?? s.color, s.labelScale ?? 1);
+          const sprite = this.createTextSprite(s.label, this.ink(s.labelColor ?? s.color), s.labelScale ?? 1);
           if (obj.position) sprite.position.set(obj.position.x, obj.position.y, obj.position.z);
           // Offset label slightly above the point
           if (this.core.isZUp) sprite.position.z += s.pointSize + 0.15;
@@ -164,7 +169,7 @@ export class ObjectBuilder {
         const pts = obj.vertices.map(v => new THREE.Vector3(v.x, v.y, v.z));
         if (pts.length > 2) pts.push(pts[0].clone());
         const lineGeo = new THREE.BufferGeometry().setFromPoints(pts);
-        group.add(new THREE.Line(lineGeo, new THREE.LineBasicMaterial({ color: s.color })));
+        group.add(new THREE.Line(lineGeo, new THREE.LineBasicMaterial({ color: this.ink(s.color) })));
 
         // Fill
         if (obj.vertices.length >= 3) {
@@ -342,12 +347,12 @@ export class ObjectBuilder {
       group.add(new THREE.Mesh(geo, wireMat));
 
     } else if (mode === "hiddenline") {
-      // Pass 1: solid in background color for depth occlusion. toneMapped:false
+      // Pass 1: solid in the page's colour for depth occlusion. toneMapped:false
       // on both passes — the background clear color is never tone-mapped, so in
       // Studio lighting (ACES) a tone-mapped fill would read as a visible gray
       // silhouette, and edge colors would shift from their set edgeColor.
       const occlusionMat = new THREE.MeshBasicMaterial({
-        color: this.core.config.backgroundColor,
+        color: this.core.pageColor(),
         side,
         toneMapped: false,
         polygonOffset: true,
@@ -360,7 +365,10 @@ export class ObjectBuilder {
       // edges whose dihedral angle exceeds `edgeAngle`, so coplanar tessellation
       // seams (quad diagonals, flat-wall tiling) drop out — a clean line drawing.
       const edgeAngle = s.edgeAngle ?? 30; // degrees
-      const wireMat = new THREE.LineBasicMaterial({ color: s.edgeColor ?? 0x2f2f2f, toneMapped: false });
+      // The drawing's ink: dark on paper, light on an inverse page; an edge colour of the
+      // object's own stays while it reads on the page.
+      const ink = inkOn(this.core.pageColor(), s.edgeColor ?? 0x2f2f2f);
+      const wireMat = new THREE.LineBasicMaterial({ color: ink, toneMapped: false });
       group.add(this._edgeLines(geo, edgeAngle, wireMat));
 
       // Pass 3: view-dependent SILHOUETTES for smooth geometry (pipes, posts,
@@ -370,7 +378,7 @@ export class ObjectBuilder {
       // everywhere except along the contour rim, leaving a thin outline that
       // tracks the view — each tube reads as its two silhouette lines.
       const rimMat = new THREE.MeshBasicMaterial({
-        color: s.edgeColor ?? 0x2f2f2f,
+        color: ink,
         side: THREE.BackSide,
         toneMapped: false,
       });

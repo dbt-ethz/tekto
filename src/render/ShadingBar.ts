@@ -1,8 +1,10 @@
 /**
  * The shading bar: a small strip of icons in a corner of the 3D view, as Blender has one in
  * its viewport header. The render style (solid, wireframe, hidden line, ghost), the lighting
- * (Flat, Studio) and the sun (Morning, Noon, Sunset). The renderer draws it in its own view,
- * so an app only switches it on (`shadingBar: true`); it follows changes made in code.
+ * (Flat, Studio) and the sun (Morning, Noon, Sunset, or a date and a place). The renderer draws it in its own view,
+ * so an app only switches it on (`shadingBar: true`); it follows changes made in code. In a
+ * strict-2D view (orbit rotation off) it is the 2D palette instead: the hand (drag the view along),
+ * zoom in, zoom out, zoom to bounds.
  */
 import type { RenderMode, LightingMode } from "../scene/Scene";
 import type { SunPreset } from "./viewRules";
@@ -12,6 +14,7 @@ import type { Lighting } from "./Lighting";
 import type { Marks } from "./Marks";
 import type { AmbientOcclusion } from "./AmbientOcclusion";
 import { ensureSliderStyle } from "../gui/ControlPanel";
+import { SUN_PLACES, hhmm, sunFor, sunNow, sunTimeZone, type SunSite } from "./sunSite";
 
 const svg = (body: string) =>
   `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" `
@@ -30,6 +33,8 @@ export const SHADING_ICONS = {
   noon: svg(`<circle cx="12" cy="12" r="4"/><path d="${RAYS}"/>`),
   morning: HORIZON("M9 5.5 12 2.5l3 3"),
   sunset: HORIZON("M9 6.5l3 3 3-3"),
+  // The sun for a date: a calendar sheet.
+  date: svg(`<rect x="4" y="5.5" width="16" height="14" rx="1.5"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/>`),
   // Ambient occlusion: two faces meeting, darkened into the corner.
   ao: svg(`<path d="M5 4v15h15"/><path d="M5 9.5v9.5h9.5A9.5 9.5 0 0 0 5 9.5z" fill="currentColor" fill-opacity="0.5" stroke="none"/>`),
   // Overlays: two overlapping rings, as Blender draws it.
@@ -41,18 +46,40 @@ export const SHADING_ICONS = {
   // A box with a slice through it.
   section: svg(`<path d="M4 7.5 12 4l8 3.5v9L12 20l-8-3.5z"/><path d="M4 12.5 12 16l8-3.5M4 12.5 12 9l8 3.5" fill="currentColor" fill-opacity="0.35"/>`),
   flip: svg(`<path d="M8 4v15M5 7l3-3 3 3M16 20V5M13 17l3 3 3-3"/>`),
+  // Zoom in / out: a magnifier with a plus or a minus.
+  zoomIn: svg(`<circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5M8 10.5h5M10.5 8v5"/>`),
+  zoomOut: svg(`<circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5M8 10.5h5"/>`),
+  // The hand: four fingers up, the thumb out to the left.
+  hand: svg(`<path d="M7 14V7.3a1.3 1.3 0 0 1 2.6 0V11M9.6 11V5.3a1.3 1.3 0 0 1 2.6 0V11M12.2 11V6.3a1.3 1.3 0 0 1 2.6 0V11`
+    + `M14.8 11.5V8.3a1.3 1.3 0 0 1 2.6 0V15a6 6 0 0 1-6 6h-1a5 5 0 0 1-3.9-1.9L3.6 15.4a1.4 1.4 0 0 1 2.1-1.8L7 15"/>`),
 };
+
+/** How much one click of the 2D palette's zoom in / out zooms. */
+const ZOOM_STEP = 1.25;
 
 const MODES: [RenderMode, string][] = [["solid", "Solid"], ["wireframe", "Wireframe"], ["hiddenline", "Hidden line"], ["ghost", "Ghost"]];
 const LIGHTS: [LightingMode, string][] = [["flat", "Flat lighting"], ["studio", "Studio lighting: soft shadows"]];
+/** Where the sun menu remembers the place last chosen. */
+const SUN_PLACE_KEY = "tekto.sunPlace";
 const SUNS: [SunPreset, string][] = [["morning", "Morning"], ["noon", "Noon"], ["sunset", "Sunset"]];
 
-/** What the bar asks of its renderer beyond the parts: overlays, framing, a snapshot. */
+/** What the bar asks of its renderer beyond the parts: overlays, framing, zooming, a snapshot,
+ *  and whether the view is strict 2D (orbit rotation off). */
 export interface ShadingBarHost {
   readonly overlays: Record<string, boolean>;
   setOverlays(overlays: Record<string, boolean>): void;
   frame(): void;
+  zoomBy(factor: number): void;
+  readonly orbitRotateEnabled: boolean;
+  /** The hand (a strict-2D view's tool): the left button drags the view along. */
+  readonly handMode: boolean;
+  setHandMode(on: boolean): void;
+  /** Hidden line inverse: light lines on a dark page, not dark lines on paper. */
+  readonly hiddenLineInverse: boolean;
+  setHiddenLineInverse(on: boolean): void;
   saveSnapshot(fileName?: string): void;
+  /** The axis widget's element, if there is one: in the header layout the nav column sits under it. */
+  readonly navGizmoEl: HTMLElement | null;
 }
 
 const OVERLAY_LABELS: Record<string, string> = { grid: "Grid", axes: "Axes", wireframe: "Wireframe", labels: "Labels", notes: "Notes" };
@@ -60,9 +87,49 @@ const OVERLAY_LABELS: Record<string, string> = { grid: "Grid", axes: "Axes", wir
 /** Corner of the view the bar sits in. */
 export type ShadingBarCorner = "top-left" | "top-right" | "bottom-left" | "bottom-right";
 
+/** Where the bar sits: a corner of the view, or `"header"` — a strip across the top of the view, as
+ *  Blender's viewport header: the app's own controls on its left (`renderer.viewerHeader.left`), the
+ *  shading icons, the snapshot and ✎ Markup on its right, and zoom in / out / to bounds in a column
+ *  under the axis widget (the hand above them in a strict-2D view). */
+export type ShadingBarPlacement = ShadingBarCorner | "header";
+
+/**
+ * Which of the viewer's tools an app shows; each is on unless set to false. An app without
+ * daylight drops `sun`, a drawing viewer drops `light`, and so on: fewer tools, same places.
+ */
+export interface ViewerTools {
+  /** The render style: solid, wireframe, hidden line, ghost. */
+  modes?: boolean;
+  /** Flat / Studio lighting, and ambient occlusion beside it. */
+  light?: boolean;
+  /** The sun: morning, noon, sunset, or a date, an hour and a place. */
+  sun?: boolean;
+  /** The section through the model. */
+  section?: boolean;
+  /** The overlays' switches: grid, axes, wireframe, labels, notes. */
+  overlays?: boolean;
+  /** Save the view as a PNG. */
+  snapshot?: boolean;
+  /** Zoom in / out / to bounds (the column under the axis widget in the header layout). */
+  zoom?: boolean;
+}
+
+/** The header strip's height in pixels (`shadingBar: "header"`). */
+export const VIEWER_HEADER_H = 34;
+
 export class ShadingBar {
   private root = document.createElement("div");
+  // Two palettes, one shown: the 3D one (style, lighting, sun, section, overlays) and, in a
+  // strict-2D view, the 2D one (the hand, zoom in, zoom out, zoom to bounds).
+  private full = document.createElement("div");
+  private flat = document.createElement("div");
+  private group: HTMLElement = this.full;
   private openPop: HTMLDivElement | null = null;
+  /** The header layout's slots: the app's controls (left, right) and where ✎ Markup goes (end). */
+  readonly header: { left: HTMLElement; right: HTMLElement; end: HTMLElement } | null = null;
+  // The header layout's nav column (zoom in / out / to bounds; the hand in 2D), under the axis widget.
+  private nav: HTMLDivElement | null = null;
+  private openers = new Map<HTMLDivElement, HTMLButtonElement>();
   // Storeys for the section: a chip each (a plan cut `cutHeight` above its floor), ticks on the slider.
   private levels: { name: string; elevation: number }[] = [];
   private cutHeight = 1.2;
@@ -74,93 +141,200 @@ export class ShadingBar {
   private off: () => void;
 
   constructor(private core: RendererCore, private lighting: Lighting, private marks: Marks, private ao: AmbientOcclusion,
-    private view: ShadingBarHost, corner: ShadingBarCorner = "top-left") {
+    private view: ShadingBarHost, placement: ShadingBarPlacement = "top-left", headerHost: HTMLElement | null = null,
+    tools: ViewerTools = {}) {
     const host = core.container;
     if (getComputedStyle(host).position === "static") host.style.position = "relative";
+    // The header may sit outside the view's own stacking context (above overlays laid over the view);
+    // the nav column stays with the view, under the axis widget.
+    const rootHost = placement === "header" && headerHost ? headerHost : host;
+    if (rootHost !== host && getComputedStyle(rootHost).position === "static") rootHost.style.position = "relative";
+    const isHeader = placement === "header";
+    const corner: ShadingBarCorner = isHeader ? "top-left" : placement;
     const [v, h] = [corner.startsWith("top") ? "top" : "bottom", corner.endsWith("left") ? "left" : "right"];
-    this.root.style.cssText = `position:absolute;${v}:10px;${h}:10px;z-index:5;display:flex;align-items:center;gap:2px;`
-      + "padding:3px;border-radius:7px;background:rgba(16,18,26,.78);border:1px solid rgba(255,255,255,.08);"
-      + "box-shadow:0 2px 8px rgba(0,0,0,.3);user-select:none;";
     this.root.dataset.tektoShadingBar = "";
-
-    const scene = core.gScene;
-    for (const [mode, label] of MODES) this.button(viewModeIconSvg(mode, 16), label, () => scene.renderMode === mode, () => scene.setRenderMode(mode));
-    this.separator();
-    for (const [mode, label] of LIGHTS) this.button(SHADING_ICONS[mode], label, () => scene.lightingMode === mode, () => scene.setLightingMode(mode));
-    this.button(SHADING_ICONS.ao, "Ambient occlusion: darker where surfaces meet (Solid, perspective)", () => this.ao.enabled, () => this.ao.set(!this.ao.enabled));
-    this.separator();
-    const sunPop = this.popover(v, h);
-    const sun = this.button(SHADING_ICONS.noon, "Sun: morning, noon, sunset", () => this.openPop === sunPop, () => this.toggle(sunPop));
-    this.paints.push(() => { sun.innerHTML = SHADING_ICONS[this.lighting.currentSunPreset ?? "noon"]; });
-    for (const [preset, label] of SUNS) {
-      const b = this.button(`${SHADING_ICONS[preset]}<span style="font:500 9.5px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${label}</span>`,
-        `${label}: Studio, the light following the sun`, () => this.lighting.currentSunPreset === preset,
-        () => { this.lighting.sunPreset(preset); this.toggle(null); }, sunPop);
-      b.style.width = "54px";
-      b.style.height = "42px";
-      b.style.flexDirection = "column";
-      b.style.gap = "4px";
+    this.full.style.display = "contents";
+    this.flat.style.display = "contents";
+    if (isHeader) {
+      // Above the ✎ Markup drawing layer (z 20–22), so its Done stays in reach while drawing.
+      this.root.style.cssText = `position:absolute;top:0;left:0;right:0;height:${VIEWER_HEADER_H}px;box-sizing:border-box;z-index:23;`
+        + "display:flex;align-items:center;gap:2px;padding:0 6px;background:rgba(30,30,30,.96);"
+        + "border-bottom:1px solid rgba(255,255,255,.08);user-select:none;";
+      this.root.dataset.tektoViewerHeader = "";
+      const slot = () => { const d = document.createElement("div"); d.style.cssText = "display:flex;align-items:center;gap:6px;"; return d; };
+      const left = slot(), right = slot(), end = slot(), spacer = document.createElement("div");
+      spacer.style.cssText = "flex:1;min-width:8px;";
+      right.style.marginLeft = end.style.marginLeft = "8px";
+      left.dataset.tektoHeaderSlot = "left"; right.dataset.tektoHeaderSlot = "right"; end.dataset.tektoHeaderSlot = "end";
+      this.header = { left, right, end };
+      this.root.append(left, spacer, this.full, this.flat, right, end);
+      this.nav = document.createElement("div");
+      this.nav.dataset.tektoNavColumn = "";
+      this.nav.style.cssText = "position:absolute;z-index:5;display:flex;flex-direction:column;gap:2px;padding:3px;border-radius:7px;"
+        + "background:rgba(30,30,30,.9);border:1px solid rgba(255,255,255,.08);user-select:none;";
+      host.appendChild(this.nav);
+    } else {
+      this.root.style.cssText = `position:absolute;${v}:10px;${h}:10px;z-index:5;display:flex;align-items:center;gap:2px;`
+        + "padding:3px;border-radius:7px;background:rgba(30,30,30,.9);border:1px solid rgba(255,255,255,.08);"
+        + "box-shadow:0 2px 8px rgba(0,0,0,.3);user-select:none;";
+      this.root.append(this.full, this.flat);
     }
 
-    // The section: which way it cuts, where (a slider in metres), which side stays.
-    const cutPop = this.popover(v, h);
-    cutPop.style.flexDirection = "column";
-    cutPop.style.gap = "6px";
-    this.button(SHADING_ICONS.section, "Section: cut the model", () => this.openPop === cutPop || !!this.marks.section, () => this.toggle(cutPop));
-    this.sectionControls(cutPop);
-    this.separator();
-
-    // Overlays: a switch each for what is drawn over the model (and any the app registered).
-    const overlayPop = this.popover(v, h);
-    overlayPop.style.flexDirection = "column";
-    overlayPop.style.minWidth = "120px";
-    this.button(SHADING_ICONS.overlays, "Overlays: grid, axes, wireframe, labels, notes", () => this.openPop === overlayPop, () => this.toggle(overlayPop));
-    let listed = "";
-    this.paints.push(() => {
-      const names = Object.keys(this.view.overlays);
-      if (names.join() === listed) return;                          // rebuilt only when the list changes
-      listed = names.join();
-      overlayPop.replaceChildren();
-      this.overlayPaints = [];
-      for (const name of names) {
-        const label = OVERLAY_LABELS[name] ?? name[0].toUpperCase() + name.slice(1);
-        const b = this.button(`<span style="width:14px;font:600 11px/1 system-ui,sans-serif">${"✓"}</span>`
-          + `<span style="font:500 11px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${escapeHtml(label)}</span>`,
-          `${label}: show or hide`, () => false,                     // a checklist: a tick, not a filled button
-          () => this.view.setOverlays({ [name]: !(this.view.overlays[name] ?? false) }), overlayPop, this.overlayPaints);
-        b.style.width = "auto";
-        b.style.justifyContent = "flex-start";
-        b.style.gap = "6px";
-        b.style.padding = "0 10px 0 6px";
-        const tick = b.firstElementChild as HTMLElement;
-        this.overlayPaints.push(() => {
-          const on = !!this.view.overlays[name];
-          tick.style.visibility = on ? "visible" : "hidden";
-          b.style.color = on ? "#e8ebf0" : "rgba(232,235,240,.5)";
-          b.setAttribute("aria-pressed", String(on));
-        });
+    const scene = core.gScene;
+    // Groups of tools with a separator between those that are shown.
+    let any = false;
+    const group = (shown: boolean | undefined, build: () => void) => {
+      if (shown === false) return;
+      if (any) this.separator();
+      any = true;
+      build();
+    };
+    group(tools.modes, () => {
+      for (const [mode, label] of MODES) {
+        // Hidden line, clicked again: the drawing turns inverse (light lines on dark) and back.
+        const again = mode === "hiddenline";
+        this.button(viewModeIconSvg(mode, 16), again ? `${label}: dark lines on paper (click again for the inverse)` : label, () => scene.renderMode === mode,
+          () => { if (again && scene.renderMode === mode) this.view.setHiddenLineInverse(!this.view.hiddenLineInverse); else scene.setRenderMode(mode); });
       }
     });
-    this.paints.push(() => { for (const p of this.overlayPaints) p(); });
+    group(tools.light, () => {
+      for (const [mode, label] of LIGHTS) this.button(SHADING_ICONS[mode], label, () => scene.lightingMode === mode, () => scene.setLightingMode(mode));
+      this.button(SHADING_ICONS.ao, "Ambient occlusion: darker where surfaces meet (Solid, perspective)", () => this.ao.enabled, () => this.ao.set(!this.ao.enabled));
+    });
+    const sunAndSection = tools.sun !== false || tools.section !== false;
+    group(sunAndSection, () => {
+      if (tools.sun !== false) {
+        const sunPop = this.popover(v, h);
+        sunPop.style.flexDirection = "column";
+        const row = document.createElement("div");
+        row.style.cssText = "display:flex;gap:2px;";
+        sunPop.appendChild(row);
+        const sun = this.button(SHADING_ICONS.noon, "Sun: morning, noon, sunset, or a date and a place", () => this.openPop === sunPop, () => this.toggle(sunPop));
+        this.openers.set(sunPop, sun);
+        this.paints.push(() => { sun.innerHTML = SHADING_ICONS[this.sunIcon()]; });
+        const tile = (b: HTMLButtonElement) => {
+          b.style.width = "54px";
+          b.style.height = "42px";
+          b.style.flexDirection = "column";
+          b.style.gap = "4px";
+        };
+        const caption = (label: string) => `<span style="font:500 9.5px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${label}</span>`;
+        for (const [preset, label] of SUNS) {
+          tile(this.button(`${SHADING_ICONS[preset]}${caption(label)}`,
+            `${label}: Studio, the light following the sun`, () => this.lighting.currentSunPreset === preset,
+            () => { this.lighting.sunPreset(preset); this.toggle(null); }, row));
+        }
+        // The fourth sun: a date, an hour and a place (its fields open under the row).
+        tile(this.button(`${SHADING_ICONS.date}${caption("Date")}`,
+          "Date: the sun for a date, an hour and a place", () => !!this.lighting.currentSunSite,
+          () => this.lighting.sunAt(this.sunState), row));
+        this.sunControls(sunPop);
+      }
 
-    // Frame the selection or everything; save the view.
-    this.button(SHADING_ICONS.frame, "Frame: the selection, or everything", () => false, () => this.view.frame());
-    this.button(SHADING_ICONS.snapshot, "Snapshot: save the view as a PNG", () => false, () => this.view.saveSnapshot());
-    host.appendChild(this.root);
+      // The section: which way it cuts, where (a slider in metres), which side stays.
+      if (tools.section !== false) {
+        const cutPop = this.popover(v, h);
+        cutPop.style.flexDirection = "column";
+        cutPop.style.gap = "6px";
+        this.openers.set(cutPop, this.button(SHADING_ICONS.section, "Section: cut the model", () => this.openPop === cutPop || !!this.marks.section, () => this.toggle(cutPop)));
+        this.sectionControls(cutPop);
+      }
+    });
+
+    // Overlays: a switch each for what is drawn over the model (and any the app registered).
+    group(tools.overlays !== false || tools.snapshot !== false || (!isHeader && tools.zoom !== false), () => {
+      if (tools.overlays !== false) {
+        const overlayPop = this.popover(v, h);
+        overlayPop.style.flexDirection = "column";
+        overlayPop.style.minWidth = "120px";
+        this.openers.set(overlayPop, this.button(SHADING_ICONS.overlays, "Overlays: grid, axes, wireframe, labels, notes", () => this.openPop === overlayPop, () => this.toggle(overlayPop)));
+        let listed = "";
+        this.paints.push(() => {
+          const names = Object.keys(this.view.overlays);
+          if (names.join() === listed) return;                          // rebuilt only when the list changes
+          listed = names.join();
+          overlayPop.replaceChildren();
+          this.overlayPaints = [];
+          for (const name of names) {
+            const label = OVERLAY_LABELS[name] ?? name[0].toUpperCase() + name.slice(1);
+            const b = this.button(`<span style="width:14px;font:600 11px/1 system-ui,sans-serif">${"✓"}</span>`
+              + `<span style="font:500 11px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${escapeHtml(label)}</span>`,
+              `${label}: show or hide`, () => false,                     // a checklist: a tick, not a filled button
+              () => this.view.setOverlays({ [name]: !(this.view.overlays[name] ?? false) }), overlayPop, this.overlayPaints);
+            b.style.width = "auto";
+            b.style.justifyContent = "flex-start";
+            b.style.gap = "6px";
+            b.style.padding = "0 10px 0 6px";
+            const tick = b.firstElementChild as HTMLElement;
+            this.overlayPaints.push(() => {
+              const on = !!this.view.overlays[name];
+              tick.style.visibility = on ? "visible" : "hidden";
+              b.style.color = on ? "#e8ebf0" : "rgba(232,235,240,.5)";
+              b.setAttribute("aria-pressed", String(on));
+            });
+          }
+        });
+        this.paints.push(() => { for (const p of this.overlayPaints) p(); });
+      }
+
+      // Frame the selection or everything (the header layout has it in the nav column); save the view.
+      if (!isHeader && tools.zoom !== false) this.button(SHADING_ICONS.frame, "Frame: the selection, or everything", () => false, () => this.view.frame());
+      if (tools.snapshot !== false) this.button(SHADING_ICONS.snapshot, "Snapshot: save the view as a PNG", () => false, () => this.view.saveSnapshot());
+    });
+
+    // The 2D palette, for a strict-2D view (orbit rotation off): a flat sheet has no style,
+    // lighting, sun or section to choose — only how much of it to see. In the header layout the
+    // zoom is in the nav column (in 2D and 3D), and the 2D header keeps just the snapshot.
+    this.group = this.flat;
+    if (isHeader && tools.snapshot !== false) this.button(SHADING_ICONS.snapshot, "Snapshot: save the view as a PNG", () => false, () => this.view.saveSnapshot());
+    this.group = this.nav ?? this.flat;
+    const hand = this.button(SHADING_ICONS.hand, "Hand: drag the view along (click again to stop)",
+      () => this.view.handMode, () => this.view.setHandMode(!this.view.handMode));
+    this.button(SHADING_ICONS.zoomIn, "Zoom in", () => false, () => this.view.zoomBy(ZOOM_STEP));
+    this.button(SHADING_ICONS.zoomOut, "Zoom out", () => false, () => this.view.zoomBy(1 / ZOOM_STEP));
+    this.button(SHADING_ICONS.frame, "Zoom to bounds: the selection, or everything", () => false, () => this.view.frame());
+    this.paints.push(() => {
+      const flat = !this.view.orbitRotateEnabled;
+      this.root.dataset.palette = flat ? "2d" : "3d";
+      this.full.style.display = flat || this.toolsHidden ? "none" : "contents";
+      this.flat.style.display = flat && !this.toolsHidden ? "contents" : "none";
+      if (this.nav) this.nav.style.display = this.toolsHidden || tools.zoom === false ? "none" : "flex";
+      hand.style.display = flat ? "flex" : "none";            // a flat sheet's tool (the nav column shows in 3D too)
+      if (flat && this.openPop) { this.openPop.style.display = "none"; this.openPop = null; }
+      if (this.nav) this.placeNav();
+    });
+    rootHost.appendChild(this.root);
+    if (this.nav) requestAnimationFrame(() => this.placeNav());   // once laid out
 
     // Follow the state wherever it is changed.
     this.off = scene.on((e) => { if (e.type === "scene:renderMode" || e.type === "scene:lightingMode") this.paint(); });
     this.paint();
   }
 
+  private toolsHidden = false;
+  /** Hide or show the tools (the header strip itself stays, with the app's slots and ✎ Markup). */
+  setToolsVisible(visible: boolean): void {
+    this.toolsHidden = !visible;
+    if (!visible && this.openPop) { this.openPop.style.display = "none"; this.openPop = null; }
+    this.paint();
+  }
+
   /** Redraw which buttons are on (after a change made elsewhere, such as the sun moved in code). */
   paint(): void { for (const p of this.paints) p(); }
+
+  /** The nav column under the axis widget, or right under the header without one (a strict-2D view). */
+  private placeNav(): void {
+    const nav = this.nav!, g = this.view.navGizmoEl;
+    const under = !!g && g.style.display !== "none" && g.offsetHeight > 0;
+    nav.style.top = `${under ? g!.offsetTop + g!.offsetHeight + 6 : VIEWER_HEADER_H + 8}px`;
+    nav.style.right = `${under ? 12 + Math.max(0, (g!.offsetWidth - nav.offsetWidth) / 2) : 12}px`;
+  }
 
   /** A popover under the bar (above it when the bar sits at the bottom). */
   private popover(v: string, h: string): HTMLDivElement {
     const pop = document.createElement("div");
     pop.style.cssText = `position:absolute;${v === "top" ? "top" : "bottom"}:calc(100% + 6px);${h}:0;display:none;gap:2px;`
-      + "padding:4px;border-radius:7px;background:rgba(16,18,26,.92);border:1px solid rgba(255,255,255,.08);"
+      + "padding:4px;border-radius:7px;background:rgba(37,37,38,.98);border:1px solid rgba(255,255,255,.08);"
       + "box-shadow:0 4px 14px rgba(0,0,0,.4);";
     this.root.appendChild(pop);
     return pop;
@@ -172,7 +346,150 @@ export class ShadingBar {
     if (this.openPop) this.openPop.style.display = "none";
     if (next) next.style.display = "flex";
     this.openPop = next;
+    if (next) this.placePop(next);
     this.paint();
+  }
+
+  /** In the header: a popover under its button, kept inside the header's width. */
+  private placePop(pop: HTMLDivElement): void {
+    const opener = this.header ? this.openers.get(pop) : undefined;
+    if (opener) pop.style.left = `${Math.max(0, Math.min(opener.offsetLeft, this.root.clientWidth - pop.offsetWidth - 4))}px`;
+  }
+
+  // ── The sun for a date and a place ──────────────────────────────────────────────────────
+  /** What the Date sun's fields hold: the place last chosen (remembered), today, 13:30. */
+  private sunState: SunSite = (() => {
+    const z = SUN_PLACES[0];
+    let place: Partial<SunSite> = { place: z.name, latitude: z.latitude, longitude: z.longitude, timeZone: z.timeZone };
+    try {
+      const stored = JSON.parse(localStorage.getItem(SUN_PLACE_KEY) ?? "null");
+      if (stored && Number.isFinite(stored.latitude) && Number.isFinite(stored.longitude)) {
+        place = { place: stored.place, latitude: stored.latitude, longitude: stored.longitude, timeZone: stored.timeZone };
+      }
+    } catch { /* no storage: Zurich */ }
+    return { ...place, date: new Date().toISOString().slice(0, 10), hour: 13.5 } as SunSite;
+  })();
+
+  /** The sun button's icon: the named sun, or for a date the one nearest its hour. */
+  private sunIcon(): "morning" | "noon" | "sunset" {
+    const site = this.lighting.currentSunSite;
+    if (!site) return this.lighting.currentSunPreset ?? "noon";
+    return this.lighting.sunAltitude() > 20 ? "noon" : site.hour < 12 ? "morning" : "sunset";
+  }
+
+  /** The Date sun's fields under the sun popover's row: place, latitude and longitude, north, date, hour. */
+  private sunControls(pop: HTMLDivElement): void {
+    ensureSliderStyle(document);
+    const form = document.createElement("div");
+    form.dataset.tektoSunDate = "";
+    form.style.cssText = "display:none;flex-direction:column;gap:6px;padding:6px 4px 4px;margin-top:2px;"
+      + "border-top:1px solid rgba(255,255,255,.1);color:rgba(232,235,240,.72);"
+      + "font:11px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;";
+    const FIELD = "box-sizing:border-box;height:22px;min-width:0;padding:0 5px;border:1px solid rgba(255,255,255,.14);"
+      + "border-radius:4px;background:#141414;color:#e8ebf0;font:inherit;color-scheme:dark;";
+    const line = (label: string, ...controls: HTMLElement[]) => {
+      const l = document.createElement("div");
+      l.style.cssText = "display:flex;align-items:center;gap:6px;";
+      const name = document.createElement("span");
+      name.textContent = label;
+      name.style.cssText = "flex:0 0 38px;";
+      l.append(name, ...controls);
+      form.appendChild(l);
+    };
+    const field = <K extends "input" | "select">(tag: K, label: string, type?: string): HTMLElementTagNameMap[K] => {
+      const f = document.createElement(tag);
+      if (type) (f as HTMLInputElement).type = type;
+      f.setAttribute("aria-label", label);
+      f.title = label;
+      f.style.cssText = `${FIELD}flex:1;`;
+      return f;
+    };
+
+    const place = field("select", "Place");
+    for (const p of SUN_PLACES) place.add(new Option(p.name, p.name));
+    place.add(new Option("Other", ""));
+    const lat = field("input", "Latitude, north positive", "number");
+    const lon = field("input", "Longitude, east positive", "number");
+    lat.step = lon.step = "0.01";
+    [lat.min, lat.max, lon.min, lon.max] = ["-85", "85", "-180", "180"];
+    const north = field("input", "North: degrees clockwise from the model's +Y axis (up on the plan)", "range");
+    [north.min, north.max, north.step] = ["0", "360", "1"];
+    const date = field("input", "Date", "date");
+    const time = field("input", "Time of day (standard time)", "range");
+    [time.min, time.max, time.step] = ["0", "24", "0.25"];
+    const value = () => {
+      const v = document.createElement("span");
+      v.style.cssText = "flex:0 0 38px;text-align:right;color:#e8ebf0;font:11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;";
+      return v;
+    };
+    for (const slider of [time, north]) {
+      slider.className = "tekto-slider";
+      slider.style.cssText = "flex:1;width:0;min-width:40px;--tekto-track:rgba(255,255,255,.18);--tekto-thumb:#e8ebf0;";
+    }
+    const clock = value(), bearing = value();
+    const readout = document.createElement("span");
+    readout.dataset.tektoSunReadout = "";
+    readout.style.cssText = "flex:1;white-space:nowrap;";
+    const now = document.createElement("button");
+    now.type = "button";
+    now.textContent = "Now";
+    now.title = "Today, at this hour";
+    now.style.cssText = `${FIELD}cursor:pointer;padding:0 9px;`;
+    line("Place", place);
+    line("Lat", lat, lon);
+    line("North", north, bearing);
+    line("Date", date);
+    line("Time", time, clock);
+    const foot = document.createElement("div");
+    foot.style.cssText = "display:flex;align-items:center;gap:6px;padding-top:2px;";
+    foot.append(readout, now);
+    form.appendChild(foot);
+    pop.appendChild(form);
+
+    const apply = (change: Partial<SunSite>) => {
+      this.sunState = { ...this.sunState, ...change };
+      const { place: name, latitude, longitude, timeZone } = this.sunState;
+      try { localStorage.setItem(SUN_PLACE_KEY, JSON.stringify({ place: name, latitude, longitude, timeZone })); } catch { /* not remembered */ }
+      this.lighting.sunAt(this.sunState);
+      this.paint();
+    };
+    const num = (el: HTMLInputElement, fallback: number) => {
+      const v = Number(el.value);
+      return el.value === "" || !Number.isFinite(v) ? fallback : Math.min(Number(el.max), Math.max(Number(el.min), v));
+    };
+    place.addEventListener("change", () => {
+      const p = SUN_PLACES.find((q) => q.name === place.value);
+      if (p) apply({ place: p.name, latitude: p.latitude, longitude: p.longitude, timeZone: p.timeZone });
+      else apply({ place: undefined, timeZone: undefined });           // the hour by the longitude
+    });
+    const moved = () => apply({ place: undefined, timeZone: undefined, latitude: num(lat, this.sunState.latitude), longitude: num(lon, this.sunState.longitude) });
+    lat.addEventListener("change", moved);
+    lon.addEventListener("change", moved);
+    date.addEventListener("change", () => { if (date.value) apply({ date: date.value }); });
+    time.addEventListener("input", () => apply({ hour: Number(time.value) }));
+    north.addEventListener("input", () => apply({ north: Number(north.value) % 360 }));
+    now.addEventListener("click", () => apply(sunNow(this.sunState)));
+
+    const set = (el: HTMLInputElement | HTMLSelectElement, value: string) => { if (document.activeElement !== el && el.value !== value) el.value = value; };
+    this.paints.push(() => {
+      const site = this.lighting.currentSunSite;
+      const shown = form.style.display !== "none";
+      form.style.display = site ? "flex" : "none";
+      if (!site) return;
+      this.sunState = { ...site };                                     // also when set in code (renderer.setSunAt)
+      set(place, site.place && SUN_PLACES.some((p) => p.name === site.place) ? site.place : "");
+      set(lat, site.latitude.toFixed(2));
+      set(lon, site.longitude.toFixed(2));
+      set(date, site.date);
+      set(time, String(site.hour));
+      clock.textContent = hhmm(site.hour);
+      const turned = ((site.north ?? 0) % 360 + 360) % 360;
+      set(north, String(turned));
+      bearing.textContent = `${Math.round(turned)}°`;
+      const s = sunFor(site), deg = (r: number) => Math.round(r * 180 / Math.PI), tz = sunTimeZone(site);
+      readout.textContent = `${s.isDaytime ? `Alt ${deg(s.altitude)}° · Az ${deg(s.azimuth)}°` : "Below the horizon"} · UTC${tz < 0 ? "−" : "+"}${Math.abs(tz)}`;
+      if (!shown && this.openPop === pop) this.placePop(pop);          // wider now: keep it inside the header
+    });
   }
 
   /** The section popover's controls, kept in step with the cut however it was set. */
@@ -323,7 +640,7 @@ export class ShadingBar {
     this.paint();
   }
 
-  private button(icon: string, title: string, on: () => boolean, run: () => void, parent: HTMLElement = this.root, paints = this.paints): HTMLButtonElement {
+  private button(icon: string, title: string, on: () => boolean, run: () => void, parent: HTMLElement = this.group, paints = this.paints): HTMLButtonElement {
     const b = document.createElement("button");
     b.type = "button";
     b.title = title;
@@ -335,7 +652,7 @@ export class ShadingBar {
       const active = on();
       b.setAttribute("aria-pressed", String(active));
       b.style.background = active ? "#e8ebf0" : "transparent";
-      b.style.color = active ? "#11131a" : "rgba(232,235,240,.72)";
+      b.style.color = active ? "#1e1e1e" : "rgba(232,235,240,.72)";
     };
     b.onmouseenter = () => { if (!on()) b.style.color = "#fff"; };
     b.onmouseleave = paint;
@@ -348,13 +665,14 @@ export class ShadingBar {
   private separator(): void {
     const s = document.createElement("div");
     s.style.cssText = "width:1px;height:18px;margin:0 3px;background:rgba(255,255,255,.14);";
-    this.root.appendChild(s);
+    this.group.appendChild(s);
   }
 
   dispose(): void {
     this.off();
     this.marks.showSectionPlane(false);
     this.root.remove();
+    this.nav?.remove();
   }
 }
 

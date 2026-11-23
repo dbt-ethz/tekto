@@ -41,10 +41,16 @@ import { Scene } from "../scene/Scene";
 import { ThreeRenderer, ThreeRendererConfig } from "../render/ThreeRenderer";
 import { ParamStore, ParamSchema } from "../gui/Params";
 import { ControlPanel, ControlItem } from "../gui/ControlPanel";
-import { getTheme, Theme } from "../gui/theme";
-import { installAgentBridge, plainBundle, sceneSummary, describeSceneObject, addOverlay, snapshotWithOverlays } from "./AgentBridge";
+import { getTheme, Theme, VIEW_BG_DARK } from "../gui/theme";
+import { installAgentBridge, plainBundle, sceneSummary, describeSceneObject, addOverlay, snapshotWithOverlays, callSite } from "./AgentBridge";
+import { StepTrace } from "../core/steps/StepTrace";
+import { StepsPanel, type StepMark } from "./StepsPanel";
 import { Commands, viewCommands } from "../gui/Commands";
 import { viewerToolbar, type TopBarOptions } from "./ViewerToolbar";
+import { panelFrame, type PanelFrame } from "./panelFrame";
+import { menuBar, menuSlot } from "../gui/MenuBar";
+import { ParamHistory } from "../gui/ParamHistory";
+import { VIEWER_HEADER_H, type ViewerTools } from "../render/ShadingBar";
 import { NotesLayer, type Note } from "./Notes";
 import type { Doc } from "../collab/Doc";
 import { MarkupOverlay, type MarkupCaptureOptions } from "./Markup";
@@ -64,27 +70,43 @@ export interface AppShellConfig<S extends ParamSchema = ParamSchema> {
   /** Camera up-axis. Default "z" (tekto Z-up convention). Use "y" for the Y-up built-in primitives. */
   up?: "y" | "z";
   theme?: "dark" | "light";
-  /** Panel width in pixels (default: 260) */
-  panelWidth?: number;
+  /** Panel width in pixels (default 260), or "auto": as wide as its controls need. A width dragged by hand wins. */
+  panelWidth?: number | "auto";
+  /** The name in the panel's top row, beside the chevron that folds it. Default "Parameters"; "" leaves the row free. */
+  panelTitle?: string;
+  /** Tabs as a bar on top of the panel (default) or as a list down its left side. */
+  tabs?: "top" | "side";
   /** Renderer config overrides */
   renderer?: Partial<ThreeRendererConfig>;
-  /** Top bar with Lighting / Render-mode / Camera / Cut / Sun controls. Default: true.
-   *  An object turns single controls off where they don't make sense for the app
-   *  (`{ cut: false, sun: false }`). */
+  /** The older text toolbar in the title bar (Light / Mode / Cam / Cut / Sun, the sun for a
+   *  place and a date). Default: false: the view's own header has these as icons (`shadingBar`,
+   *  `viewerTools`). `true` or an object of its controls shows it as well. */
   topBar?: boolean | TopBarOptions;
+  /** Show the title bar. Default: yes, except inside a shell that has its own bar (`<div data-shell>`). */
+  showHeader?: boolean;
+  /** Which of the viewer's tools to show (`{ sun: false, section: false }`): each is on unless false. */
+  viewerTools?: ViewerTools;
   /** Show the ✎ Markup button (draw instructions on the view; marks name document records). Default `true`. */
   markup?: boolean;
+  /**
+   * Start with the status line collapsed to an ⓘ in the corner of the view. Its button folds
+   * and unfolds it, and a person's choice is remembered for this app (by its title). Default false.
+   */
+  statusCollapsed?: boolean;
   /** Notes that live with the model: the doc whose `notes` collection keeps them (or
-   *  `{ doc, collection, author }`). Markup then offers "Keep as notes", and the notes are
-   *  drawn over the view with a pin each (`app.notes`). */
+   *  `{ doc, collection, author }`). Markup then offers "Pin notes to the model" (and "Save for Claude"
+   *  pins the marks as notes too), the notes are drawn over the view with a pin each (`app.notes`), and
+   *  an agent lists, answers and resolves them (`__tekto.notes`). */
   notes?: Doc<any> | { doc: Doc<any>; collection?: string; author?: string };
-  /** The axis widget in a viewport corner (`true` = bottom right): click an axis for a plan
-   *  or an elevation, toggle persp/ortho under it. Default `false` — an app may have its own
-   *  panels in that corner. */
+  /** The axis widget (default on, top right under the viewer header): click an axis for a plan
+   *  or an elevation, toggle persp/ortho under it. A corner places it; `false` hides it, for an
+   *  app with its own panels there. */
   navGizmo?: boolean | "top-left" | "top-right" | "bottom-left" | "bottom-right";
-  /** The shading bar in a viewport corner (`true` = top left): icons for the render style, the
-   *  lighting and the sun (morning, noon, sunset). Default `false`. */
-  shadingBar?: boolean | "top-left" | "top-right" | "bottom-left" | "bottom-right";
+  /** The view's tools, the same in every tekto 3D view. `"header"` (the default): a strip across
+   *  the top of the view with icons for the render style, lighting, sun, section, overlays and
+   *  snapshot, and ✎ Markup at its end. A corner (`true` = top left) is the compact bar instead;
+   *  `false` hides it. `viewerTools` drops single tools. */
+  shadingBar?: boolean | "top-left" | "top-right" | "bottom-left" | "bottom-right" | "header";
   /** The scene's unit (`"m"`, `"mm"`…): readouts show coordinates in it. Unset: relative to
    *  the content's extent. */
   units?: string;
@@ -135,6 +157,11 @@ export interface AppShellInstance<S extends ParamSchema = ParamSchema> {
 
   /** Update the status overlay text (cheap — just sets textContent) */
   status(text: string): void;
+  /**
+   * Run `fn(inputs)` as a named step of the build and record it (see `lab.step`): the steps
+   * panel draws the build as a graph of its steps, and a snapshot carries them for an agent.
+   */
+  step<I extends Record<string, unknown>, T>(name: string, inputs: I, fn: (inputs: I) => T): T;
 
   /**
    * A new layer over the 3D view, under the status line and ✎ Markup — mount a 2D view
@@ -159,14 +186,18 @@ export interface AppShellInstance<S extends ParamSchema = ParamSchema> {
  */
 export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppShellInstance<S> {
   const t = getTheme(config.theme);
-  const panelWidth = config.panelWidth ?? 260;
 
   // ── Layout ──
 
+  // A shell (the testbench: `<div data-shell>`) shows the title in its own bar.
+  const showHeader = config.showHeader ?? (config.container.dataset.shell == null || !!config.topBar);
+  const headerH = showHeader ? 36 : 0;
+  const bodyRow = showHeader ? 2 : 1;
+
   const root = document.createElement("div");
   root.style.cssText = `
-    display:grid; grid-template-columns:${panelWidth}px 1fr;
-    grid-template-rows:36px 1fr;
+    display:grid; grid-template-columns:260px 1fr;
+    grid-template-rows:${showHeader ? "36px " : ""}1fr; position:relative;
     width:100%; height:100%; font-family:${t.font};
     font-size:12px; color:${t.text}; background:${t.panelBg};
   `;
@@ -184,19 +215,19 @@ export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppS
     <span style="font-size:9px;padding:2px 6px;border-radius:3px;
       background:${t.hoverBg};color:${t.accent}">LIVE</span>
   `;
-  root.appendChild(header);
+  if (showHeader) root.appendChild(header);
 
   // Panel
   const panelEl = document.createElement("div");
   panelEl.style.cssText = `
-    overflow-y:auto; overflow-x:hidden; padding:0;
+    overflow-y:auto; overflow-x:hidden; padding:0; grid-column:1; grid-row:${bodyRow};
     background:${t.panelBg}; border-right:1px solid ${t.border};
   `;
   root.appendChild(panelEl);
 
-  // Viewport wrapper
+  // Viewport wrapper (pinned to its cell: a folded panel leaves the grid flow)
   const vpWrap = document.createElement("div");
-  vpWrap.style.cssText = "position:relative;overflow:hidden;";
+  vpWrap.style.cssText = `position:relative;overflow:hidden;grid-column:2;grid-row:${bodyRow};`;
 
   const viewportEl = document.createElement("div");
   // Its own stacking context: what the 3D view puts in its corners (the axis widget) stays
@@ -204,19 +235,54 @@ export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppS
   viewportEl.style.cssText = "width:100%;height:100%;isolation:isolate;";
   vpWrap.appendChild(viewportEl);
 
-  // Status overlay
+  // Status overlay: the app's status line, folded to an ⓘ by its button (remembered per app).
+  // Clicks pass through it to the view, except on the button.
   const statusEl = document.createElement("div");
+  statusEl.dataset.tektoStatus = "";
   statusEl.style.cssText = `
     position:absolute; bottom:12px; left:12px;
-    padding:8px 12px; border-radius:6px;
-    background:rgba(7,8,14,.85); backdrop-filter:blur(8px);
+    border-radius:6px;
+    background:rgba(30,30,30,.92); backdrop-filter:blur(8px);
     font-size:11px; line-height:1.7; color:${t.textDim};
     pointer-events:none; max-width:340px;
-    border:1px solid rgba(22,24,42,.8);
-    white-space:pre; font-family:${t.font};
-    display:none;
+    border:1px solid rgba(255,255,255,.1);
+    font-family:${t.font};
+    display:none; align-items:flex-start;
   `;
+  const statusTextEl = document.createElement("div");
+  statusTextEl.style.cssText = "white-space:pre;overflow:hidden;text-overflow:ellipsis;padding:8px 2px 8px 12px;";
+  const statusToggle = document.createElement("button");
+  statusToggle.type = "button";
+  statusToggle.style.cssText = `
+    pointer-events:auto; cursor:pointer; flex:none; border:none; background:transparent;
+    color:${t.textDim}; font:600 11px/1 ${t.font}; padding:0; width:22px; height:22px;
+    margin:4px 4px 0 0; border-radius:4px;
+  `;
+  statusToggle.addEventListener("pointerenter", () => { statusToggle.style.color = t.text; });
+  statusToggle.addEventListener("pointerleave", () => { statusToggle.style.color = t.textDim; });
+  statusEl.append(statusTextEl, statusToggle);
   vpWrap.appendChild(statusEl);
+  const statusKey = `tekto.appShell.statusCollapsed.${config.title ?? "app"}`;
+  let statusCollapsed = config.statusCollapsed ?? false;
+  try {
+    const stored = localStorage.getItem(statusKey);
+    if (stored !== null) statusCollapsed = stored === "1";
+  } catch { /* storage blocked: the default */ }
+  const paintStatus = () => {
+    statusTextEl.style.display = statusCollapsed ? "none" : "";
+    statusToggle.style.margin = statusCollapsed ? "2px" : "4px 4px 0 0";
+    statusToggle.textContent = statusCollapsed ? "i" : "–";
+    statusToggle.title = statusCollapsed ? `Show status${statusTextEl.textContent ? `: ${statusTextEl.textContent}` : ""}` : "Hide status";
+    statusToggle.setAttribute("aria-label", statusCollapsed ? "Show status" : "Hide status");
+    statusToggle.setAttribute("aria-expanded", String(!statusCollapsed));
+  };
+  statusToggle.addEventListener("click", (e) => {
+    e.stopPropagation();
+    statusCollapsed = !statusCollapsed;
+    try { localStorage.setItem(statusKey, statusCollapsed ? "1" : "0"); } catch { /* noop */ }
+    paintStatus();
+  });
+  paintStatus();
 
   root.appendChild(vpWrap);
   config.container.appendChild(root);
@@ -224,7 +290,10 @@ export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppS
   // ── ParamStore + shared ControlPanel sidebar ──
 
   const params = new ParamStore(config.params);
-  const panel = new ControlPanel({ store: params, theme: t });
+  let frame: PanelFrame | null = null;
+  // Undo for the params (Edit ▸ Undo); an app with a document declares its own `edit.undo` over it.
+  const history = new ParamHistory(params);
+  const panel = new ControlPanel({ store: params, theme: t, tabs: config.tabs, onRender: () => frame?.fit(), onCommit: () => history.commit() });
 
   const groups = config.groups ?? { Parameters: Object.keys(config.params) };
   const items: ControlItem[] = [];
@@ -233,37 +302,54 @@ export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppS
   }
   panel.render(items);
   panelEl.appendChild(panel.el);
+  // The same frame as a sketch's panel: drag its edge, fold it, or let it size itself.
+  frame = panelFrame({
+    root, panelEl, theme: t, top: headerH,
+    width: config.panelWidth ?? 260,
+    title: config.panelTitle ?? "Parameters",
+    storageKey: config.title ?? "app",
+    preferred: () => panel.preferredWidth(),
+  });
 
   // ── Scene + Renderer ──
 
   const scene = new Scene();
   const renderer = new ThreeRenderer(scene, viewportEl, {
-    backgroundColor: config.background ?? 0x0a0b14,
+    backgroundColor: config.background ?? VIEW_BG_DARK,
     cameraPosition: config.camera ?? [6, 8, 10],
     cameraTarget: config.target ?? [0, 0, 0],
     // Z-up by default — matches the tekto convention (XY = ground plane) and
     // the architectural / BIM / voxel geometry these apps usually build. Pass
     // `up: "y"` if you're showing the Y-up built-in primitives (box/cylinder/sphere).
     up: config.up ?? "z",
-    navGizmo: config.navGizmo ?? false,
-    shadingBar: config.shadingBar ?? false,
+    navGizmo: config.navGizmo ?? true,
+    shadingBar: config.shadingBar ?? "header",
+    viewerTools: config.viewerTools ?? {},
+    headerHost: vpWrap,   // the viewer header (shadingBar: "header") above overlays and ✎ Markup
     units: config.units ?? null,
     ...config.renderer,
   });
 
   // ── Commands: the view's from the start, keys bound while the app is mounted ──
   const commands = new Commands();
+  commands.add(history.commands());
   commands.add(viewCommands(renderer));
   const unbindKeys = commands.bindKeys();
+  // The menu bar, from the commands: in the title bar, or in the slot of a shell that has its own.
+  const menuHost = menuSlot(showHeader ? header : null);
+  const menus = menuHost ? menuBar(commands, { theme: t }) : null;
+  if (menus) menuHost!.appendChild(menus.el);
 
   // ── Top bar: lighting · render mode · camera · cut · sun (the viewer toolbar) ──
-  const toolbar = config.topBar === false ? null
-    : viewerToolbar(scene, renderer, { ...(config.topBar === true || config.topBar === undefined ? {} : config.topBar), theme: t });
+  const toolbar = !config.topBar ? null
+    : viewerToolbar(scene, renderer, { ...(config.topBar === true ? {} : config.topBar), theme: t });
   if (toolbar) header.appendChild(toolbar.el);
 
   // ── Notes that live with the model (a Doc collection), drawn over the view ──
   const notesCfg = config.notes ? ("doc" in config.notes ? config.notes : { doc: config.notes }) : null;
-  const notes = notesCfg ? new NotesLayer(renderer, notesCfg.doc, { collection: notesCfg.collection, host: vpWrap }) : null;
+  const notes = notesCfg ? new NotesLayer(renderer, notesCfg.doc, {
+    collection: notesCfg.collection, host: vpWrap, ...("author" in notesCfg && notesCfg.author ? { author: notesCfg.author } : {}),
+  }) : null;
 
   // ── Build / display passes ──
   // Two-tier invalidation: params flagged `display: true` only re-run the
@@ -271,13 +357,23 @@ export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppS
 
   let buildFn: (() => void) | null = null;
   let displayFn: (() => void) | null = null;
+  // The build's steps (`app.step`): a fresh record each build, the objects drawn in a step its own.
+  let trace = new StepTrace();
+  let stepsPanel: StepsPanel | null = null;
+  let stepMarks: StepMark[] = [];
+  scene.on((e) => { if (e.type === "object:add") trace.current?.objects.push(e.id); });
+  const build = () => {
+    trace = new StepTrace();
+    buildFn?.();
+    showSteps();
+  };
 
   params.onChange((key) => {
     const def = params.getDef(key as any) as { display?: boolean } | undefined;
     if (def?.display) {
       displayFn?.();
     } else {
-      buildFn?.();
+      build();
       displayFn?.();
     }
   });
@@ -321,13 +417,15 @@ export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppS
 
     onBuild(fn) { buildFn = fn; },
     onDisplay(fn) { displayFn = fn; },
-    rebuild() { buildFn?.(); displayFn?.(); },
+    rebuild() { build(); displayFn?.(); },
+    step: (name, inputs, fn) => trace.step(name, inputs, fn, { src: callSite() }),
 
     status(text: string) {
       statusText = text;
       if (text) {
-        statusEl.textContent = text;
-        statusEl.style.display = "block";
+        statusTextEl.textContent = text;
+        statusEl.style.display = "flex";
+        paintStatus();
       } else {
         statusEl.style.display = "none";
       }
@@ -341,6 +439,7 @@ export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppS
       bridge.dispose();
       unbindKeys();
       toolbar?.dispose();
+      menus?.dispose();
       notes?.dispose();
       panel.dispose();
       renderer.dispose();
@@ -360,6 +459,8 @@ export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppS
     logs: statusText ? [{ label: "status", value: statusText }] : [],
     commands: commands.list(),
     errors: bridge.errors(),
+    ...(trace.steps.length ? { steps: trace.toJSON() } : {}),
+    ...(stepMarks.length ? { stepMarks } : {}),
   });
   const markup = config.markup === false ? null : new MarkupOverlay({
     viewport: vpWrap,
@@ -370,7 +471,8 @@ export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppS
     describe: (id) => describeSceneObject(scene, id),
     context,
     setTracking: () => { /* retained scenes aren't re-run: objects carry their record key instead */ },
-    ...(notes ? { keep: (ns: Note[]) => { notes.keep(ns); } } : {}),
+    ...(renderer.viewerHeader ? { buttonHost: renderer.viewerHeader.end, top: VIEWER_HEADER_H } : {}),
+    ...(notes ? { keep: (ns: Note[]) => notes.keep(ns).map((id) => `${notes.collection}/${id}`) } : {}),
     ...(notesCfg && "author" in notesCfg && notesCfg.author ? { author: notesCfg.author } : {}),
   });
 
@@ -394,6 +496,38 @@ export function appShell<S extends ParamSchema>(config: AppShellConfig<S>): AppS
       if (target) renderer.lookAt(target[0], target[1], target[2]);
     },
     section: (cut) => renderer.setSection(cut),
+    notes: () => notes,
+    steps: () => (trace.steps.length ? { ...trace.toJSON(), marks: [...(stepsPanel?.pendingMarks ?? [])] } : null),
   });
   return instance;
+
+  /** The build's steps in the panel (made the first time a build records any); a click on geometry finds its step. */
+  function showSteps(): void {
+    if (!trace.steps.length && !stepsPanel) return;
+    if (!stepsPanel) {
+      stepsPanel = new StepsPanel(vpWrap, {
+        theme: t,
+        onSelect: (_step, objects) => renderer.setSelectionHighlight(objects.length ? objects : null),
+        onSave: async (marks) => {
+          if (!markup) return undefined;
+          stepMarks = [...marks];
+          try {
+            const n = marks.length;
+            return (await markup.capture({ note: `${n} note${n > 1 ? "s" : ""} on steps`, label: "steps" })).dir;
+          } finally {
+            stepMarks = [];
+          }
+        },
+      });
+      let down: { x: number; y: number } | null = null;
+      renderer.canvasEl.addEventListener("pointerdown", (e) => { down = { x: e.clientX, y: e.clientY }; });
+      renderer.canvasEl.addEventListener("pointerup", (e) => {
+        if (!down || !stepsPanel?.isOpen || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 4) return;
+        const hit = renderer.hitAt(e.clientX, e.clientY);
+        const step = hit ? stepsPanel.stepOfObject(hit.id) : undefined;
+        if (step) stepsPanel.select(step);
+      });
+    }
+    stepsPanel.show(trace.steps.length ? trace.toJSON() : null);
+  }
 }

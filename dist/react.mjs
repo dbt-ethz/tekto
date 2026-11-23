@@ -3,12 +3,12 @@ import {
   markup,
   viewModeIconShapes,
   viewerToolbar
-} from "./chunk-GWINOG4X.mjs";
-import "./chunk-FPI463DX.mjs";
+} from "./chunk-BDOEIXHP.mjs";
+import "./chunk-BXIU5T7I.mjs";
 import {
   Scene
-} from "./chunk-Z6BOOQ26.mjs";
-import "./chunk-QLUI3675.mjs";
+} from "./chunk-PPIR23JZ.mjs";
+import "./chunk-K6X6LVYU.mjs";
 
 // src/react/components.tsx
 import React, {
@@ -246,7 +246,7 @@ function InspectorPanel({
             borderLeft: `3px solid ${obj.style.color}`
           },
           children: [
-            /* @__PURE__ */ jsx("span", { style: { color: "#5a6080", fontSize: 11, fontFamily: "monospace" }, children: obj.type }),
+            /* @__PURE__ */ jsx("span", { style: { color: "#808080", fontSize: 11, fontFamily: "monospace" }, children: obj.type }),
             /* @__PURE__ */ jsx("span", { style: { color: "#9aa0b8", fontSize: 11, fontFamily: "monospace" }, children: obj.id }),
             obj.style.label && /* @__PURE__ */ jsxs("span", { style: { color: "#6a7090", fontSize: 10, fontStyle: "italic" }, children: [
               '"',
@@ -308,7 +308,7 @@ var panelStyle = {
   padding: 12,
   background: "rgba(14, 15, 26, 0.95)",
   borderRadius: 8,
-  border: "1px solid #1a1c2e",
+  border: "1px solid #252526",
   color: "#c8cad8",
   fontFamily: "'DM Sans', sans-serif",
   fontSize: 13,
@@ -320,7 +320,7 @@ var panelTitleStyle = {
   fontWeight: 600,
   textTransform: "uppercase",
   letterSpacing: "1.2px",
-  color: "#5a6080",
+  color: "#808080",
   marginBottom: 12,
   fontFamily: "monospace"
 };
@@ -358,7 +358,7 @@ var checkStyle = {
 var selectStyle = {
   flex: 1,
   padding: "4px 8px",
-  background: "#0a0b14",
+  background: "#0b0b0b",
   border: "1px solid #1e2035",
   borderRadius: 4,
   color: "#c8cad8",
@@ -368,7 +368,7 @@ var selectStyle = {
 var textStyle = {
   flex: 1,
   padding: "4px 8px",
-  background: "#0a0b14",
+  background: "#0b0b0b",
   border: "1px solid #1e2035",
   borderRadius: 4,
   color: "#c8cad8",

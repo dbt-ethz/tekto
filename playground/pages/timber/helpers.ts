@@ -105,10 +105,10 @@ export function syncInfoPanel(
   if (!infoPanelEl) {
     infoPanelEl = document.createElement("div");
     infoPanelEl.style.cssText = `
-      position:absolute; top:12px; right:12px; z-index:50;
+      position:absolute; top:46px; left:12px; z-index:4;
       min-width:220px; max-width:300px;
-      background:#0c0d16; color:#c8cad0;
-      border:1px solid #16182a; border-radius:6px;
+      background:#1e1e1e; color:#cccccc;
+      border:1px solid #303030; border-radius:6px;
       padding:10px 12px;
       font-family:'IBM Plex Mono', ui-monospace, monospace; font-size:11px;
       box-shadow:0 4px 12px rgba(0,0,0,.3);
@@ -119,7 +119,7 @@ export function syncInfoPanel(
   // Clear and rebuild content nodes (preserving the container element).
   infoPanelEl.innerHTML = "";
   const titleEl = document.createElement("div");
-  titleEl.style.cssText = "color:#38d9a9;font-weight:600;font-size:12px;margin-bottom:8px;";
+  titleEl.style.cssText = "color:#ffffff;font-weight:600;font-size:12px;margin-bottom:8px;";
   titleEl.textContent = title;
   infoPanelEl.appendChild(titleEl);
 
@@ -160,7 +160,7 @@ export function makeNumberRow(
   inp.type = "range";
   inp.min = String(min); inp.max = String(max); inp.step = String(step);
   inp.value = String(current);
-  inp.style.cssText = "flex:1;accent-color:#38d9a9;min-width:60px;";
+  inp.style.cssText = "flex:1;accent-color:#ffffff;min-width:60px;";
   const val = document.createElement("span");
   val.style.cssText = "color:#c8cad0;min-width:60px;text-align:right;font-variant-numeric:tabular-nums;";
   val.textContent = formatter(current);
@@ -184,7 +184,7 @@ export function makeSelectRow(
   lbl.textContent = labelText;
   lbl.style.cssText = "color:#7a80a0;flex-shrink:0;min-width:60px;";
   const sel = document.createElement("select");
-  sel.style.cssText = "flex:1;background:#16182a;color:#c8cad0;border:1px solid #262840;border-radius:3px;padding:2px 4px;font-family:inherit;font-size:11px;";
+  sel.style.cssText = "flex:1;background:#141414;color:#cccccc;border:1px solid #444444;border-radius:3px;padding:2px 4px;font-family:inherit;font-size:11px;";
   for (const opt of options) {
     const o = document.createElement("option");
     o.value = opt; o.textContent = opt; if (opt === current) o.selected = true;

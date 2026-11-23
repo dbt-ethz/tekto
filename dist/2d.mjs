@@ -4,18 +4,18 @@ import {
   drawSheet,
   fitSheet,
   sketch2d
-} from "./chunk-7HKE2KJ6.mjs";
+} from "./chunk-3L2FI4NP.mjs";
 import {
+  Axonometric,
   Polygon2D,
   PolygonBool,
   Sheet,
   SheetView,
   createRandom,
   noise,
-  pickPrim,
-  writeDxf2D
-} from "./chunk-BESWYJWB.mjs";
-import "./chunk-FPI463DX.mjs";
+  pickPrim
+} from "./chunk-MPAWQFRS.mjs";
+import "./chunk-BXIU5T7I.mjs";
 import {
   Segment,
   Vec2,
@@ -23,9 +23,11 @@ import {
   closestPointOnSegment,
   download,
   segmentSegmentClosest,
-  stampName
-} from "./chunk-QLUI3675.mjs";
+  stampName,
+  writeDxf2D
+} from "./chunk-K6X6LVYU.mjs";
 export {
+  Axonometric,
   Polygon2D,
   PolygonBool,
   Segment,

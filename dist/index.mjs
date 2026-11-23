@@ -1,18 +1,30 @@
 import {
+  Commands,
   ControlPanel,
+  ParamHistory,
   SheetCanvas,
   Sketch2DInstance,
   drawSheet,
   ensureSliderStyle,
   fitSheet,
-  sketch2d
-} from "./chunk-7HKE2KJ6.mjs";
+  formatKeys,
+  keyMatches,
+  menuBar,
+  menuSlot,
+  panelFrame,
+  sketch2d,
+  viewCommands
+} from "./chunk-3L2FI4NP.mjs";
 import {
   Algo,
   ArcCurve,
+  BUILDING_COLLECTIONS,
+  BUILDING_SCHEMA,
   BalloonFrame,
   BlobDetect,
   BspTree,
+  Building,
+  BuildingSession,
   Capsule2D,
   CltConstruction,
   CubicBezierCurve,
@@ -20,7 +32,6 @@ import {
   CurveUtils,
   Delaunay2D,
   DistanceTransform,
-  Doc,
   ExtrudedRibbon,
   FloodFill,
   Graph,
@@ -45,11 +56,11 @@ import {
   NoFitPolygon,
   NurbsCurve,
   NurbsSurface,
-  ObjFile,
   OpeningType,
   PGFace,
   PGHalfEdge,
   PGVertex,
+  Particles2D,
   PixelView,
   PlanarGraph,
   PlanarGraphCleanup,
@@ -62,6 +73,7 @@ import {
   RibbonOpening,
   RibbonSystem,
   RigidBody2D,
+  Roof,
   SdfBlend,
   SdfBoundedExtrude,
   SdfBox,
@@ -93,8 +105,6 @@ import {
   SdfUnion,
   SdfUtils,
   SdfVoronoi,
-  Selection,
-  SharedStore,
   Slab,
   SlabOpening,
   SlabType,
@@ -106,7 +116,9 @@ import {
   SpringSystem3D,
   Stair,
   StairType,
+  StepTrace,
   StreamlineTracer,
+  Voronoi2D,
   VoxelGrid,
   VoxelGrid2D,
   Wall,
@@ -114,16 +126,18 @@ import {
   WallOpening,
   WallSystem,
   WallType,
-  bindScene,
+  bindBuilding,
   boundingWalls,
   boxOf,
   buildCutList,
+  buildingPlan,
+  buildingSchema,
   chooseJoistDirection,
   clampedUniformKnots,
   cltLayers,
-  collabColor,
   contactBetween,
-  devServerAdapter,
+  defaultBuildingTypes,
+  describeValue,
   edgeOutwardVisibility,
   findAdjacent,
   holzrahmenbauLayers,
@@ -131,43 +145,39 @@ import {
   joistDirectionFromPCA,
   joistDirectionFromSupports,
   lineClipPolygon,
-  localAdapter,
-  memoryAdapter,
   neighboursOf,
+  openingFill,
   perpVisibility,
   perpVisibilityOfPolys,
   polygonFromVertices,
   realize,
+  realizeBuilding,
   realizeSlab,
   repelBodies,
   reverse,
-  selectOnClick,
-  shareSelection,
-  supabaseAdapter,
-  writePdf2D
-} from "./chunk-IX3YNGZP.mjs";
+  validateBuilding
+} from "./chunk-NVFBXJTP.mjs";
 import {
+  Axonometric,
   DASH_PATTERNS,
+  DRAWING_PALETTE,
   OBB2D,
   ParamStore,
   Polygon2D,
   PolygonBool,
   Sheet,
   SheetView,
-  _resolveLayers,
-  _sanLayer,
-  _writeR12Prologue,
-  aciFromHex,
   createLayout,
   createParams,
   createRandom,
+  encodePNG,
   noise,
   pickPrim,
   polygonIntersection,
+  rasterizeSheet,
   setClipSnap,
-  writeDxf2D,
-  writeDxf3D
-} from "./chunk-BESWYJWB.mjs";
+  sheetToPNG
+} from "./chunk-MPAWQFRS.mjs";
 import {
   MarkupOverlay,
   VIEW_MODE_ICON_CORNERS,
@@ -176,9 +186,12 @@ import {
   viewModeIconShapes,
   viewModeIconSvg,
   viewerToolbar
-} from "./chunk-GWINOG4X.mjs";
+} from "./chunk-BDOEIXHP.mjs";
 import {
+  VIEW_BG_DARK,
   addOverlay,
+  agentDoc,
+  callSite,
   describeSceneObject,
   downloadSnapshot,
   getTheme,
@@ -186,29 +199,57 @@ import {
   plainBundle,
   sceneSummary,
   snapshotWithOverlays
-} from "./chunk-FPI463DX.mjs";
+} from "./chunk-BXIU5T7I.mjs";
 import {
   Mesh,
+  ObjFile,
   Plane,
   Scene,
   SunPosition,
-  Triangle
-} from "./chunk-Z6BOOQ26.mjs";
+  Triangle,
+  writePdf2D
+} from "./chunk-PPIR23JZ.mjs";
 import {
   AABB,
+  Doc,
   HMath,
   Mat4,
   MathUtils,
+  PROPOSALS,
   Segment,
+  Selection,
+  SharedStore,
   Vec2,
   Vec3,
   Vec4,
   VecMath,
+  _resolveLayers,
+  _sanLayer,
+  _writeR12Prologue,
+  acceptProposal,
+  aciFromHex,
+  applyPatch,
+  bindScene,
+  checkRecord,
   closestPointOnSegment,
+  collabColor,
+  devServerAdapter,
   download,
+  listProposals,
+  localAdapter,
+  memoryAdapter,
+  patchChanges,
+  patchedCollections,
+  propose,
+  rejectProposal,
   segmentSegmentClosest,
-  stampName
-} from "./chunk-QLUI3675.mjs";
+  selectOnClick,
+  shareSelection,
+  stampName,
+  supabaseAdapter,
+  writeDxf2D,
+  writeDxf3D
+} from "./chunk-K6X6LVYU.mjs";
 
 // src/io/IdBufferHiddenLine.ts
 import * as THREE from "three";
@@ -1720,146 +1761,6 @@ function polylinesToSVG(segments, bounds, options) {
   return parts.join("\n");
 }
 
-// src/gui/Commands.ts
-var isMacPlatform = () => typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || "");
-function keyMatches(binding, e, mac = isMacPlatform()) {
-  const parts = binding.split("+").map((s) => s.trim()).filter(Boolean);
-  const key = binding.endsWith("++") ? "+" : parts.pop();
-  if (!key) return false;
-  const want = { meta: false, ctrl: false, alt: false, shift: false };
-  for (const m of parts) {
-    const k = m.toLowerCase();
-    if (k === "mod") mac ? want.meta = true : want.ctrl = true;
-    else if (k === "meta" || k === "cmd") want.meta = true;
-    else if (k === "ctrl" || k === "control") want.ctrl = true;
-    else if (k === "alt" || k === "option") want.alt = true;
-    else if (k === "shift") want.shift = true;
-  }
-  if (e.metaKey !== want.meta || e.ctrlKey !== want.ctrl || e.altKey !== want.alt) return false;
-  const letterOrNamed = key.length > 1 || /^[a-z0-9]$/i.test(key);
-  if (letterOrNamed && e.shiftKey !== want.shift) return false;
-  return e.key.length === 1 ? e.key.toLowerCase() === key.toLowerCase() : e.key === key;
-}
-function formatKeys(binding, mac = isMacPlatform()) {
-  const parts = binding.split("+").map((s) => s.trim()).filter(Boolean);
-  const key = binding.endsWith("++") ? "+" : parts.pop() ?? "";
-  const has = (...names) => parts.some((p) => names.includes(p.toLowerCase()));
-  const named = mac ? { ArrowUp: "\u2191", ArrowDown: "\u2193", ArrowLeft: "\u2190", ArrowRight: "\u2192", Delete: "\u2326", Backspace: "\u232B", Escape: "\u238B", Enter: "\u21A9" } : { ArrowUp: "\u2191", ArrowDown: "\u2193", ArrowLeft: "\u2190", ArrowRight: "\u2192", Escape: "Esc" };
-  const k = named[key] ?? (key.length === 1 ? key.toUpperCase() : key);
-  if (mac) {
-    return (has("ctrl", "control") ? "\u2303" : "") + (has("alt", "option") ? "\u2325" : "") + (has("shift") ? "\u21E7" : "") + (has("mod", "meta", "cmd") ? "\u2318" : "") + k;
-  }
-  const mods = [has("mod", "ctrl", "control") && "Ctrl", has("meta", "cmd") && "Win", has("alt", "option") && "Alt", has("shift") && "Shift"].filter(Boolean);
-  return [...mods, k].join("+");
-}
-function typing(target) {
-  const el = target;
-  if (!el || typeof el.tagName !== "string") return false;
-  return el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable;
-}
-function viewCommands(view) {
-  const v = (id, label) => ({ id: `view.${id}`, label, group: "View", run: () => view.setView(id) });
-  return [
-    { id: "view.fitAll", label: "Frame all", group: "View", run: () => view.fitAll() },
-    v("top", "Plan (top)"),
-    v("front", "Front"),
-    v("right", "Right"),
-    v("back", "Back"),
-    v("left", "Left"),
-    v("iso", "Iso"),
-    {
-      id: "view.toggleProjection",
-      label: "Perspective / orthographic",
-      group: "View",
-      run: () => view.setProjection(view.projection === "perspective" ? "orthographic" : "perspective")
-    }
-  ];
-}
-var Commands = class {
-  constructor() {
-    this.byId = /* @__PURE__ */ new Map();
-    this.listeners = /* @__PURE__ */ new Set();
-  }
-  /** Add commands (an id already there is replaced). Returns a function that removes them. */
-  add(commands) {
-    const list = Array.isArray(commands) ? commands : [commands];
-    for (const c of list) {
-      if (!c.id || typeof c.run !== "function") throw new Error(`Commands.add: a command needs an id and run(), got ${JSON.stringify(c)}`);
-      this.byId.set(c.id, c);
-    }
-    this.emit();
-    return () => {
-      for (const c of list) if (this.byId.get(c.id) === c) this.byId.delete(c.id);
-      this.emit();
-    };
-  }
-  remove(id) {
-    if (this.byId.delete(id)) this.emit();
-  }
-  get(id) {
-    return this.byId.get(id);
-  }
-  has(id) {
-    return this.byId.has(id);
-  }
-  /** Every command, in the order added, with its keys and whether it can run now. */
-  list() {
-    return [...this.byId.values()].map((c) => ({
-      id: c.id,
-      label: c.label,
-      group: c.group,
-      keys: c.keys === void 0 ? [] : typeof c.keys === "string" ? [c.keys] : [...c.keys],
-      enabled: this.canRun(c)
-    }));
-  }
-  /** Run a command by id. False if there is none or it can't run now. */
-  async run(id) {
-    const c = this.byId.get(id);
-    if (!c || !this.canRun(c)) return false;
-    await c.run();
-    return true;
-  }
-  /** The command a key event presses, if any (and enabled). */
-  match(e, mac) {
-    for (const c of this.byId.values()) {
-      const keys = c.keys === void 0 ? [] : typeof c.keys === "string" ? [c.keys] : c.keys;
-      if (keys.some((k) => keyMatches(k, e, mac)) && this.canRun(c)) return c;
-    }
-    return void 0;
-  }
-  /**
-   * Run commands from their keys on `target` (default: the window). Keys typed into a
-   * field stay with the field; a matched key's default is prevented. Returns the unbind.
-   */
-  bindKeys(target = window) {
-    const onKey = (ev) => {
-      const e = ev;
-      if (e.defaultPrevented || typing(e.target)) return;
-      const c = this.match(e);
-      if (!c) return;
-      e.preventDefault();
-      void Promise.resolve(c.run()).catch((err) => console.error(`command ${c.id}:`, err));
-    };
-    target.addEventListener("keydown", onKey);
-    return () => target.removeEventListener("keydown", onKey);
-  }
-  /** Hear when commands are added or removed. Returns the unsubscribe. */
-  onChange(cb) {
-    this.listeners.add(cb);
-    return () => this.listeners.delete(cb);
-  }
-  canRun(c) {
-    try {
-      return c.enabled ? c.enabled() !== false : true;
-    } catch {
-      return false;
-    }
-  }
-  emit() {
-    for (const l of this.listeners) l();
-  }
-};
-
 // src/render/ThreeRenderer.ts
 import * as THREE12 from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
@@ -1870,6 +1771,18 @@ import * as THREE4 from "three";
 // src/render/viewRules.ts
 import * as THREE3 from "three";
 var DEFAULT_BACKGROUND = 16119802;
+var PAPER = 16777215;
+var DARK_PAGE = 723723;
+function hiddenLinePage(background, inverse = false) {
+  const light = luminance(background) > 0.5;
+  if (inverse) return light ? DARK_PAGE : new THREE3.Color(background).getHex();
+  return light ? new THREE3.Color(background).getHex() : PAPER;
+}
+function inkOn(page, colour) {
+  const a = luminance(page), b = luminance(colour);
+  const contrast = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+  return contrast >= 1.6 ? colour : a > 0.5 ? "#2f2f2f" : "#d8d8d8";
+}
 function edgeStyle(mode, background = modeBackground(mode, DEFAULT_BACKGROUND)) {
   if (mode === "hidden-line") return { colour: 1779507, opacity: 1 };
   if (mode === "ghost" && luminance(background) > 0.5) return { colour: 1779507, opacity: 0.6 };
@@ -1897,6 +1810,28 @@ function surfaceAppearance(mode, base) {
   }
   return { colour: base, opacity: 1, depthWrite: true, polygonOffset: false };
 }
+function flatLights(style) {
+  if (style === "plain") {
+    const { sky, sun } = lightBalance("shaded", false);
+    return { ambient: 0, sky, skyColour: 16777215, groundColour: 8952234, sun };
+  }
+  return { ambient: 0.5, sky: 0.4, skyColour: 4482730, groundColour: 3351057, sun: 0.7 };
+}
+function studioLights(style) {
+  if (style === "plain") {
+    const { sky, sun } = lightBalance("shaded", true);
+    return { ambient: 0, sky, skyColour: 16777215, groundColour: 8952234, sun, toneMapped: false };
+  }
+  const sketch2 = flatLights("sketch");
+  return {
+    ambient: 0.35,
+    sky: 0.3,
+    skyColour: sketch2.skyColour,
+    groundColour: sketch2.groundColour,
+    sun: 2.8,
+    toneMapped: true
+  };
+}
 function lightBalance(mode, shadows) {
   const shadowed = shadows && mode !== "ghost";
   return {
@@ -1910,20 +1845,20 @@ function lightBalance(mode, shadows) {
 }
 var POLE = 1e-3;
 function standardOrbit(view) {
-  const H = Math.PI / 2;
+  const H2 = Math.PI / 2;
   switch (view) {
     case "top":
       return { phi: POLE, theta: 0 };
     case "bottom":
       return { phi: Math.PI - POLE, theta: 0 };
     case "front":
-      return { phi: H, theta: 0 };
+      return { phi: H2, theta: 0 };
     case "back":
-      return { phi: H, theta: Math.PI };
+      return { phi: H2, theta: Math.PI };
     case "right":
-      return { phi: H, theta: H };
+      return { phi: H2, theta: H2 };
     case "left":
-      return { phi: H, theta: -H };
+      return { phi: H2, theta: -H2 };
     default:
       return { phi: Math.PI / 3, theta: Math.PI / 4 };
   }
@@ -2058,6 +1993,23 @@ function occludes(material) {
   const m = Array.isArray(material) ? material[0] : material;
   return !!m && m.visible !== false && m.depthWrite !== false;
 }
+function rayTargets(objects) {
+  const out = [];
+  for (const top of objects) {
+    if (!top.visible) continue;
+    top.traverse((o) => {
+      const mesh = o;
+      if (!mesh.isMesh) return;
+      const m = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
+      if (m?.wireframe) return;
+      out.push(mesh);
+    });
+  }
+  return out;
+}
+function cameraKey(...matrices) {
+  return matrices.map((m) => Array.from(m, (e) => String(Math.round(e * 1e6))).join()).join("|");
+}
 function luminance(colour) {
   const c = new THREE3.Color(colour);
   return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
@@ -2112,13 +2064,13 @@ var ObjectBuilder = class {
   _stripeTexture(layerH) {
     let tex = this._stripeTexCache.get(layerH);
     if (tex) return tex;
-    const H = 64;
+    const H2 = 64;
     const cv = document.createElement("canvas");
     cv.width = 2;
-    cv.height = H;
+    cv.height = H2;
     const ctx = cv.getContext("2d");
-    for (let y = 0; y < H; y++) {
-      const t = y / H;
+    for (let y = 0; y < H2; y++) {
+      const t = y / H2;
       const crown = Math.sin(Math.PI * t);
       const v = Math.round(150 + 105 * Math.pow(crown, 0.7));
       ctx.fillStyle = `rgb(${v},${v},${v})`;
@@ -2132,10 +2084,14 @@ var ObjectBuilder = class {
     this._stripeTexCache.set(layerH, tex);
     return tex;
   }
+  /** A colour as drawn: its own, except in a hidden-line drawing where it would vanish into the page. */
+  ink(colour) {
+    return this.core.gScene.renderMode === "hiddenline" ? inkOn(this.core.pageColor(), colour) : colour;
+  }
   /** Build a THREE.Line for a line-type object — dashed material (+ line distances)
    *  when the style requests it, else a basic line material. */
   _makeLine(geo, s) {
-    const mat = s.dash ? new THREE4.LineDashedMaterial({ color: s.color, opacity: s.opacity, transparent: s.opacity < 1, dashSize: s.dash.size, gapSize: s.dash.gap }) : new THREE4.LineBasicMaterial({ color: s.color, opacity: s.opacity, transparent: s.opacity < 1 });
+    const mat = s.dash ? new THREE4.LineDashedMaterial({ color: this.ink(s.color), opacity: s.opacity, transparent: s.opacity < 1, dashSize: s.dash.size, gapSize: s.dash.gap }) : new THREE4.LineBasicMaterial({ color: this.ink(s.color), opacity: s.opacity, transparent: s.opacity < 1 });
     const line = new THREE4.Line(geo, mat);
     if (s.dash) line.computeLineDistances();
     return line;
@@ -2146,8 +2102,8 @@ var ObjectBuilder = class {
       case "point": {
         const geo = new THREE4.SphereGeometry(s.pointSize, 12, 12);
         const mat = this.makeMaterial({
-          color: s.color,
-          emissive: s.color,
+          color: this.ink(s.color),
+          emissive: this.ink(s.color),
           emissiveIntensity: 0.3,
           opacity: s.opacity,
           transparent: s.opacity < 1,
@@ -2159,7 +2115,7 @@ var ObjectBuilder = class {
         if (s.label) {
           const group = new THREE4.Group();
           group.add(mesh);
-          const sprite = this.createTextSprite(s.label, s.labelColor ?? s.color, s.labelScale ?? 1);
+          const sprite = this.createTextSprite(s.label, this.ink(s.labelColor ?? s.color), s.labelScale ?? 1);
           if (obj.position) sprite.position.set(obj.position.x, obj.position.y, obj.position.z);
           if (this.core.isZUp) sprite.position.z += s.pointSize + 0.15;
           else sprite.position.y += s.pointSize + 0.15;
@@ -2213,7 +2169,7 @@ var ObjectBuilder = class {
         const pts = obj.vertices.map((v) => new THREE4.Vector3(v.x, v.y, v.z));
         if (pts.length > 2) pts.push(pts[0].clone());
         const lineGeo = new THREE4.BufferGeometry().setFromPoints(pts);
-        group.add(new THREE4.Line(lineGeo, new THREE4.LineBasicMaterial({ color: s.color })));
+        group.add(new THREE4.Line(lineGeo, new THREE4.LineBasicMaterial({ color: this.ink(s.color) })));
         if (obj.vertices.length >= 3) {
           if (this.core.isZUp) {
             const shape = new THREE4.Shape(obj.vertices.map((v) => new THREE4.Vector2(v.x, v.y)));
@@ -2307,6 +2263,8 @@ var ObjectBuilder = class {
     geo.setAttribute("position", new THREE4.BufferAttribute(data.positions, 3));
     geo.setAttribute("normal", new THREE4.BufferAttribute(data.normals, 3));
     geo.setIndex(new THREE4.BufferAttribute(data.indices, 1));
+    const hasColors = !!data.colors?.length;
+    if (hasColors) geo.setAttribute("color", new THREE4.BufferAttribute(data.colors, 4));
     const pipeUV = gmesh.__pipeUV;
     if (pipeUV && pipeUV.sides > 0) {
       const n = data.positions.length / 3;
@@ -2318,7 +2276,7 @@ var ObjectBuilder = class {
       }
       geo.setAttribute("uv", new THREE4.BufferAttribute(uv, 2));
     }
-    return this.buildMeshGroup(geo, s);
+    return this.buildMeshGroup(geo, s, hasColors);
   }
   /** Convert flat mesh data (with optional per-vertex colors) → Three.js group */
   convertFlatMesh(data, s) {
@@ -2378,7 +2336,7 @@ var ObjectBuilder = class {
       group.add(new THREE4.Mesh(geo, wireMat));
     } else if (mode === "hiddenline") {
       const occlusionMat = new THREE4.MeshBasicMaterial({
-        color: this.core.config.backgroundColor,
+        color: this.core.pageColor(),
         side,
         toneMapped: false,
         polygonOffset: true,
@@ -2387,10 +2345,11 @@ var ObjectBuilder = class {
       });
       group.add(new THREE4.Mesh(geo, occlusionMat));
       const edgeAngle = s.edgeAngle ?? 30;
-      const wireMat = new THREE4.LineBasicMaterial({ color: s.edgeColor ?? 3092271, toneMapped: false });
+      const ink = inkOn(this.core.pageColor(), s.edgeColor ?? 3092271);
+      const wireMat = new THREE4.LineBasicMaterial({ color: ink, toneMapped: false });
       group.add(this._edgeLines(geo, edgeAngle, wireMat));
       const rimMat = new THREE4.MeshBasicMaterial({
-        color: s.edgeColor ?? 3092271,
+        color: ink,
         side: THREE4.BackSide,
         toneMapped: false
       });
@@ -2530,6 +2489,57 @@ var ObjectBuilder = class {
 
 // src/render/Lighting.ts
 import * as THREE5 from "three";
+
+// src/render/sunSite.ts
+var SUN_PLACES = [
+  { name: "Zurich", latitude: 47.37, longitude: 8.55, timeZone: 1 },
+  { name: "Berlin", latitude: 52.52, longitude: 13.4, timeZone: 1 },
+  { name: "Paris", latitude: 48.86, longitude: 2.35, timeZone: 1 },
+  { name: "London", latitude: 51.51, longitude: -0.13, timeZone: 0 },
+  { name: "Madrid", latitude: 40.42, longitude: -3.7, timeZone: 1 },
+  { name: "Rome", latitude: 41.9, longitude: 12.5, timeZone: 1 },
+  { name: "Stockholm", latitude: 59.33, longitude: 18.07, timeZone: 1 },
+  { name: "Reykjavik", latitude: 64.13, longitude: -21.95, timeZone: 0 },
+  { name: "Moscow", latitude: 55.76, longitude: 37.62, timeZone: 3 },
+  { name: "Dubai", latitude: 25.27, longitude: 55.3, timeZone: 4 },
+  { name: "Mumbai", latitude: 19.08, longitude: 72.88, timeZone: 5.5 },
+  { name: "Singapore", latitude: 1.35, longitude: 103.82, timeZone: 8 },
+  { name: "Beijing", latitude: 39.9, longitude: 116.41, timeZone: 8 },
+  { name: "Tokyo", latitude: 35.68, longitude: 139.69, timeZone: 9 },
+  { name: "Sydney", latitude: -33.87, longitude: 151.21, timeZone: 10 },
+  { name: "Honolulu", latitude: 21.31, longitude: -157.86, timeZone: -10 },
+  { name: "Anchorage", latitude: 61.22, longitude: -149.9, timeZone: -9 },
+  { name: "San Francisco", latitude: 37.77, longitude: -122.42, timeZone: -8 },
+  { name: "Mexico City", latitude: 19.43, longitude: -99.13, timeZone: -6 },
+  { name: "Chicago", latitude: 41.88, longitude: -87.63, timeZone: -6 },
+  { name: "New York", latitude: 40.71, longitude: -74.01, timeZone: -5 },
+  { name: "Buenos Aires", latitude: -34.61, longitude: -58.38, timeZone: -3 },
+  { name: "S\xE3o Paulo", latitude: -23.55, longitude: -46.63, timeZone: -3 },
+  { name: "Cape Town", latitude: -33.92, longitude: 18.42, timeZone: 2 }
+];
+function sunTimeZone(site) {
+  return site.timeZone ?? Math.round(site.longitude / 15);
+}
+function sunFor(site) {
+  const [y, m, d] = site.date.split("-").map(Number);
+  if (![y, m, d].every(Number.isFinite)) throw new Error(`sunFor: date "${site.date}" is not "YYYY-MM-DD"`);
+  const utc = site.hour - sunTimeZone(site);
+  const date = new Date(Date.UTC(y, m - 1, d, 0, Math.round(utc * 60)));
+  const sun = SunPosition.compute({ date, latitude: site.latitude, longitude: site.longitude });
+  if (!site.north) return sun;
+  const a = site.north * Math.PI / 180, { x: e, y: n, z } = sun.direction;
+  return { ...sun, direction: new Vec3(e * Math.cos(a) + n * Math.sin(a), n * Math.cos(a) - e * Math.sin(a), z) };
+}
+function hhmm(hour) {
+  const min = Math.round(hour * 60);
+  return `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+}
+function sunNow(site, now = /* @__PURE__ */ new Date()) {
+  const local = new Date(now.getTime() + sunTimeZone(site) * 36e5);
+  return { date: local.toISOString().slice(0, 10), hour: local.getUTCHours() + local.getUTCMinutes() / 60 };
+}
+
+// src/render/Lighting.ts
 var Lighting = class {
   constructor(core) {
     this.core = core;
@@ -2568,6 +2578,8 @@ var Lighting = class {
     this.daylightOn = false;
     /** The last preset `sunPreset` set, until the sun is moved another way. */
     this.currentSunPreset = null;
+    /** The date and place `sunAt` last set, until the sun is moved another way. */
+    this.currentSunSite = null;
     const isZUp = core.isZUp;
     this.ambientLight = new THREE5.AmbientLight(16777215, 0.5);
     core.threeScene.add(this.ambientLight);
@@ -2623,6 +2635,7 @@ var Lighting = class {
   }
   setSunDirection(direction, distance = 50) {
     this.currentSunPreset = null;
+    this.currentSunSite = null;
     const x = direction.x;
     const y = this.core.isZUp ? direction.y : direction.z;
     const z = this.core.isZUp ? direction.z : -direction.y;
@@ -2671,6 +2684,14 @@ var Lighting = class {
     this.setSunDirection(new Vec3(d.x, d.y, d.z));
     this.currentSunPreset = name;
   }
+  /** The sun for a date, an hour and a place: Studio, the light following the sun (night included). */
+  sunAt(site) {
+    const sun = sunFor(site);
+    this.core.gScene.setLightingMode("studio");
+    this.setDaylight(true);
+    this.setSunDirection(sun.direction);
+    this.currentSunSite = { ...site };
+  }
   setDaylight(on) {
     this.daylightOn = on;
     if (on) this.sunDirty = true;
@@ -2688,16 +2709,25 @@ var Lighting = class {
     this.hemiLight.intensity = d.skyIntensity;
     this.ambientLight.intensity = d.ambient;
     this.core.renderer.toneMappingExposure = d.exposure;
-    if (!(this.envBackground && this.envSourceTex)) {
-      this.core.threeScene.background = new THREE5.Color(this.core.config.backgroundColor).lerp(new THREE5.Color(d.background), d.backgroundAmount);
+    this.applyPage();
+  }
+  /**
+   * The colour behind the model: the page, tinted by the sky while Studio's light follows
+   * the sun. A hidden-line drawing keeps its page plain. An image as background stays.
+   */
+  applyPage() {
+    if (this.envBackground && this.envSourceTex) return;
+    const page = new THREE5.Color(this.core.pageColor());
+    if (this.daylightOn && this.currentLighting === "studio" && this.core.gScene.renderMode !== "hiddenline") {
+      const d = daylight(this.sunAltitude());
+      page.lerp(new THREE5.Color(d.background), d.backgroundAmount);
     }
+    this.core.threeScene.background = page;
   }
   /** Back to the plain balance of the current mode. */
   _resetDaylight() {
     this.dirLight.color.setHex(16777215);
-    this.hemiLight.color.setHex(4482730);
-    this.hemiLight.groundColor.setHex(3351057);
-    if (!(this.envBackground && this.envSourceTex)) this.core.threeScene.background = new THREE5.Color(this.core.config.backgroundColor);
+    this.applyPage();
     this.applyMode(this.currentLighting);
   }
   /**
@@ -2709,27 +2739,31 @@ var Lighting = class {
     const studio = mode === "studio";
     this.core.renderer.shadowMap.enabled = studio;
     this.core.renderer.shadowMap.type = parseInt(THREE5.REVISION, 10) >= 180 ? THREE5.PCFShadowMap : THREE5.PCFSoftShadowMap;
-    this.core.renderer.toneMapping = studio ? THREE5.ACESFilmicToneMapping : THREE5.NoToneMapping;
+    const studioBalance = studioLights(this.core.config.studioLighting);
+    this.core.renderer.toneMapping = studio && studioBalance.toneMapped ? THREE5.ACESFilmicToneMapping : THREE5.NoToneMapping;
     this.core.renderer.toneMappingExposure = 1;
     this.core.renderer.outputColorSpace = THREE5.SRGBColorSpace;
     if (studio) {
-      this.ambientLight.intensity = 0.35;
-      this.hemiLight.intensity = 0.3;
-      this.dirLight.intensity = 2.8;
+      this.hemiLight.color.setHex(studioBalance.skyColour);
+      this.hemiLight.groundColor.setHex(studioBalance.groundColour);
+      this.ambientLight.intensity = studioBalance.ambient;
+      this.hemiLight.intensity = studioBalance.sky;
+      this.dirLight.intensity = studioBalance.sun;
       this.dirLight.castShadow = true;
       this.dirLight.shadow.mapSize.set(2048, 2048);
       this.dirLight.shadow.bias = -5e-4;
       this.sunDirty = true;
     } else {
-      this.ambientLight.intensity = 0.5;
-      this.hemiLight.intensity = 0.4;
-      this.dirLight.intensity = 0.7;
+      const flat = flatLights(this.core.config.flatLighting);
+      this.ambientLight.intensity = flat.ambient;
+      this.hemiLight.intensity = flat.sky;
+      this.hemiLight.color.setHex(flat.skyColour);
+      this.hemiLight.groundColor.setHex(flat.groundColour);
+      this.dirLight.intensity = flat.sun;
       this.dirLight.castShadow = false;
       if (this.daylightOn) {
         this.dirLight.color.setHex(16777215);
-        this.hemiLight.color.setHex(4482730);
-        this.hemiLight.groundColor.setHex(3351057);
-        if (!(this.envBackground && this.envSourceTex)) this.core.threeScene.background = new THREE5.Color(this.core.config.backgroundColor);
+        this.applyPage();
       }
     }
     const cast = studio && this.core.gScene.renderMode !== "ghost";
@@ -2800,7 +2834,8 @@ var Lighting = class {
       this.envSourceTex.mapping = THREE5.EquirectangularReflectionMapping;
       this.core.threeScene.background = this.envSourceTex;
     } else if (this.core.threeScene.background?.isTexture) {
-      this.core.threeScene.background = new THREE5.Color(this.core.config.backgroundColor);
+      this.core.threeScene.background = null;
+      this.applyPage();
     }
   }
   /** A sky: an equirectangular image lighting the scene and, by default, behind it. */
@@ -2840,13 +2875,13 @@ var Lighting = class {
       pmremSrc.dispose();
       return envSrc;
     }
-    const W = 16, H = 256;
-    const data = new Uint8Array(W * H * 4);
+    const W2 = 16, H2 = 256;
+    const data = new Uint8Array(W2 * H2 * 4);
     const sky = [0.85, 0.88, 0.95];
     const horizon = [0.55, 0.55, 0.55];
     const ground = [0.12, 0.12, 0.13];
-    for (let y = 0; y < H; y++) {
-      const t = y / (H - 1);
+    for (let y = 0; y < H2; y++) {
+      const t = y / (H2 - 1);
       let r, g, b;
       if (t < 0.5) {
         const k = t / 0.5;
@@ -2859,15 +2894,15 @@ var Lighting = class {
         g = horizon[1] + (sky[1] - horizon[1]) * k;
         b = horizon[2] + (sky[2] - horizon[2]) * k;
       }
-      for (let x = 0; x < W; x++) {
-        const i = (y * W + x) * 4;
+      for (let x = 0; x < W2; x++) {
+        const i = (y * W2 + x) * 4;
         data[i] = Math.round(r * 255);
         data[i + 1] = Math.round(g * 255);
         data[i + 2] = Math.round(b * 255);
         data[i + 3] = 255;
       }
     }
-    const tex = new THREE5.DataTexture(data, W, H, THREE5.RGBAFormat);
+    const tex = new THREE5.DataTexture(data, W2, H2, THREE5.RGBAFormat);
     tex.mapping = THREE5.EquirectangularReflectionMapping;
     tex.colorSpace = THREE5.SRGBColorSpace;
     tex.needsUpdate = true;
@@ -2917,7 +2952,7 @@ var NavGizmo = class {
     const corner = opts.corner ?? "bottom-right";
     const inset = `${opts.inset ?? 12}px`;
     this.root.style.cssText = `position:absolute;width:${this.size}px;
-      ${corner.includes("top") ? "top" : "bottom"}:${inset};
+      ${corner.includes("top") ? `top:${(opts.inset ?? 12) + (opts.offsetTop ?? 0)}px` : `bottom:${inset}`};
       ${corner.includes("left") ? "left" : "right"}:${inset};
       cursor:grab;touch-action:none;user-select:none;z-index:5;
       display:flex;flex-direction:column;align-items:center;gap:2px`;
@@ -3087,6 +3122,10 @@ var NavGizmo = class {
   setVisible(on) {
     this.root.style.display = on ? "" : "none";
   }
+  /** The widget's element (axes and the projection toggle). */
+  get el() {
+    return this.root;
+  }
   dispose() {
     this.listeners.abort();
     this.root.remove();
@@ -3096,11 +3135,12 @@ var NavGizmo = class {
 // src/render/CameraRig.ts
 var NO_TURN = new THREE7.Quaternion();
 var CameraRig = class {
-  constructor(core, camera, _orthoCam, gizmo) {
+  constructor(core, camera, _orthoCam, gizmo, gizmoTop = 0) {
     this.core = core;
     this.camera = camera;
     this._orthoCam = _orthoCam;
     this._isOrtho = false;
+    this._rotateEnabled = true;
     // Camera position at the previous renderIfNeeded(), to follow orbit damping
     // below OrbitControls' change threshold (see settleDamping).
     this._lastCamPos = new THREE7.Vector3(NaN, NaN, NaN);
@@ -3110,12 +3150,22 @@ var CameraRig = class {
     // Standing inside (walkTo): the lens the camera had outside, given back on the way out.
     this.outsideFov = null;
     this.projectionListeners = /* @__PURE__ */ new Set();
+    // The hand (setHandMode): what the left button and one finger did before it took them.
+    this.handPrev = null;
+    this._gizmoShown = true;
+    this.onHandDown = () => {
+      this.core.renderer.domElement.style.cursor = "grabbing";
+    };
+    this.onHandUp = () => {
+      if (this.handMode) this.core.renderer.domElement.style.cursor = "grab";
+    };
     core.controls?.addEventListener("start", () => {
       this.cameraMove = null;
     });
     if (gizmo) {
       this.navGizmo = new NavGizmo(core.container, {
-        corner: typeof gizmo === "string" ? gizmo : "bottom-right",
+        corner: typeof gizmo === "string" ? gizmo : gizmoTop ? "top-right" : "bottom-right",
+        offsetTop: gizmoTop,
         onAxis: (direction) => this.orbitTo(direction),
         onDrag: (dx, dy) => this.orbitBy(dx, dy),
         onSnap: () => this.orbitTo(nearestAxis(this._viewOffset())),
@@ -3139,8 +3189,71 @@ var CameraRig = class {
     const visible = v.z > -1 && v.z < 1;
     return { x, y, visible };
   }
+  /** Show or hide the axis widget (with the viewer's other tools); it stays hidden in a strict-2D view. */
+  setGizmoShown(shown2) {
+    this._gizmoShown = shown2;
+    this.navGizmo?.setVisible(shown2 && this._rotateEnabled);
+  }
   setOrbitRotateEnabled(enabled) {
+    this._rotateEnabled = enabled;
     if (this.core.controls) this.core.controls.enableRotate = enabled;
+    this.navGizmo?.setVisible(enabled && this._gizmoShown);
+    if (enabled) this.setHandMode(false);
+  }
+  /** The hand, a strict-2D view's tool: on, the left button (and one finger) drags the view along
+   *  under a grab cursor. Off again when the view turns 3D. */
+  setHandMode(on) {
+    const c = this.core.controls;
+    on = on && !this._rotateEnabled && !!c;
+    if (on === this.handMode) return;
+    const dom = this.core.renderer.domElement;
+    if (on) {
+      this.handPrev = { left: c.mouseButtons.LEFT ?? null, one: c.touches.ONE ?? null };
+      c.mouseButtons.LEFT = THREE7.MOUSE.PAN;
+      c.touches.ONE = THREE7.TOUCH.PAN;
+      dom.style.cursor = "grab";
+      dom.addEventListener("pointerdown", this.onHandDown);
+      dom.addEventListener("pointerup", this.onHandUp);
+      dom.addEventListener("pointercancel", this.onHandUp);
+    } else {
+      c.mouseButtons.LEFT = this.handPrev.left;
+      c.touches.ONE = this.handPrev.one;
+      this.handPrev = null;
+      dom.style.cursor = "";
+      dom.removeEventListener("pointerdown", this.onHandDown);
+      dom.removeEventListener("pointerup", this.onHandUp);
+      dom.removeEventListener("pointercancel", this.onHandUp);
+    }
+  }
+  /** Whether the hand is on (see `setHandMode`). */
+  get handMode() {
+    return this.handPrev !== null;
+  }
+  /** The axis widget's element, or null without one. */
+  get navGizmoEl() {
+    return this.navGizmo?.el ?? null;
+  }
+  /** False in a strict-2D view: pan and zoom only. */
+  get orbitRotateEnabled() {
+    return this._rotateEnabled;
+  }
+  /** Zoom in (`factor` > 1) or out (< 1) about the target: closer in perspective, a larger zoom in orthographic. */
+  zoomBy(factor, opts = {}) {
+    if (!(factor > 0)) throw new Error(`zoomBy: factor must be > 0 (got ${factor})`);
+    const target = this.core.controls?.target.clone() ?? new THREE7.Vector3();
+    const offset = this.activeCamera.position.clone().sub(target);
+    const dist = this._isOrtho ? offset.length() : offset.length() / factor;
+    const zoom = this._isOrtho ? this._orthoCam.zoom * factor : this._orthoCam.zoom;
+    if (opts.animate === false) {
+      this.cameraMove = null;
+      if (this._isOrtho) {
+        this._orthoCam.zoom = zoom;
+        this._orthoCam.updateProjectionMatrix();
+      }
+      this._placeCamera(target, offset.setLength(dist));
+      return;
+    }
+    this._moveCamera(offset.normalize(), target, dist, zoom);
   }
   cameraState() {
     const c = this.activeCamera;
@@ -3296,6 +3409,10 @@ var CameraRig = class {
   fitTo(objects, opts = {}) {
     const box = new THREE7.Box3();
     for (const t of this.core.resolve(objects)) box.expandByObject(t);
+    this.fitBox(box, opts);
+  }
+  /** Frame a world-space box, as `fitTo` frames objects. */
+  fitBox(box, opts = {}) {
     if (box.isEmpty()) return;
     const out = this._leaveInside();
     if (out) this._setFov(out.fov);
@@ -3447,6 +3564,7 @@ var Pointer = class {
     this.marks = marks;
     this.raycaster = new THREE8.Raycaster();
     this.pickEnabled = false;
+    this.pickFilter = null;
     this.pickListeners = /* @__PURE__ */ new Set();
     this.transformControls = null;
     this.gizmoMode = "translate";
@@ -3467,8 +3585,10 @@ var Pointer = class {
     this.hoverListeners = /* @__PURE__ */ new Set();
     this.hovered = null;
     this.hoverAt = 0;
+    /** The hand is on (CameraRig.setHandMode): the left button drags the view, over drag handles too. */
+    this.handMode = false;
     this.onPointerDown = (e) => {
-      const handleName = this.dragHandleHitTest(e.clientX, e.clientY);
+      const handleName = this.handMode ? null : this.dragHandleHitTest(e.clientX, e.clientY);
       if (handleName) {
         e.preventDefault();
         this.activeDragHandle = handleName;
@@ -3687,9 +3807,13 @@ var Pointer = class {
       if (this.marks.cutAway(h.point) || !shown(h.object)) continue;
       let cur = h.object;
       while (cur && !cur.userData.geomId) cur = cur.parent;
-      if (cur?.userData.geomId) return cur.userData.geomId;
+      const id = cur?.userData.geomId;
+      if (id && (!this.pickFilter || this.pickFilter(id))) return id;
     }
     return null;
+  }
+  setPickFilter(filter) {
+    this.pickFilter = filter;
   }
   hitAt(clientX, clientY) {
     const rect = this.core.renderer.domElement.getBoundingClientRect();
@@ -3857,6 +3981,25 @@ import * as THREE9 from "three";
 
 // src/render/Callouts.ts
 var SVG2 = "http://www.w3.org/2000/svg";
+var LIST_TITLE_HEIGHT = 24;
+function calloutGroups(item) {
+  return item.leaders === "each" ? item.objects.map((o) => [o]) : [item.objects];
+}
+function leaderPath(p, labelWidth, shape = "elbow") {
+  const from = p.side === "left" ? p.x + labelWidth : p.x;
+  const knee = p.side === "left" ? from + 10 : from - 10;
+  const mid = p.y + 9;
+  const ends = p.ends ?? [{ x: p.anchorX, y: p.anchorY }];
+  if (!ends.length) return "";
+  if (shape === "curve") {
+    return ends.map((e) => {
+      const c = (from + e.x) / 2;
+      return `M${from},${mid} C${c},${mid} ${c},${e.y} ${e.x},${e.y}`;
+    }).join(" ");
+  }
+  const run = `M${from},${mid} L${knee},${mid}`;
+  return ends.length === 1 ? `${run} L${ends[0].x},${ends[0].y}` : run + ends.map((e) => ` M${knee},${mid} L${e.x},${e.y}`).join("");
+}
 function labelWidthFor(hostWidth) {
   return Math.round(Math.max(88, Math.min(170, hostWidth * 0.27)));
 }
@@ -3870,27 +4013,33 @@ function layoutLabels(anchors, opts) {
   const rowHeight = opts.rowHeight ?? 30;
   const labelWidth = opts.labelWidth ?? labelWidthFor(opts.width);
   const inset = opts.inset ?? 8;
-  const capacity = marginCapacity(opts.height, { rowHeight, inset });
+  const top = opts.top ?? 0;
+  const listed = opts.stack === "list";
+  const capacity = marginCapacity(opts.height - top, { rowHeight, inset });
   const placed = [];
   const dropped = [];
   for (const side of ["left", "right"]) {
-    const mine = anchors.filter((a) => a.x < opts.width / 2 === (side === "left"));
-    const keep = mine.slice(0, capacity).sort((a, b) => a.y - b.y);
+    const mine = anchors.filter((a) => (a.side ?? (a.x < opts.width / 2 ? "left" : "right")) === side);
+    const keep = listed ? mine.slice(0, capacity) : mine.slice(0, capacity).sort((a, b) => a.y - b.y);
     for (const a of mine.slice(capacity)) dropped.push(a.id);
     if (!keep.length) continue;
     const ys = [];
-    let previous = -Infinity;
-    for (const a of keep) {
-      const y = Math.max(a.y, previous + rowHeight, inset);
-      ys.push(y);
-      previous = y;
-    }
-    const overshoot = ys[ys.length - 1] + rowHeight - (opts.height - inset);
-    if (overshoot > 0) {
-      let floor = inset;
-      for (let i = 0; i < ys.length; i++) {
-        ys[i] = Math.max(ys[i] - overshoot, floor);
-        floor = ys[i] + rowHeight;
+    if (listed) {
+      keep.forEach((_, i) => ys.push(top + inset + i * rowHeight));
+    } else {
+      let previous = -Infinity;
+      for (const a of keep) {
+        const y = Math.max(a.y, previous + rowHeight, top + inset);
+        ys.push(y);
+        previous = y;
+      }
+      const overshoot = ys[ys.length - 1] + rowHeight - (opts.height - inset);
+      if (overshoot > 0) {
+        let floor = top + inset;
+        for (let i = 0; i < ys.length; i++) {
+          ys[i] = Math.max(ys[i] - overshoot, floor);
+          floor = ys[i] + rowHeight;
+        }
       }
     }
     keep.forEach((a, i) => placed.push({
@@ -3899,7 +4048,8 @@ function layoutLabels(anchors, opts) {
       x: side === "left" ? inset : opts.width - inset - labelWidth,
       y: ys[i],
       anchorX: a.x,
-      anchorY: a.y
+      anchorY: a.y,
+      ...a.ends ? { ends: a.ends } : {}
     }));
   }
   return { placed, dropped };
@@ -3910,6 +4060,12 @@ var Callouts = class {
     this.labels = /* @__PURE__ */ new Map();
     this.items = /* @__PURE__ */ new Map();
     this.overflow = null;
+    /** A list's column, per margin, and its title (`setList`). */
+    this.columns = /* @__PURE__ */ new Map();
+    this.list = { on: false };
+    /** Labels shown as the ones meant, and in what colour (`setHighlight`). */
+    this.highlighted = /* @__PURE__ */ new Set();
+    this.highlightColour = "#1f7ae0";
     this.labelWidth = opts.labelWidth ?? 150;
     this.root = document.createElement("div");
     this.root.style.cssText = "position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:4";
@@ -3931,6 +4087,51 @@ var Callouts = class {
     }
     this.items = next;
   }
+  /** Lay the labels out as a list, on a column of their own under `title`, or not. */
+  setList(on, title) {
+    this.list = { on, title };
+    if (!on) {
+      for (const c of this.columns.values()) c.remove();
+      this.columns.clear();
+    }
+  }
+  /** The column behind a margin's list: full height, as wide as a label and its clearance. */
+  column(side, shown2) {
+    let c = this.columns.get(side);
+    if (!shown2) {
+      if (c) c.style.display = "none";
+      return;
+    }
+    if (!c) {
+      c = document.createElement("div");
+      c.style.cssText = `position:absolute;top:0;bottom:0;${side}:0;pointer-events:none;
+        box-sizing:border-box;background:rgba(248,250,252,.92);
+        border-${side === "left" ? "right" : "left"}:1px solid rgba(90,100,110,.18);
+        font:600 9.5px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+        letter-spacing:.08em;text-transform:uppercase;color:#8a949e;padding:9px 8px 0`;
+      this.root.insertBefore(c, this.svg);
+      this.columns.set(side, c);
+    }
+    c.style.display = "block";
+    c.style.width = `${this.labelWidth + 16}px`;
+    c.textContent = this.list.title ?? "";
+  }
+  /**
+   * Show these labels, and their leaders, as the ones meant: what the pointer is over in the
+   * model, say, so a reader sees which label names it; null clears. Only the look changes.
+   */
+  setHighlight(ids, colour) {
+    this.highlighted = new Set(ids ?? []);
+    if (colour) this.highlightColour = colour;
+    for (const [id, el] of this.labels) this.paint(id, el);
+  }
+  paint(id, el) {
+    const on = this.highlighted.has(id);
+    el.leader.setAttribute("stroke", on ? this.highlightColour : "#8a949e");
+    el.leader.setAttribute("stroke-width", on ? "1.75" : "1");
+    el.box.style.boxShadow = on ? `0 0 0 2px ${this.highlightColour}` : "0 1px 2px rgba(20,30,40,.12)";
+    if (on) this.svg.append(el.leader);
+  }
   /** Track the host's width, so labels stay a share of it rather than a
    *  constant that only suits one panel size. */
   setLabelWidth(px) {
@@ -3941,6 +4142,19 @@ var Callouts = class {
   /** The objects a caller must measure to anchor each callout. */
   objectsOf(id) {
     return this.items.get(id)?.objects ?? [];
+  }
+  /** What each of a callout's leaders points at (`calloutGroups`). */
+  groupsOf(id) {
+    const item = this.items.get(id);
+    return item ? calloutGroups(item) : [];
+  }
+  /** The margin a callout keeps to, if it names one. */
+  sideOf(id) {
+    return this.items.get(id)?.side;
+  }
+  /** Whether a callout has a leader to each of its entries. */
+  fans(id) {
+    return this.items.get(id)?.leaders === "each";
   }
   get ids() {
     return [...this.items.keys()];
@@ -3961,8 +4175,11 @@ var Callouts = class {
     for (const [id, el] of this.labels) {
       if (!placed.has(id)) {
         el.box.style.display = "none";
-        el.leader.setAttribute("points", "");
+        el.leader.setAttribute("d", "");
       }
+    }
+    if (this.list.on) {
+      for (const side of ["left", "right"]) this.column(side, placements.some((p) => p.side === side));
     }
     for (const p of placements) {
       const item = this.items.get(p.id);
@@ -3971,13 +4188,7 @@ var Callouts = class {
       el.box.style.display = "block";
       el.box.style.left = `${p.x}px`;
       el.box.style.top = `${p.y}px`;
-      const from = p.side === "left" ? p.x + this.labelWidth : p.x;
-      const knee = p.side === "left" ? from + 10 : from - 10;
-      const mid = p.y + 9;
-      el.leader.setAttribute(
-        "points",
-        `${from},${mid} ${knee},${mid} ${p.anchorX},${p.anchorY}`
-      );
+      el.leader.setAttribute("d", leaderPath(p, this.labelWidth, item.leaderShape));
     }
     this.showOverflow(unplaced, upTo);
   }
@@ -3998,7 +4209,7 @@ var Callouts = class {
     this.overflow.textContent = `${upTo ? "up to " : ""}${n} more not labelled: no room in the margins`;
   }
   make(id, item) {
-    const leader = document.createElementNS(SVG2, "polyline");
+    const leader = document.createElementNS(SVG2, "path");
     leader.setAttribute("fill", "none");
     leader.setAttribute("stroke", "#8a949e");
     leader.setAttribute("stroke-width", "1");
@@ -4035,6 +4246,7 @@ var Callouts = class {
     this.root.append(box);
     const el = { box, leader };
     this.labels.set(id, el);
+    this.paint(id, el);
     return el;
   }
   setVisible(on) {
@@ -4063,9 +4275,10 @@ var Marks = class {
     this.pocheMat = null;
     // ── Callouts (setCallouts) ──
     this.callouts = null;
-    /** Per callout, where to look for it: its centre, then points toward its box's corners. */
+    /** Per callout, per leader, where to look for it (its centre, then points toward its box's
+     *  corners) and what is its own, which cannot hide it. One leader unless `leaders: "each"`. */
     this.calloutAnchors = /* @__PURE__ */ new Map();
-    /** Per callout seen, the point its leader goes to. Redone only once the camera is still. */
+    /** Per callout seen, the point each seen leader goes to. Redone only once the camera is still. */
     this.calloutVisible = /* @__PURE__ */ new Map();
     /** Something that decides visibility changed since the last answer. */
     this.calloutCheckDirty = true;
@@ -4091,8 +4304,13 @@ var Marks = class {
     this.calloutsShown = true;
     this.outlineMat = null;
     this.sectionFrame = null;
+    this.calloutHighlight = { ids: null };
     this.outlineGroup.renderOrder = 999;
     core.threeScene.add(this.outlineGroup);
+  }
+  /** Room at the top of a margin for a list's title. */
+  calloutTop() {
+    return this.calloutHandlers.stack === "list" && this.calloutHandlers.title ? LIST_TITLE_HEIGHT : 0;
   }
   /** Keep outlines on their objects (a gizmo drag moves them without a rebuild), and hidden
    *  with them: a hidden object shows no outline. */
@@ -4335,13 +4553,22 @@ var Marks = class {
   cutAway(p) {
     return !!this.sectionClip && this.sectionClip.distanceToPoint(p) < -1e-9;
   }
+  /** Show these callouts, and their leaders, as the ones meant; null clears. */
+  setCalloutHighlight(ids, colour) {
+    this.calloutHighlight = { ids, colour };
+    this.callouts?.setHighlight(ids, colour);
+  }
   setCallouts(items, handlers = {}) {
     this.calloutHandlers = handlers;
     if (!items.length && !this.callouts) return;
-    this.callouts ?? (this.callouts = new Callouts(this.core.container, {
-      onPick: (id) => this.calloutHandlers.onPick?.(id),
-      onHover: (id) => this.calloutHandlers.onHover?.(id)
-    }));
+    if (!this.callouts) {
+      this.callouts = new Callouts(this.core.container, {
+        onPick: (id) => this.calloutHandlers.onPick?.(id),
+        onHover: (id) => this.calloutHandlers.onHover?.(id)
+      });
+      this.callouts.setHighlight(this.calloutHighlight.ids, this.calloutHighlight.colour);
+    }
+    this.callouts.setList(handlers.stack === "list", handlers.title);
     this.callouts.setVisible(this.calloutsShown);
     this.callouts.setItems(items);
     const ids = new Set(items.map((i) => i.id));
@@ -4350,15 +4577,21 @@ var Marks = class {
     this.calloutsDirty = true;
     this.core.requestRender();
   }
-  /** Re-measure where to look for each callout: points in its objects' bounds. */
+  /** Re-measure where to look for each callout: points in the bounds of what each of its
+   *  leaders points at. */
   _measureCallouts() {
     this.calloutsDirty = false;
     this.calloutAnchors.clear();
     const box = new THREE9.Box3();
     for (const id of this.callouts?.ids ?? []) {
-      box.makeEmpty();
-      for (const t of this.core.resolve(this.callouts.objectsOf(id))) if (t.visible) box.expandByObject(t);
-      if (!box.isEmpty()) this.calloutAnchors.set(id, calloutSamples(box));
+      const groups = [];
+      for (const objects of this.callouts.groupsOf(id)) {
+        const own = this.core.resolve(objects);
+        box.makeEmpty();
+        for (const t of own) if (t.visible) box.expandByObject(t);
+        if (!box.isEmpty()) groups.push({ samples: calloutSamples(box), own: new Set(own) });
+      }
+      if (groups.length) this.calloutAnchors.set(id, groups);
     }
     this.calloutPending = null;
     this.calloutCheckDirty = true;
@@ -4367,61 +4600,87 @@ var Marks = class {
    * Work on which callouts the reader can see, until `deadline`. Seen means any of its
    * sample points is: the centre first, the others only if it is hidden, and the leader goes
    * to the first one seen. Only a surface that writes depth hides it (`occludes`), its own
-   * objects don't count, nor does what the section removed. A margin that is full takes no
-   * more, so its side needs no rays, and the check ends when both are.
+   * objects don't count, nor does what the section removed. A callout with a leader to each
+   * of its entries is seen when any one is, and gets a leader only to those seen: an entry
+   * behind another, even one of its own, gets none. A margin that is full takes no more, so
+   * its side needs no rays, and the check ends when both are.
    */
   _checkCalloutVisibility(deadline) {
     const pending = this.calloutPending;
     if (!pending) return;
     const cam = this.core.activeCamera;
-    const meshes = [...this.core.objectMap.values()].filter((t) => t.visible);
     const ray = new THREE9.Raycaster();
     const eye = cam.getWorldPosition(new THREE9.Vector3());
     const view = cam.getWorldDirection(new THREE9.Vector3());
     const ortho = cam.isOrthographicCamera;
     const ndc = new THREE9.Vector3(), dir = new THREE9.Vector3();
     const full = () => pending.left >= pending.capacity && pending.right >= pending.capacity;
-    while (pending.queue.length && !full() && performance.now() < deadline) {
-      const id = pending.queue.pop();
-      const samples = this.calloutAnchors.get(id);
-      if (!samples) continue;
-      const side = ndc.copy(samples[0]).project(cam).x < 0 ? "left" : "right";
-      if (pending[side] >= pending.capacity) {
-        pending.skipped.push(id);
-        continue;
-      }
-      const own = new Set(this.core.resolve(this.callouts.objectsOf(id)));
-      let seen = null;
-      for (const point of samples) {
-        ndc.copy(point).project(cam);
-        if (ndc.z > 1 || Math.abs(ndc.x) > 1 || Math.abs(ndc.y) > 1) continue;
-        if (ortho) {
-          ray.set(point.clone().addScaledVector(view, -1e4), view);
-          ray.far = 1e4;
-        } else {
-          dir.copy(point).sub(eye);
-          ray.far = dir.length();
-          ray.set(eye, dir.normalize());
+    const w = this.core.container.clientWidth || 1;
+    while ((pending.current || pending.queue.length) && !full() && performance.now() < deadline) {
+      if (!pending.current) {
+        const id = pending.queue.pop();
+        const groups2 = this.calloutAnchors.get(id);
+        if (!groups2) continue;
+        const side = this.calloutSide(id, cam);
+        if (pending[side] >= pending.capacity) {
+          pending.skipped.push(id);
+          continue;
         }
-        const hit = ray.intersectObjects(meshes, true).find((h) => h.object.isMesh && occludes(h.object.material) && !this.cutAway(h.point));
-        let owner = hit?.object ?? null;
-        while (owner && !own.has(owner)) owner = owner.parent;
-        if (!hit || owner || hit.distance >= ray.far - 1e-3) {
-          seen = point;
-          break;
+        pending.current = { id, side, group: 0, seen: [] };
+      }
+      const c = pending.current;
+      const groups = this.calloutAnchors.get(c.id) ?? [];
+      while (c.group < groups.length && performance.now() < deadline) {
+        const g = groups[c.group++];
+        for (const point of g.samples) {
+          ndc.copy(point).project(cam);
+          if (ndc.z > 1 || Math.abs(ndc.x) > 1 || Math.abs(ndc.y) > 1) continue;
+          const px = (ndc.x + 1) / 2 * w;
+          if (px < pending.bands.left || px > w - pending.bands.right || this.cutAway(point)) continue;
+          if (ortho) {
+            ray.set(point.clone().addScaledVector(view, -1e4), view);
+            ray.far = 1e4;
+          } else {
+            dir.copy(point).sub(eye);
+            ray.far = dir.length();
+            ray.set(eye, dir.normalize());
+          }
+          const hit = ray.intersectObjects(pending.targets, false).find((h) => h.object.isMesh && occludes(h.object.material) && !this.cutAway(h.point));
+          let owner = hit?.object ?? null;
+          while (owner && !g.own.has(owner)) owner = owner.parent;
+          if (!hit || owner || hit.distance >= ray.far - 1e-3) {
+            c.seen.push(point);
+            break;
+          }
         }
       }
-      if (seen) {
-        this.calloutVisible.set(id, seen);
-        pending[side]++;
-      } else this.calloutVisible.delete(id);
+      if (c.group < groups.length) break;
+      if (c.seen.length) {
+        this.calloutVisible.set(c.id, c.seen);
+        pending[c.side]++;
+      } else this.calloutVisible.delete(c.id);
+      pending.current = null;
     }
-    if (!pending.queue.length || full()) {
-      const unchecked = [...pending.queue, ...pending.skipped];
+    if (!pending.queue.length && !pending.current || full()) {
+      const unchecked = [...pending.queue, ...pending.skipped, ...pending.current ? [pending.current.id] : []];
       for (const id of unchecked) this.calloutVisible.delete(id);
       this.calloutUnchecked = unchecked.length;
       this.calloutPending = null;
     }
+  }
+  /**
+   * The margin a callout goes to: its own, or the one nearer the middle of what it points
+   * at, measured from where the things are rather than where they were last seen, so a
+   * listed label does not change columns as what is in sight of it changes.
+   */
+  calloutSide(id, cam) {
+    const forced = this.callouts?.sideOf(id);
+    if (forced) return forced;
+    const groups = this.calloutAnchors.get(id) ?? [];
+    const v = new THREE9.Vector3();
+    let x = 0;
+    for (const g of groups) x += v.copy(g.samples[0]).project(cam).x;
+    return groups.length && x / groups.length >= 0 ? "right" : "left";
   }
   /** Project, cull and lay out this frame's labels. */
   drawCallouts() {
@@ -4431,8 +4690,7 @@ var Marks = class {
     const now = performance.now();
     const cam = this.core.activeCamera;
     cam.updateMatrixWorld();
-    const key = (m) => m.elements.map((e) => e.toFixed(6)).join();
-    const at = `${key(cam.matrixWorld)}|${key(cam.projectionMatrix)}|${w}|${h}`;
+    const at = `${cameraKey(cam.matrixWorld.elements, cam.projectionMatrix.elements)}|${w}|${h}`;
     if (at !== this.calloutCamera) {
       this.calloutCamera = at;
       this.calloutStillSince = now;
@@ -4441,7 +4699,20 @@ var Marks = class {
     }
     if (this.calloutCheckDirty && !this.calloutPending) {
       if (now - this.calloutStillSince >= CALLOUT_SETTLE_MS) {
-        this.calloutPending = { queue: [...this.calloutAnchors.keys()].reverse(), skipped: [], left: 0, right: 0, capacity: marginCapacity(h) };
+        const list2 = this.calloutHandlers.stack === "list" && this.calloutHandlers.labels !== false;
+        const sides = new Set([...this.calloutAnchors.keys()].map((id) => this.calloutSide(id, cam)));
+        const band = labelWidthFor(w) + 16;
+        this.calloutPending = {
+          current: null,
+          bands: { left: list2 && sides.has("left") ? band : 0, right: list2 && sides.has("right") ? band : 0 },
+          queue: [...this.calloutAnchors.keys()].reverse(),
+          skipped: [],
+          left: 0,
+          right: 0,
+          // with no labels there are no margins to fill: every callout is looked at
+          capacity: this.calloutHandlers.labels === false ? Infinity : marginCapacity(h - this.calloutTop()),
+          targets: rayTargets(this.core.objectMap.values())
+        };
         this.calloutCheckDirty = false;
       } else if (!this.calloutRecheck) {
         this.calloutRecheck = window.setTimeout(
@@ -4459,17 +4730,53 @@ var Marks = class {
     }
     const v = new THREE9.Vector3();
     const anchors = [];
+    if (this.calloutHandlers.labels === false) {
+      const out = [];
+      for (const id of this.calloutAnchors.keys()) {
+        const ends = [];
+        for (const point of this.calloutVisible.get(id) ?? []) {
+          v.copy(point).project(cam);
+          if (v.z > 1) continue;
+          ends.push({ x: (v.x + 1) / 2 * w, y: (1 - v.y) / 2 * h });
+        }
+        out.push({ id, ends });
+      }
+      this.callouts.update([], 0);
+      this.calloutHandlers.onEnds?.(out);
+      return;
+    }
+    const list = this.calloutHandlers.stack === "list";
     for (const id of this.calloutAnchors.keys()) {
-      const anchor = this.calloutVisible.get(id);
-      if (!anchor) continue;
-      v.copy(anchor).project(cam);
-      if (v.z > 1) continue;
-      anchors.push({ id, x: (v.x + 1) / 2 * w, y: (1 - v.y) / 2 * h });
+      const seen = this.calloutVisible.get(id);
+      if (!seen && !list) continue;
+      const ends = [];
+      for (const point of seen ?? []) {
+        v.copy(point).project(cam);
+        if (v.z > 1) continue;
+        ends.push({ x: (v.x + 1) / 2 * w, y: (1 - v.y) / 2 * h });
+      }
+      if (!ends.length && !list) continue;
+      const x = ends.length ? ends.reduce((sum, e) => sum + e.x, 0) / ends.length : 0;
+      const y = ends.length ? ends.reduce((sum, e) => sum + e.y, 0) / ends.length : 0;
+      anchors.push({
+        id,
+        x,
+        y,
+        side: list ? this.calloutSide(id, cam) : this.callouts.sideOf(id),
+        ...this.callouts.fans(id) || list ? { ends } : {}
+      });
     }
     const labelWidth = labelWidthFor(w);
     this.callouts.setLabelWidth(labelWidth);
-    const { placed, dropped } = layoutLabels(anchors, { width: w, height: h, labelWidth });
-    this.callouts.update(placed, dropped.length + this.calloutUnchecked, this.calloutUnchecked > 0);
+    const { placed, dropped } = layoutLabels(
+      anchors,
+      { width: w, height: h, labelWidth, stack: list ? "list" : "anchors", top: this.calloutTop() }
+    );
+    this.callouts.update(
+      placed,
+      list ? dropped.length : dropped.length + this.calloutUnchecked,
+      !list && this.calloutUnchecked > 0
+    );
   }
   dispose() {
     this.pocheMat?.dispose();
@@ -4486,6 +4793,10 @@ var Marks = class {
 import * as THREE10 from "three";
 var srgb = (hex) => new THREE10.Vector3((hex >> 16 & 255) / 255, (hex >> 8 & 255) / 255, (hex & 255) / 255);
 var FadingGrid = class {
+  /** The page changed (a hidden-line drawing's paper): the lines a step off the new one. */
+  setBackground(background) {
+    this.mesh.material.uniforms.uLine.value = srgb(gridLineColour(background));
+  }
   constructor(background, zUp) {
     const material = new THREE10.ShaderMaterial({
       transparent: true,
@@ -4575,6 +4886,8 @@ var SHADING_ICONS = {
   noon: svg(`<circle cx="12" cy="12" r="4"/><path d="${RAYS}"/>`),
   morning: HORIZON("M9 5.5 12 2.5l3 3"),
   sunset: HORIZON("M9 6.5l3 3 3-3"),
+  // The sun for a date: a calendar sheet.
+  date: svg(`<rect x="4" y="5.5" width="16" height="14" rx="1.5"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/>`),
   // Ambient occlusion: two faces meeting, darkened into the corner.
   ao: svg(`<path d="M5 4v15h15"/><path d="M5 9.5v9.5h9.5A9.5 9.5 0 0 0 5 9.5z" fill="currentColor" fill-opacity="0.5" stroke="none"/>`),
   // Overlays: two overlapping rings, as Blender draws it.
@@ -4585,21 +4898,39 @@ var SHADING_ICONS = {
   snapshot: svg(`<path d="M4 8h3l2-2.5h6L17 8h3v11H4z"/><circle cx="12" cy="13.2" r="3.4"/>`),
   // A box with a slice through it.
   section: svg(`<path d="M4 7.5 12 4l8 3.5v9L12 20l-8-3.5z"/><path d="M4 12.5 12 16l8-3.5M4 12.5 12 9l8 3.5" fill="currentColor" fill-opacity="0.35"/>`),
-  flip: svg(`<path d="M8 4v15M5 7l3-3 3 3M16 20V5M13 17l3 3 3-3"/>`)
+  flip: svg(`<path d="M8 4v15M5 7l3-3 3 3M16 20V5M13 17l3 3 3-3"/>`),
+  // Zoom in / out: a magnifier with a plus or a minus.
+  zoomIn: svg(`<circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5M8 10.5h5M10.5 8v5"/>`),
+  zoomOut: svg(`<circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5M8 10.5h5"/>`),
+  // The hand: four fingers up, the thumb out to the left.
+  hand: svg(`<path d="M7 14V7.3a1.3 1.3 0 0 1 2.6 0V11M9.6 11V5.3a1.3 1.3 0 0 1 2.6 0V11M12.2 11V6.3a1.3 1.3 0 0 1 2.6 0V11M14.8 11.5V8.3a1.3 1.3 0 0 1 2.6 0V15a6 6 0 0 1-6 6h-1a5 5 0 0 1-3.9-1.9L3.6 15.4a1.4 1.4 0 0 1 2.1-1.8L7 15"/>`)
 };
+var ZOOM_STEP = 1.25;
 var MODES = [["solid", "Solid"], ["wireframe", "Wireframe"], ["hiddenline", "Hidden line"], ["ghost", "Ghost"]];
 var LIGHTS = [["flat", "Flat lighting"], ["studio", "Studio lighting: soft shadows"]];
+var SUN_PLACE_KEY = "tekto.sunPlace";
 var SUNS = [["morning", "Morning"], ["noon", "Noon"], ["sunset", "Sunset"]];
 var OVERLAY_LABELS = { grid: "Grid", axes: "Axes", wireframe: "Wireframe", labels: "Labels", notes: "Notes" };
+var VIEWER_HEADER_H = 34;
 var ShadingBar = class {
-  constructor(core, lighting, marks, ao, view, corner = "top-left") {
+  constructor(core, lighting, marks, ao, view, placement = "top-left", headerHost = null, tools = {}) {
     this.core = core;
     this.lighting = lighting;
     this.marks = marks;
     this.ao = ao;
     this.view = view;
     this.root = document.createElement("div");
+    // Two palettes, one shown: the 3D one (style, lighting, sun, section, overlays) and, in a
+    // strict-2D view, the 2D one (the hand, zoom in, zoom out, zoom to bounds).
+    this.full = document.createElement("div");
+    this.flat = document.createElement("div");
+    this.group = this.full;
     this.openPop = null;
+    /** The header layout's slots: the app's controls (left, right) and where ✎ Markup goes (end). */
+    this.header = null;
+    // The header layout's nav column (zoom in / out / to bounds; the hand in 2D), under the axis widget.
+    this.nav = null;
+    this.openers = /* @__PURE__ */ new Map();
     // Storeys for the section: a chip each (a plan cut `cutHeight` above its floor), ticks on the slider.
     this.levels = [];
     this.cutHeight = 1.2;
@@ -4608,98 +4939,230 @@ var ShadingBar = class {
     this.overlayPaints = [];
     this.setCut = null;
     this.paints = [];
+    this.toolsHidden = false;
+    // ── The sun for a date and a place ──────────────────────────────────────────────────────
+    /** What the Date sun's fields hold: the place last chosen (remembered), today, 13:30. */
+    this.sunState = (() => {
+      const z = SUN_PLACES[0];
+      let place = { place: z.name, latitude: z.latitude, longitude: z.longitude, timeZone: z.timeZone };
+      try {
+        const stored = JSON.parse(localStorage.getItem(SUN_PLACE_KEY) ?? "null");
+        if (stored && Number.isFinite(stored.latitude) && Number.isFinite(stored.longitude)) {
+          place = { place: stored.place, latitude: stored.latitude, longitude: stored.longitude, timeZone: stored.timeZone };
+        }
+      } catch {
+      }
+      return { ...place, date: (/* @__PURE__ */ new Date()).toISOString().slice(0, 10), hour: 13.5 };
+    })();
     const host = core.container;
     if (getComputedStyle(host).position === "static") host.style.position = "relative";
+    const rootHost = placement === "header" && headerHost ? headerHost : host;
+    if (rootHost !== host && getComputedStyle(rootHost).position === "static") rootHost.style.position = "relative";
+    const isHeader = placement === "header";
+    const corner = isHeader ? "top-left" : placement;
     const [v, h] = [corner.startsWith("top") ? "top" : "bottom", corner.endsWith("left") ? "left" : "right"];
-    this.root.style.cssText = `position:absolute;${v}:10px;${h}:10px;z-index:5;display:flex;align-items:center;gap:2px;padding:3px;border-radius:7px;background:rgba(16,18,26,.78);border:1px solid rgba(255,255,255,.08);box-shadow:0 2px 8px rgba(0,0,0,.3);user-select:none;`;
     this.root.dataset.tektoShadingBar = "";
-    const scene = core.gScene;
-    for (const [mode, label] of MODES) this.button(viewModeIconSvg(mode, 16), label, () => scene.renderMode === mode, () => scene.setRenderMode(mode));
-    this.separator();
-    for (const [mode, label] of LIGHTS) this.button(SHADING_ICONS[mode], label, () => scene.lightingMode === mode, () => scene.setLightingMode(mode));
-    this.button(SHADING_ICONS.ao, "Ambient occlusion: darker where surfaces meet (Solid, perspective)", () => this.ao.enabled, () => this.ao.set(!this.ao.enabled));
-    this.separator();
-    const sunPop = this.popover(v, h);
-    const sun = this.button(SHADING_ICONS.noon, "Sun: morning, noon, sunset", () => this.openPop === sunPop, () => this.toggle(sunPop));
-    this.paints.push(() => {
-      sun.innerHTML = SHADING_ICONS[this.lighting.currentSunPreset ?? "noon"];
-    });
-    for (const [preset, label] of SUNS) {
-      const b = this.button(
-        `${SHADING_ICONS[preset]}<span style="font:500 9.5px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${label}</span>`,
-        `${label}: Studio, the light following the sun`,
-        () => this.lighting.currentSunPreset === preset,
-        () => {
-          this.lighting.sunPreset(preset);
-          this.toggle(null);
-        },
-        sunPop
-      );
-      b.style.width = "54px";
-      b.style.height = "42px";
-      b.style.flexDirection = "column";
-      b.style.gap = "4px";
+    this.full.style.display = "contents";
+    this.flat.style.display = "contents";
+    if (isHeader) {
+      this.root.style.cssText = `position:absolute;top:0;left:0;right:0;height:${VIEWER_HEADER_H}px;box-sizing:border-box;z-index:23;display:flex;align-items:center;gap:2px;padding:0 6px;background:rgba(30,30,30,.96);border-bottom:1px solid rgba(255,255,255,.08);user-select:none;`;
+      this.root.dataset.tektoViewerHeader = "";
+      const slot = () => {
+        const d = document.createElement("div");
+        d.style.cssText = "display:flex;align-items:center;gap:6px;";
+        return d;
+      };
+      const left = slot(), right = slot(), end = slot(), spacer = document.createElement("div");
+      spacer.style.cssText = "flex:1;min-width:8px;";
+      right.style.marginLeft = end.style.marginLeft = "8px";
+      left.dataset.tektoHeaderSlot = "left";
+      right.dataset.tektoHeaderSlot = "right";
+      end.dataset.tektoHeaderSlot = "end";
+      this.header = { left, right, end };
+      this.root.append(left, spacer, this.full, this.flat, right, end);
+      this.nav = document.createElement("div");
+      this.nav.dataset.tektoNavColumn = "";
+      this.nav.style.cssText = "position:absolute;z-index:5;display:flex;flex-direction:column;gap:2px;padding:3px;border-radius:7px;background:rgba(30,30,30,.9);border:1px solid rgba(255,255,255,.08);user-select:none;";
+      host.appendChild(this.nav);
+    } else {
+      this.root.style.cssText = `position:absolute;${v}:10px;${h}:10px;z-index:5;display:flex;align-items:center;gap:2px;padding:3px;border-radius:7px;background:rgba(30,30,30,.9);border:1px solid rgba(255,255,255,.08);box-shadow:0 2px 8px rgba(0,0,0,.3);user-select:none;`;
+      this.root.append(this.full, this.flat);
     }
-    const cutPop = this.popover(v, h);
-    cutPop.style.flexDirection = "column";
-    cutPop.style.gap = "6px";
-    this.button(SHADING_ICONS.section, "Section: cut the model", () => this.openPop === cutPop || !!this.marks.section, () => this.toggle(cutPop));
-    this.sectionControls(cutPop);
-    this.separator();
-    const overlayPop = this.popover(v, h);
-    overlayPop.style.flexDirection = "column";
-    overlayPop.style.minWidth = "120px";
-    this.button(SHADING_ICONS.overlays, "Overlays: grid, axes, wireframe, labels, notes", () => this.openPop === overlayPop, () => this.toggle(overlayPop));
-    let listed = "";
-    this.paints.push(() => {
-      const names = Object.keys(this.view.overlays);
-      if (names.join() === listed) return;
-      listed = names.join();
-      overlayPop.replaceChildren();
-      this.overlayPaints = [];
-      for (const name of names) {
-        const label = OVERLAY_LABELS[name] ?? name[0].toUpperCase() + name.slice(1);
-        const b = this.button(
-          `<span style="width:14px;font:600 11px/1 system-ui,sans-serif">${"\u2713"}</span><span style="font:500 11px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${escapeHtml(label)}</span>`,
-          `${label}: show or hide`,
-          () => false,
-          // a checklist: a tick, not a filled button
-          () => this.view.setOverlays({ [name]: !(this.view.overlays[name] ?? false) }),
-          overlayPop,
-          this.overlayPaints
+    const scene = core.gScene;
+    let any = false;
+    const group = (shown2, build) => {
+      if (shown2 === false) return;
+      if (any) this.separator();
+      any = true;
+      build();
+    };
+    group(tools.modes, () => {
+      for (const [mode, label] of MODES) {
+        const again = mode === "hiddenline";
+        this.button(
+          viewModeIconSvg(mode, 16),
+          again ? `${label}: dark lines on paper (click again for the inverse)` : label,
+          () => scene.renderMode === mode,
+          () => {
+            if (again && scene.renderMode === mode) this.view.setHiddenLineInverse(!this.view.hiddenLineInverse);
+            else scene.setRenderMode(mode);
+          }
         );
-        b.style.width = "auto";
-        b.style.justifyContent = "flex-start";
-        b.style.gap = "6px";
-        b.style.padding = "0 10px 0 6px";
-        const tick = b.firstElementChild;
-        this.overlayPaints.push(() => {
-          const on = !!this.view.overlays[name];
-          tick.style.visibility = on ? "visible" : "hidden";
-          b.style.color = on ? "#e8ebf0" : "rgba(232,235,240,.5)";
-          b.setAttribute("aria-pressed", String(on));
-        });
       }
     });
-    this.paints.push(() => {
-      for (const p of this.overlayPaints) p();
+    group(tools.light, () => {
+      for (const [mode, label] of LIGHTS) this.button(SHADING_ICONS[mode], label, () => scene.lightingMode === mode, () => scene.setLightingMode(mode));
+      this.button(SHADING_ICONS.ao, "Ambient occlusion: darker where surfaces meet (Solid, perspective)", () => this.ao.enabled, () => this.ao.set(!this.ao.enabled));
     });
-    this.button(SHADING_ICONS.frame, "Frame: the selection, or everything", () => false, () => this.view.frame());
-    this.button(SHADING_ICONS.snapshot, "Snapshot: save the view as a PNG", () => false, () => this.view.saveSnapshot());
-    host.appendChild(this.root);
+    const sunAndSection = tools.sun !== false || tools.section !== false;
+    group(sunAndSection, () => {
+      if (tools.sun !== false) {
+        const sunPop = this.popover(v, h);
+        sunPop.style.flexDirection = "column";
+        const row = document.createElement("div");
+        row.style.cssText = "display:flex;gap:2px;";
+        sunPop.appendChild(row);
+        const sun = this.button(SHADING_ICONS.noon, "Sun: morning, noon, sunset, or a date and a place", () => this.openPop === sunPop, () => this.toggle(sunPop));
+        this.openers.set(sunPop, sun);
+        this.paints.push(() => {
+          sun.innerHTML = SHADING_ICONS[this.sunIcon()];
+        });
+        const tile = (b) => {
+          b.style.width = "54px";
+          b.style.height = "42px";
+          b.style.flexDirection = "column";
+          b.style.gap = "4px";
+        };
+        const caption = (label) => `<span style="font:500 9.5px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${label}</span>`;
+        for (const [preset, label] of SUNS) {
+          tile(this.button(
+            `${SHADING_ICONS[preset]}${caption(label)}`,
+            `${label}: Studio, the light following the sun`,
+            () => this.lighting.currentSunPreset === preset,
+            () => {
+              this.lighting.sunPreset(preset);
+              this.toggle(null);
+            },
+            row
+          ));
+        }
+        tile(this.button(
+          `${SHADING_ICONS.date}${caption("Date")}`,
+          "Date: the sun for a date, an hour and a place",
+          () => !!this.lighting.currentSunSite,
+          () => this.lighting.sunAt(this.sunState),
+          row
+        ));
+        this.sunControls(sunPop);
+      }
+      if (tools.section !== false) {
+        const cutPop = this.popover(v, h);
+        cutPop.style.flexDirection = "column";
+        cutPop.style.gap = "6px";
+        this.openers.set(cutPop, this.button(SHADING_ICONS.section, "Section: cut the model", () => this.openPop === cutPop || !!this.marks.section, () => this.toggle(cutPop)));
+        this.sectionControls(cutPop);
+      }
+    });
+    group(tools.overlays !== false || tools.snapshot !== false || !isHeader && tools.zoom !== false, () => {
+      if (tools.overlays !== false) {
+        const overlayPop = this.popover(v, h);
+        overlayPop.style.flexDirection = "column";
+        overlayPop.style.minWidth = "120px";
+        this.openers.set(overlayPop, this.button(SHADING_ICONS.overlays, "Overlays: grid, axes, wireframe, labels, notes", () => this.openPop === overlayPop, () => this.toggle(overlayPop)));
+        let listed = "";
+        this.paints.push(() => {
+          const names = Object.keys(this.view.overlays);
+          if (names.join() === listed) return;
+          listed = names.join();
+          overlayPop.replaceChildren();
+          this.overlayPaints = [];
+          for (const name of names) {
+            const label = OVERLAY_LABELS[name] ?? name[0].toUpperCase() + name.slice(1);
+            const b = this.button(
+              `<span style="width:14px;font:600 11px/1 system-ui,sans-serif">${"\u2713"}</span><span style="font:500 11px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${escapeHtml(label)}</span>`,
+              `${label}: show or hide`,
+              () => false,
+              // a checklist: a tick, not a filled button
+              () => this.view.setOverlays({ [name]: !(this.view.overlays[name] ?? false) }),
+              overlayPop,
+              this.overlayPaints
+            );
+            b.style.width = "auto";
+            b.style.justifyContent = "flex-start";
+            b.style.gap = "6px";
+            b.style.padding = "0 10px 0 6px";
+            const tick = b.firstElementChild;
+            this.overlayPaints.push(() => {
+              const on = !!this.view.overlays[name];
+              tick.style.visibility = on ? "visible" : "hidden";
+              b.style.color = on ? "#e8ebf0" : "rgba(232,235,240,.5)";
+              b.setAttribute("aria-pressed", String(on));
+            });
+          }
+        });
+        this.paints.push(() => {
+          for (const p of this.overlayPaints) p();
+        });
+      }
+      if (!isHeader && tools.zoom !== false) this.button(SHADING_ICONS.frame, "Frame: the selection, or everything", () => false, () => this.view.frame());
+      if (tools.snapshot !== false) this.button(SHADING_ICONS.snapshot, "Snapshot: save the view as a PNG", () => false, () => this.view.saveSnapshot());
+    });
+    this.group = this.flat;
+    if (isHeader && tools.snapshot !== false) this.button(SHADING_ICONS.snapshot, "Snapshot: save the view as a PNG", () => false, () => this.view.saveSnapshot());
+    this.group = this.nav ?? this.flat;
+    const hand = this.button(
+      SHADING_ICONS.hand,
+      "Hand: drag the view along (click again to stop)",
+      () => this.view.handMode,
+      () => this.view.setHandMode(!this.view.handMode)
+    );
+    this.button(SHADING_ICONS.zoomIn, "Zoom in", () => false, () => this.view.zoomBy(ZOOM_STEP));
+    this.button(SHADING_ICONS.zoomOut, "Zoom out", () => false, () => this.view.zoomBy(1 / ZOOM_STEP));
+    this.button(SHADING_ICONS.frame, "Zoom to bounds: the selection, or everything", () => false, () => this.view.frame());
+    this.paints.push(() => {
+      const flat = !this.view.orbitRotateEnabled;
+      this.root.dataset.palette = flat ? "2d" : "3d";
+      this.full.style.display = flat || this.toolsHidden ? "none" : "contents";
+      this.flat.style.display = flat && !this.toolsHidden ? "contents" : "none";
+      if (this.nav) this.nav.style.display = this.toolsHidden || tools.zoom === false ? "none" : "flex";
+      hand.style.display = flat ? "flex" : "none";
+      if (flat && this.openPop) {
+        this.openPop.style.display = "none";
+        this.openPop = null;
+      }
+      if (this.nav) this.placeNav();
+    });
+    rootHost.appendChild(this.root);
+    if (this.nav) requestAnimationFrame(() => this.placeNav());
     this.off = scene.on((e) => {
       if (e.type === "scene:renderMode" || e.type === "scene:lightingMode") this.paint();
     });
+    this.paint();
+  }
+  /** Hide or show the tools (the header strip itself stays, with the app's slots and ✎ Markup). */
+  setToolsVisible(visible) {
+    this.toolsHidden = !visible;
+    if (!visible && this.openPop) {
+      this.openPop.style.display = "none";
+      this.openPop = null;
+    }
     this.paint();
   }
   /** Redraw which buttons are on (after a change made elsewhere, such as the sun moved in code). */
   paint() {
     for (const p of this.paints) p();
   }
+  /** The nav column under the axis widget, or right under the header without one (a strict-2D view). */
+  placeNav() {
+    const nav = this.nav, g = this.view.navGizmoEl;
+    const under = !!g && g.style.display !== "none" && g.offsetHeight > 0;
+    nav.style.top = `${under ? g.offsetTop + g.offsetHeight + 6 : VIEWER_HEADER_H + 8}px`;
+    nav.style.right = `${under ? 12 + Math.max(0, (g.offsetWidth - nav.offsetWidth) / 2) : 12}px`;
+  }
   /** A popover under the bar (above it when the bar sits at the bottom). */
   popover(v, h) {
     const pop = document.createElement("div");
-    pop.style.cssText = `position:absolute;${v === "top" ? "top" : "bottom"}:calc(100% + 6px);${h}:0;display:none;gap:2px;padding:4px;border-radius:7px;background:rgba(16,18,26,.92);border:1px solid rgba(255,255,255,.08);box-shadow:0 4px 14px rgba(0,0,0,.4);`;
+    pop.style.cssText = `position:absolute;${v === "top" ? "top" : "bottom"}:calc(100% + 6px);${h}:0;display:none;gap:2px;padding:4px;border-radius:7px;background:rgba(37,37,38,.98);border:1px solid rgba(255,255,255,.08);box-shadow:0 4px 14px rgba(0,0,0,.4);`;
     this.root.appendChild(pop);
     return pop;
   }
@@ -4709,7 +5172,134 @@ var ShadingBar = class {
     if (this.openPop) this.openPop.style.display = "none";
     if (next) next.style.display = "flex";
     this.openPop = next;
+    if (next) this.placePop(next);
     this.paint();
+  }
+  /** In the header: a popover under its button, kept inside the header's width. */
+  placePop(pop) {
+    const opener = this.header ? this.openers.get(pop) : void 0;
+    if (opener) pop.style.left = `${Math.max(0, Math.min(opener.offsetLeft, this.root.clientWidth - pop.offsetWidth - 4))}px`;
+  }
+  /** The sun button's icon: the named sun, or for a date the one nearest its hour. */
+  sunIcon() {
+    const site = this.lighting.currentSunSite;
+    if (!site) return this.lighting.currentSunPreset ?? "noon";
+    return this.lighting.sunAltitude() > 20 ? "noon" : site.hour < 12 ? "morning" : "sunset";
+  }
+  /** The Date sun's fields under the sun popover's row: place, latitude and longitude, north, date, hour. */
+  sunControls(pop) {
+    ensureSliderStyle(document);
+    const form = document.createElement("div");
+    form.dataset.tektoSunDate = "";
+    form.style.cssText = "display:none;flex-direction:column;gap:6px;padding:6px 4px 4px;margin-top:2px;border-top:1px solid rgba(255,255,255,.1);color:rgba(232,235,240,.72);font:11px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;";
+    const FIELD = "box-sizing:border-box;height:22px;min-width:0;padding:0 5px;border:1px solid rgba(255,255,255,.14);border-radius:4px;background:#141414;color:#e8ebf0;font:inherit;color-scheme:dark;";
+    const line = (label, ...controls) => {
+      const l = document.createElement("div");
+      l.style.cssText = "display:flex;align-items:center;gap:6px;";
+      const name = document.createElement("span");
+      name.textContent = label;
+      name.style.cssText = "flex:0 0 38px;";
+      l.append(name, ...controls);
+      form.appendChild(l);
+    };
+    const field = (tag, label, type) => {
+      const f = document.createElement(tag);
+      if (type) f.type = type;
+      f.setAttribute("aria-label", label);
+      f.title = label;
+      f.style.cssText = `${FIELD}flex:1;`;
+      return f;
+    };
+    const place = field("select", "Place");
+    for (const p of SUN_PLACES) place.add(new Option(p.name, p.name));
+    place.add(new Option("Other", ""));
+    const lat = field("input", "Latitude, north positive", "number");
+    const lon = field("input", "Longitude, east positive", "number");
+    lat.step = lon.step = "0.01";
+    [lat.min, lat.max, lon.min, lon.max] = ["-85", "85", "-180", "180"];
+    const north = field("input", "North: degrees clockwise from the model's +Y axis (up on the plan)", "range");
+    [north.min, north.max, north.step] = ["0", "360", "1"];
+    const date = field("input", "Date", "date");
+    const time = field("input", "Time of day (standard time)", "range");
+    [time.min, time.max, time.step] = ["0", "24", "0.25"];
+    const value = () => {
+      const v = document.createElement("span");
+      v.style.cssText = "flex:0 0 38px;text-align:right;color:#e8ebf0;font:11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;";
+      return v;
+    };
+    for (const slider of [time, north]) {
+      slider.className = "tekto-slider";
+      slider.style.cssText = "flex:1;width:0;min-width:40px;--tekto-track:rgba(255,255,255,.18);--tekto-thumb:#e8ebf0;";
+    }
+    const clock = value(), bearing = value();
+    const readout = document.createElement("span");
+    readout.dataset.tektoSunReadout = "";
+    readout.style.cssText = "flex:1;white-space:nowrap;";
+    const now = document.createElement("button");
+    now.type = "button";
+    now.textContent = "Now";
+    now.title = "Today, at this hour";
+    now.style.cssText = `${FIELD}cursor:pointer;padding:0 9px;`;
+    line("Place", place);
+    line("Lat", lat, lon);
+    line("North", north, bearing);
+    line("Date", date);
+    line("Time", time, clock);
+    const foot = document.createElement("div");
+    foot.style.cssText = "display:flex;align-items:center;gap:6px;padding-top:2px;";
+    foot.append(readout, now);
+    form.appendChild(foot);
+    pop.appendChild(form);
+    const apply = (change) => {
+      this.sunState = { ...this.sunState, ...change };
+      const { place: name, latitude, longitude, timeZone } = this.sunState;
+      try {
+        localStorage.setItem(SUN_PLACE_KEY, JSON.stringify({ place: name, latitude, longitude, timeZone }));
+      } catch {
+      }
+      this.lighting.sunAt(this.sunState);
+      this.paint();
+    };
+    const num = (el, fallback) => {
+      const v = Number(el.value);
+      return el.value === "" || !Number.isFinite(v) ? fallback : Math.min(Number(el.max), Math.max(Number(el.min), v));
+    };
+    place.addEventListener("change", () => {
+      const p = SUN_PLACES.find((q) => q.name === place.value);
+      if (p) apply({ place: p.name, latitude: p.latitude, longitude: p.longitude, timeZone: p.timeZone });
+      else apply({ place: void 0, timeZone: void 0 });
+    });
+    const moved = () => apply({ place: void 0, timeZone: void 0, latitude: num(lat, this.sunState.latitude), longitude: num(lon, this.sunState.longitude) });
+    lat.addEventListener("change", moved);
+    lon.addEventListener("change", moved);
+    date.addEventListener("change", () => {
+      if (date.value) apply({ date: date.value });
+    });
+    time.addEventListener("input", () => apply({ hour: Number(time.value) }));
+    north.addEventListener("input", () => apply({ north: Number(north.value) % 360 }));
+    now.addEventListener("click", () => apply(sunNow(this.sunState)));
+    const set = (el, value2) => {
+      if (document.activeElement !== el && el.value !== value2) el.value = value2;
+    };
+    this.paints.push(() => {
+      const site = this.lighting.currentSunSite;
+      const shown2 = form.style.display !== "none";
+      form.style.display = site ? "flex" : "none";
+      if (!site) return;
+      this.sunState = { ...site };
+      set(place, site.place && SUN_PLACES.some((p) => p.name === site.place) ? site.place : "");
+      set(lat, site.latitude.toFixed(2));
+      set(lon, site.longitude.toFixed(2));
+      set(date, site.date);
+      set(time, String(site.hour));
+      clock.textContent = hhmm(site.hour);
+      const turned = ((site.north ?? 0) % 360 + 360) % 360;
+      set(north, String(turned));
+      bearing.textContent = `${Math.round(turned)}\xB0`;
+      const s = sunFor(site), deg = (r) => Math.round(r * 180 / Math.PI), tz = sunTimeZone(site);
+      readout.textContent = `${s.isDaytime ? `Alt ${deg(s.altitude)}\xB0 \xB7 Az ${deg(s.azimuth)}\xB0` : "Below the horizon"} \xB7 UTC${tz < 0 ? "\u2212" : "+"}${Math.abs(tz)}`;
+      if (!shown2 && this.openPop === pop) this.placePop(pop);
+    });
   }
   /** The section popover's controls, kept in step with the cut however it was set. */
   sectionControls(pop) {
@@ -4743,7 +5333,7 @@ var ShadingBar = class {
       this.marks.setSection({ axis, ...w, ...flip ? { flip } : {} });
       this.paint();
     };
-    const show = (c, r) => units ? `${c.toFixed(2)} ${units}` : `${Math.round((c - r[0]) / Math.max(r[1] - r[0], 1e-12) * 100)} %`;
+    const show2 = (c, r) => units ? `${c.toFixed(2)} ${units}` : `${Math.round((c - r[0]) / Math.max(r[1] - r[0], 1e-12) * 100)} %`;
     for (const [label, axis, title] of axes) {
       const b = this.button(
         `<span style="font:600 10px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${label}</span>`,
@@ -4802,7 +5392,7 @@ var ShadingBar = class {
           slider.value = String(near);
         }
       }
-      value.textContent = show(pending, [Number(slider.min), Number(slider.max)]);
+      value.textContent = show2(pending, [Number(slider.min), Number(slider.max)]);
       this.marks.showSectionPlane(true);
       clearTimeout(hide);
       if (!frame) frame = requestAnimationFrame(() => {
@@ -4834,7 +5424,7 @@ var ShadingBar = class {
         slider.step = String(Math.max((r[1] - r[0]) / 500, 1e-4));
         const c = this.marks.sectionCoordinate() ?? r[0];
         if (document.activeElement !== slider) slider.value = String(c);
-        value.textContent = show(c, r);
+        value.textContent = show2(c, r);
       } else {
         value.textContent = "\u2014";
       }
@@ -4874,7 +5464,7 @@ var ShadingBar = class {
     }
     this.paint();
   }
-  button(icon, title, on, run, parent = this.root, paints = this.paints) {
+  button(icon, title, on, run, parent = this.group, paints = this.paints) {
     const b = document.createElement("button");
     b.type = "button";
     b.title = title;
@@ -4885,7 +5475,7 @@ var ShadingBar = class {
       const active = on();
       b.setAttribute("aria-pressed", String(active));
       b.style.background = active ? "#e8ebf0" : "transparent";
-      b.style.color = active ? "#11131a" : "rgba(232,235,240,.72)";
+      b.style.color = active ? "#1e1e1e" : "rgba(232,235,240,.72)";
     };
     b.onmouseenter = () => {
       if (!on()) b.style.color = "#fff";
@@ -4902,12 +5492,13 @@ var ShadingBar = class {
   separator() {
     const s = document.createElement("div");
     s.style.cssText = "width:1px;height:18px;margin:0 3px;background:rgba(255,255,255,.14);";
-    this.root.appendChild(s);
+    this.group.appendChild(s);
   }
   dispose() {
     this.off();
     this.marks.showSectionPlane(false);
     this.root.remove();
+    this.nav?.remove();
   }
 };
 function escapeHtml(s) {
@@ -4994,7 +5585,7 @@ var AmbientOcclusion = class {
 var INERT_STYLE_KEYS = /* @__PURE__ */ new Set(["layer", "lineWidth", "noExport"]);
 var DEFAULTS = {
   antialias: true,
-  backgroundColor: 658196,
+  backgroundColor: 723723,
   showGrid: true,
   gridStyle: "lines",
   gridSize: 20,
@@ -5009,7 +5600,12 @@ var DEFAULTS = {
   up: "y",
   navGizmo: false,
   shadingBar: false,
-  units: null
+  viewerTools: {},
+  units: null,
+  headerHost: null,
+  flatLighting: "sketch",
+  studioLighting: "filmic",
+  hiddenLineInverse: false
 };
 var EDGE_BUDGET_MS = 8;
 var ThreeRenderer = class {
@@ -5026,6 +5622,7 @@ var ThreeRenderer = class {
     this.gridHelper = null;
     this.fadingGrid = null;
     this.shadingBar = null;
+    this.frameBounds = null;
     this.overlayState = { grid: true, axes: true, wireframe: true, labels: true };
     this.overlayExtra = /* @__PURE__ */ new Map();
     this.gridDirty = true;
@@ -5034,6 +5631,7 @@ var ThreeRenderer = class {
     // sketch re-runs (clearThree only touches objectMap-managed objects).
     this.externalObjects = /* @__PURE__ */ new Map();
     this.resizeObserver = null;
+    this.page = null;
     this.drawListeners = /* @__PURE__ */ new Set();
     this.gScene = gScene;
     this.container = container;
@@ -5067,6 +5665,7 @@ var ThreeRenderer = class {
       config: this.config,
       camera: this.camera,
       overlay: (name) => this.overlayState[name] ?? true,
+      pageColor: () => this.pageColor(),
       get controls() {
         return self.controls;
       },
@@ -5080,23 +5679,20 @@ var ThreeRenderer = class {
     this.lighting = new Lighting(this.core);
     this.marks = new Marks(this.core);
     this.ao = new AmbientOcclusion(this.core);
-    if (cfg.shadingBar) this.shadingBar = new ShadingBar(this.core, this.lighting, this.marks, this.ao, this, cfg.shadingBar === true ? "top-left" : cfg.shadingBar);
     this.lighting.applyMode(this.gScene.lightingMode);
     this.builder = new ObjectBuilder(this.core, this.lighting);
     if (cfg.showGrid && cfg.gridStyle === "fading") {
-      this.fadingGrid = new FadingGrid(cfg.backgroundColor, this.isZUp);
+      this.fadingGrid = new FadingGrid(this.pageColor(), this.isZUp);
       this.gridHelper = this.fadingGrid.mesh;
       this.threeScene.add(this.fadingGrid.mesh);
     } else if (cfg.showGrid) {
-      const grid = new THREE12.GridHelper(cfg.gridSize, cfg.gridDivisions, 3816538, 2763850);
-      if (this.isZUp) grid.rotation.x = Math.PI / 2;
-      this.gridHelper = grid;
-      this.threeScene.add(grid);
+      this.buildLineGrid(this.pageColor());
     }
     if (cfg.showAxes) {
       this.axesHelper = new THREE12.AxesHelper(cfg.axesSize);
       this.threeScene.add(this.axesHelper);
     }
+    this.syncPage();
     if (cfg.enableOrbitControls) {
       this.controls = new OrbitControls(this.camera, this.renderer.domElement);
       this.controls.enableDamping = cfg.enableDamping;
@@ -5104,8 +5700,9 @@ var ThreeRenderer = class {
       this.controls.target.set(...cfg.cameraTarget);
       this.controls.addEventListener("change", () => this.requestRender());
     }
-    this.rig = new CameraRig(this.core, this.camera, orthoCam, cfg.navGizmo);
+    this.rig = new CameraRig(this.core, this.camera, orthoCam, cfg.navGizmo, cfg.shadingBar === "header" ? VIEWER_HEADER_H : 0);
     this.pointer = new Pointer(this.core, this.builder, this.marks);
+    if (cfg.shadingBar) this.shadingBar = new ShadingBar(this.core, this.lighting, this.marks, this.ao, this, cfg.shadingBar === true ? "top-left" : cfg.shadingBar, cfg.headerHost, cfg.viewerTools);
     this.renderer.domElement.addEventListener("webglcontextrestored", () => this.requestRender());
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(container);
@@ -5154,7 +5751,8 @@ var ThreeRenderer = class {
         this.clearThree();
         break;
       case "scene:renderMode":
-        this.rebuildAllMeshes();
+        if (this.syncPage()) this.rebuildAll();
+        else this.rebuildAllMeshes();
         break;
       case "scene:lightingMode":
         this.lighting.applyMode(event.mode);
@@ -5260,6 +5858,58 @@ var ThreeRenderer = class {
       this.addToThree(obj);
     }
   }
+  /** Rebuild every object (the page changed: lines and marks are drawn for the page they are on). */
+  rebuildAll() {
+    for (const obj of this.gScene.all()) {
+      this.removeFromThree(obj.id);
+      this.addToThree(obj);
+    }
+  }
+  // ── The page ──
+  /** The colour behind the model now: the background, or in hidden line the drawing's page. */
+  pageColor() {
+    const background = new THREE12.Color(this.config.backgroundColor).getHex();
+    return this.gScene.renderMode === "hiddenline" ? hiddenLinePage(background, this.config.hiddenLineInverse) : background;
+  }
+  /** Put the page behind the model and rule the grid for it. True if the page changed. */
+  syncPage() {
+    const page = this.pageColor();
+    this.lighting.applyPage();
+    if (page === this.page) return false;
+    const first = this.page === null;
+    this.page = page;
+    this.fadingGrid?.setBackground(page);
+    if (!this.fadingGrid && this.gridHelper && !first) {
+      const visible = this.gridHelper.visible;
+      this.threeScene.remove(this.gridHelper);
+      this.gridHelper.dispose?.();
+      this.buildLineGrid(page);
+      this.gridHelper.visible = visible;
+    }
+    this.requestRender();
+    return !first;
+  }
+  /** The grid of lines, ruled for the page it lies on: dark greys on a dark page, pale ones on paper. */
+  buildLineGrid(page) {
+    const [major, minor] = luminance(page) > 0.5 && page !== new THREE12.Color(this.config.backgroundColor).getHex() ? [11842740, 14342874] : [3815994, 2500134];
+    const grid = new THREE12.GridHelper(this.config.gridSize, this.config.gridDivisions, major, minor);
+    if (this.isZUp) grid.rotation.x = Math.PI / 2;
+    this.gridHelper = grid;
+    this.threeScene.add(grid);
+  }
+  /**
+   * Draw hidden line inverse — light lines on a dark page — or, with false, as a drawing
+   * on light paper (the default; `hiddenLineInverse` in the config).
+   */
+  setHiddenLineInverse(on) {
+    this.config.hiddenLineInverse = on;
+    if (this.syncPage()) this.rebuildAll();
+    this.shadingBar?.paint();
+  }
+  /** Whether hidden line is drawn inverse (`setHiddenLineInverse`). */
+  get hiddenLineInverse() {
+    return this.config.hiddenLineInverse;
+  }
   // Line/point "helper" object types (vs solid meshes/polygons/planes).
   _isHelper(type) {
     return type === "segment" || type === "polyline" || type === "point" || type === "circle";
@@ -5355,12 +6005,25 @@ var ThreeRenderer = class {
       this.shadingBar?.paint();
     };
   }
-  /** Frame the selection (the highlighted objects), or everything when nothing is selected:
-   *  Blender's Frame Selected / Home. Animated. */
+  /** Frame the selection (the highlighted objects), or everything when nothing is selected —
+   *  or the frame bounds, when set (`setFrameBounds`): Blender's Frame Selected / Home. Animated. */
   frame() {
     const sel = this.marks.highlighted.filter((id) => this.objectMap.has(id));
+    if (!sel.length && this.frameBounds) {
+      this.rig.fitBox(this.frameBounds.clone(), { margin: 1.3 });
+      return;
+    }
     const ids = sel.length ? sel : [...this.objectMap.keys()].filter((id) => this.isObjectShown(id));
     if (ids.length) this.rig.fitTo(ids, sel.length ? {} : { margin: 1.3 });
+  }
+  /** What Frame — the shading bar's, its 2D palette's zoom to bounds — frames when nothing is
+   *  selected: this box (world coordinates) instead of everything shown, say the model without
+   *  its site. `null`: everything shown again. */
+  setFrameBounds(bounds) {
+    this.frameBounds = bounds && new THREE12.Box3(
+      new THREE12.Vector3(bounds.min.x, bounds.min.y, bounds.min.z),
+      new THREE12.Vector3(bounds.max.x, bounds.max.y, bounds.max.z)
+    );
   }
   /** Save the view as a PNG, as a person sees it (with notes and drawings over it), named
    *  `fileName` with a date-time stamp. */
@@ -5497,8 +6160,8 @@ var ThreeRenderer = class {
   }
   /** Set the viewport background color. */
   setBackground(color) {
-    this.threeScene.background = new THREE12.Color(color);
     this.config.backgroundColor = color;
+    if (this.syncPage()) this.rebuildAll();
     this.requestRender();
   }
   // ── Cleanup ──
@@ -5586,9 +6249,23 @@ var ThreeRenderer = class {
     return this.lighting.currentSunPreset;
   }
   /**
+   * The sun for a date, an hour and a place, as the sun menu's "Date" sets it: Studio, the
+   * light following the sun, so the hour gives the evening and the night too.
+   *
+   *   renderer.setSunAt({ latitude: 47.37, longitude: 8.55, date: "2026-06-21", hour: 17 });
+   */
+  setSunAt(site) {
+    this.lighting.sunAt(site);
+    this.shadingBar?.paint();
+  }
+  /** The date and place last set (`setSunAt`), or null once the sun was moved another way. */
+  get sunSite() {
+    return this.lighting.currentSunSite;
+  }
+  /**
    * Let Studio's light follow the sun: with it on, the sun's colour and strength, the sky,
    * the exposure and the background come from the sun's altitude (`setSunDirection`, which
-   * the shell's Sun popover drives by date and hour), so evening and dusk follow from the
+   * `setSunAt` drives by date and hour), so evening and dusk follow from the
    * hour: noon as Studio is, a warm low sun, a blue dusk, night. Flat lighting is unchanged.
    * Off by default.
    */
@@ -5666,9 +6343,49 @@ var ThreeRenderer = class {
   worldToScreen(world) {
     return this.rig.worldToScreen(world);
   }
-  /** Enable/disable orbit ROTATION (pan + zoom stay). Off → a strict-2D view. */
+  /** Enable/disable orbit ROTATION (pan + zoom stay). Off → a strict-2D view: the shading bar
+   *  shows its 2D palette (the hand, zoom in, zoom out, zoom to bounds) and the axis widget hides. */
   setOrbitRotateEnabled(enabled) {
     this.rig.setOrbitRotateEnabled(enabled);
+    this.pointer.handMode = this.rig.handMode;
+    this.shadingBar?.paint();
+  }
+  /** Hide or show the viewer's tools (the shading bar's icons, the zoom column, the axis widget)
+   *  while the view shows something they do not apply to, such as a drawing laid over it. The
+   *  header strip stays, with the app's own slots and ✎ Markup. */
+  setViewerToolsVisible(visible) {
+    this.shadingBar?.setToolsVisible(visible);
+    this.rig.setGizmoShown(visible);
+  }
+  /** The hand, a strict-2D view's tool (the 2D palette has its button): on, the left button drags
+   *  the view along — over drag handles too — under a grab cursor; a click still picks. Off again
+   *  when the view turns 3D; ignored in a 3D view. */
+  setHandMode(on) {
+    this.rig.setHandMode(on);
+    this.pointer.handMode = this.rig.handMode;
+    this.shadingBar?.paint();
+  }
+  /** Whether the hand is on (see `setHandMode`). */
+  get handMode() {
+    return this.rig.handMode;
+  }
+  /** False in a strict-2D view (see `setOrbitRotateEnabled`). */
+  get orbitRotateEnabled() {
+    return this.rig.orbitRotateEnabled;
+  }
+  /** The axis widget's element, or null without one (`navGizmo`). */
+  get navGizmoEl() {
+    return this.rig.navGizmoEl;
+  }
+  /** With `shadingBar: "header"`: the header strip's slots — `left` and `right` for the app's own
+   *  controls (view tabs, tools, who is here), `end` where ✎ Markup goes. Null otherwise. */
+  get viewerHeader() {
+    return this.shadingBar?.header ?? null;
+  }
+  /** Zoom in (`factor` > 1) or out (< 1) about the view's target, animated unless
+   *  `animate: false`: closer in perspective, a larger zoom in orthographic. */
+  zoomBy(factor, opts) {
+    this.rig.zoomBy(factor, opts);
   }
   /** The camera as plain numbers, enough to reproduce the view. */
   cameraState() {
@@ -5761,6 +6478,11 @@ var ThreeRenderer = class {
   /** Raycast at viewport coordinates and return the topmost pickable scene id (or null). */
   pickAt(clientX, clientY) {
     return this.pointer.pickAt(clientX, clientY);
+  }
+  /** Only objects `filter` accepts can be picked or hovered; a rejected one lets the pick
+   *  through to what is behind it (a sketch rejects objects on locked layers). `null` clears it. */
+  setPickFilter(filter) {
+    this.pointer.setPickFilter(filter);
   }
   /** Like `pickAt`, but also returns the world-space hit point, and skips hidden objects
    *  (the raycaster alone tests invisible ones too). Used by the markup overlay. */
@@ -5892,10 +6614,18 @@ var ThreeRenderer = class {
    * they never overlap and don't swim as the model turns; a label whose thing is hidden
    * behind other things is left out; what doesn't fit is counted, not dropped silently.
    * `objects` are scene ids or record keys (a key follows its record through rebuilds).
-   * Pass `[]` to clear. `onPick` / `onHover` hear clicks and hovers on the labels.
+   * Pass `[]` to clear. `onPick` / `onHover` hear clicks and hovers on the labels;
+   * `stack: "list"` lists them from the top on a column under `title`, like a key;
+   * `labels: false` draws none and reports where their leaders would end (`onEnds`), for an
+   * app that lists them outside the view.
    */
-  setCallouts(items, handlers = {}) {
-    this.marks.setCallouts(items, handlers);
+  setCallouts(items, options = {}) {
+    this.marks.setCallouts(items, options);
+  }
+  /** Show these callouts (by id), and their leaders, as the ones meant, in `colour`: the label
+   *  naming what the pointer is over, say. Null clears. Only the look changes. */
+  setCalloutHighlight(ids, colour) {
+    this.marks.setCalloutHighlight(ids, colour);
   }
   // ── Crease lines ──
   /** Crease lines still to be drawn (hidden line and ghost build them a frame at a time). */
@@ -5909,7 +6639,7 @@ var DEFAULTS2 = {
   width: 800,
   height: 600,
   viewBox: { minX: -5, minY: -5, width: 10, height: 10 },
-  backgroundColor: "#0a0b14",
+  backgroundColor: "#0b0b0b",
   showGrid: true,
   gridSpacing: 1,
   gridColor: "#1a1c3a",
@@ -6116,6 +6846,21 @@ var SVGRenderer = class {
 };
 
 // src/gui/LayerPanel.ts
+var DEFAULT_COLOR = "#888888";
+var defaultState = (node) => ({
+  visible: node.defaultVisible ?? true,
+  color: node.defaultColor ?? DEFAULT_COLOR,
+  locked: node.defaultLocked ?? false
+});
+var stateIn = (node, value) => ({ ...defaultState(node), ...value[node.id] });
+function pathTo(nodes, id) {
+  for (const node of nodes) {
+    if (node.id === id) return [node];
+    const below = node.children ? pathTo(node.children, id) : [];
+    if (below.length) return [node, ...below];
+  }
+  return [];
+}
 function computeEffectiveVisibility(nodes, value) {
   const result = {};
   const walk = (node, parentEffective) => {
@@ -6127,67 +6872,172 @@ function computeEffectiveVisibility(nodes, value) {
   nodes.forEach((node) => walk(node, true));
   return result;
 }
+function computeEffectiveLock(nodes, value) {
+  const result = {};
+  const walk = (node, parentLocked) => {
+    const own = value[node.id]?.locked ?? (node.defaultLocked ?? false);
+    const effective = parentLocked || own;
+    result[node.id] = effective;
+    node.children?.forEach((child) => walk(child, effective));
+  };
+  nodes.forEach((node) => walk(node, false));
+  return result;
+}
+function layerDefaults(nodes) {
+  const result = {};
+  const walk = (node) => {
+    result[node.id] = defaultState(node);
+    node.children?.forEach(walk);
+  };
+  nodes.forEach(walk);
+  return result;
+}
+function activateLayer(nodes, value, id) {
+  const updates = {};
+  for (const node of pathTo(nodes, id)) {
+    const state = stateIn(node, value);
+    if (!state.visible || state.locked) updates[node.id] = { ...state, visible: true, locked: false };
+  }
+  return updates;
+}
+function defaultActiveLayer(nodes, value) {
+  const on = computeEffectiveVisibility(nodes, value);
+  const locked = computeEffectiveLock(nodes, value);
+  const ids = Object.keys(on);
+  return ids.find((id) => on[id] && !locked[id]) ?? ids[0] ?? "";
+}
+function keepActiveOn(nodes, active, updates) {
+  const guarded = new Set(pathTo(nodes, active).map((n) => n.id));
+  const result = {};
+  for (const [id, patch] of Object.entries(updates)) {
+    if (!guarded.has(id)) {
+      result[id] = patch;
+      continue;
+    }
+    const { visible, locked, ...kept } = patch;
+    if (visible) kept.visible = true;
+    if (locked === false) kept.locked = false;
+    result[id] = kept;
+  }
+  return result;
+}
+var SWATCH_STYLE_ID = "tekto-swatch-style";
+function ensureSwatchStyle(doc) {
+  if (doc.getElementById(SWATCH_STYLE_ID)) return;
+  const el = doc.createElement("style");
+  el.id = SWATCH_STYLE_ID;
+  el.textContent = `
+    .tekto-swatch{-webkit-appearance:none;appearance:none;width:12px;height:12px;padding:0;margin:0 2px 0 0;border:1px solid var(--tekto-swatch-border,#9ca3af);border-radius:0;background:none;cursor:pointer;flex-shrink:0;outline:none;}
+    .tekto-swatch::-webkit-color-swatch-wrapper{padding:0;}
+    .tekto-swatch::-webkit-color-swatch{border:none;border-radius:0;}
+    .tekto-swatch::-moz-color-swatch{border:none;border-radius:0;}
+  `;
+  doc.head.appendChild(el);
+}
+var svg2 = (body) => `<svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true">${body}</svg>`;
+var BULB_GLASS = "M8 1.5a4.5 4.5 0 0 0-2.7 8.1c.5.4.7.9.7 1.4v.5h4v-.5c0-.5.2-1 .7-1.4A4.5 4.5 0 0 0 8 1.5z";
+var BULB_BASE = `<path d="M6.2 13.5h3.6M6.8 15h2.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>`;
+var ICON = {
+  check: svg2(`<path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`),
+  bulbOn: svg2(`<path d="${BULB_GLASS}" fill="currentColor"/>${BULB_BASE}`),
+  bulbOff: svg2(`<path d="${BULB_GLASS}" fill="none" stroke="currentColor" stroke-width="1.2"/>${BULB_BASE}`),
+  lockClosed: svg2(`<rect x="3.5" y="7" width="9" height="7" rx="1" fill="currentColor"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.4"/>`),
+  lockOpen: svg2(`<rect x="3.5" y="7" width="9" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0" fill="none" stroke="currentColor" stroke-width="1.2"/>`)
+};
 var LayerPanel = class {
   constructor(opts) {
     this._nodes = [];
     this._value = {};
     this._collapsed = /* @__PURE__ */ new Set();
+    this._active = "";
+    /** The active layer and its parents: they can't be turned off or locked. */
+    this._activePath = /* @__PURE__ */ new Set();
     this._isDark = opts.isDark ?? true;
     this._onChange = opts.onChange;
+    this._columns = { active: true, locked: true, color: true, ...opts.columns };
+    this._active = opts.active ?? "";
+    ensureSwatchStyle(document);
     this.el = document.createElement("div");
     this.el.style.cssText = "overflow-y:auto;max-height:300px;";
     this.update(opts.nodes, opts.value);
   }
+  /** The active layer's id: "" for an empty tree, or with the active column hidden (`columns.active: false`),
+   *  where the tree has no active layer and nothing is kept on. */
+  get active() {
+    return this._active;
+  }
   /**
-   * Re-render with new nodes/value.
-   * Scroll position and collapsed state are preserved.
+   * Re-render with new nodes/value, and optionally another active layer (an
+   * id not in `nodes` is ignored). Scroll position and collapsed state are
+   * preserved. If the active layer leaves the tree, the first layer that is on
+   * and unlocked becomes active.
    */
-  update(nodes, value) {
+  update(nodes, value, active) {
     this._nodes = nodes;
     this._value = value;
-    const scroll = this.el.scrollTop;
-    this.el.innerHTML = "";
-    for (const node of this._nodes) this._renderNode(node, 0, true);
-    this.el.scrollTop = scroll;
+    if (!this._columns.active) this._active = "";
+    else {
+      if (active !== void 0 && pathTo(nodes, active).length) this._active = active;
+      if (!pathTo(nodes, this._active).length) this._active = defaultActiveLayer(nodes, value);
+    }
+    this._rebuild();
   }
   // ── Private helpers ──
-  _stateOf(node) {
-    return this._value[node.id] ?? {
-      visible: node.defaultVisible ?? true,
-      color: node.defaultColor ?? "#888888"
-    };
-  }
   _rebuild() {
+    this._activePath = new Set(pathTo(this._nodes, this._active).map((n) => n.id));
     const scroll = this.el.scrollTop;
     this.el.innerHTML = "";
-    for (const node of this._nodes) this._renderNode(node, 0, true);
+    for (const node of this._nodes) this._renderNode(node, 0, true, false);
     this.el.scrollTop = scroll;
   }
+  _iconButton(opts) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.innerHTML = opts.icon;
+    b.title = opts.title;
+    b.setAttribute("role", opts.role);
+    b.setAttribute("aria-label", opts.label);
+    b.setAttribute("aria-checked", String(opts.checked));
+    b.disabled = !!opts.disabled;
+    b.style.cssText = `
+      all:unset;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;
+      width:14px;height:14px;flex-shrink:0;color:${opts.color};opacity:${opts.opacity ?? 1};
+      cursor:${opts.disabled ? "default" : "pointer"};
+    `;
+    b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      opts.onClick();
+    });
+    return b;
+  }
   /**
-   * @param ancestorVisible — whether all ancestors are currently visible.
-   *   Used only for visual dimming; does NOT affect stored state.
+   * @param ancestorVisible — whether all ancestors are currently on.
+   * @param ancestorLocked — whether any ancestor is locked.
+   *   Both are used only for visual dimming; they do NOT affect stored state.
    */
-  _renderNode(node, depth, ancestorVisible) {
-    const state = this._stateOf(node);
+  _renderNode(node, depth, ancestorVisible, ancestorLocked) {
+    const state = stateIn(node, this._value);
     const hasChildren = !!node.children?.length;
     const isCollapsed = this._collapsed.has(node.id);
     const effectiveVisible = ancestorVisible && state.visible;
+    const effectiveLocked = ancestorLocked || !!state.locked;
+    const isActive = node.id === this._active;
+    const guarded = this._activePath.has(node.id);
     const d = this._isDark;
-    const labelColor = d ? effectiveVisible ? "#b8bdd4" : "#3a3f5a" : effectiveVisible ? "#2a2d3a" : "#b0b4c0";
+    const labelColor = d ? effectiveVisible ? "#cccccc" : "#3a3f5a" : effectiveVisible ? "#2a2d3a" : "#b0b4c0";
     const arrowColor = d ? "#3a3f5a" : "#b0b4c0";
     const hoverBg = d ? "rgba(255,255,255,.04)" : "rgba(0,0,0,.04)";
+    const iconOn = d ? "#cccccc" : "#2a2d3a";
+    const iconOff = d ? "#3a3f5a" : "#b0b4c0";
+    const bulbOn = d ? "#fbbf24" : "#d97706";
+    const checkColor = d ? "#ffffff" : "#16182c";
     const row = document.createElement("div");
+    row.dataset.layer = node.id;
     row.style.cssText = `
       display:flex;align-items:center;gap:5px;
       padding:3px 6px 3px ${6 + depth * 14}px;
       border-radius:3px;cursor:default;transition:background .1s;min-height:22px;
     `;
-    row.addEventListener("mouseenter", () => {
-      row.style.background = hoverBg;
-    });
-    row.addEventListener("mouseleave", () => {
-      row.style.background = "";
-    });
     const arrow = document.createElement("span");
     arrow.style.cssText = `width:10px;font-size:7px;flex-shrink:0;line-height:1;color:${arrowColor};user-select:none;`;
     if (hasChildren) {
@@ -6200,15 +7050,6 @@ var LayerPanel = class {
       });
     }
     row.appendChild(arrow);
-    const cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.checked = state.visible;
-    cb.style.cssText = `cursor:pointer;width:11px;height:11px;flex-shrink:0;accent-color:${d ? "#ffffff" : "#16182c"};margin:0;opacity:${ancestorVisible ? "1" : "0.35"};`;
-    cb.addEventListener("change", (e) => {
-      e.stopPropagation();
-      this._onChange({ [node.id]: { ...state, visible: cb.checked } });
-    });
-    row.appendChild(cb);
     const lbl = document.createElement("span");
     lbl.textContent = node.label;
     lbl.style.cssText = `
@@ -6216,23 +7057,77 @@ var LayerPanel = class {
       user-select:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
     `;
     row.appendChild(lbl);
-    const cp = document.createElement("input");
-    cp.type = "color";
-    cp.value = state.color;
-    cp.title = "Layer color";
-    cp.style.cssText = `
-      width:16px;height:13px;border:1px solid ${d ? "rgba(255,255,255,.1)" : "rgba(0,0,0,.15)"};
-      border-radius:2px;padding:0;cursor:pointer;flex-shrink:0;outline:none;background:none;
-    `;
-    cp.addEventListener("change", (e) => {
-      e.stopPropagation();
-      this._onChange({ [node.id]: { ...state, color: cp.value } });
+    let activeBtn = null;
+    if (this._columns.active) {
+      activeBtn = this._iconButton({
+        icon: ICON.check,
+        role: "radio",
+        checked: isActive,
+        label: `Active: ${node.label}`,
+        title: isActive ? "Active layer" : "Make active",
+        color: checkColor,
+        opacity: isActive ? 1 : 0,
+        onClick: () => {
+          if (isActive) return;
+          const updates = activateLayer(this._nodes, this._value, node.id);
+          this._active = node.id;
+          this._onChange(updates, node.id);
+        }
+      });
+      row.appendChild(activeBtn);
+    }
+    row.addEventListener("mouseenter", () => {
+      row.style.background = hoverBg;
+      if (activeBtn && !isActive) activeBtn.style.opacity = "0.35";
     });
-    row.appendChild(cp);
+    row.addEventListener("mouseleave", () => {
+      row.style.background = "";
+      if (activeBtn && !isActive) activeBtn.style.opacity = "0";
+    });
+    const which = isActive ? "The active layer" : "A parent of the active layer";
+    row.appendChild(this._iconButton({
+      icon: state.visible ? ICON.bulbOn : ICON.bulbOff,
+      role: "checkbox",
+      checked: state.visible,
+      label: `On: ${node.label}`,
+      title: guarded ? `${which} can't be turned off` : state.visible ? "Turn off" : "Turn on",
+      color: state.visible ? bulbOn : iconOff,
+      opacity: ancestorVisible ? 1 : 0.35,
+      disabled: guarded,
+      // Only update this node's own state — children are NOT touched (non-destructive mask)
+      onClick: () => this._onChange({ [node.id]: { ...state, visible: !state.visible } })
+    }));
+    if (this._columns.locked) {
+      row.appendChild(this._iconButton({
+        icon: state.locked ? ICON.lockClosed : ICON.lockOpen,
+        role: "checkbox",
+        checked: !!state.locked,
+        label: `Locked: ${node.label}`,
+        title: guarded ? `${which} can't be locked` : state.locked ? "Unlock" : "Lock",
+        color: state.locked ? iconOn : iconOff,
+        opacity: ancestorLocked ? 0.35 : 1,
+        disabled: guarded,
+        onClick: () => this._onChange({ [node.id]: { ...state, locked: !state.locked } })
+      }));
+    }
+    if (this._columns.color) {
+      const cp = document.createElement("input");
+      cp.type = "color";
+      cp.value = state.color;
+      cp.title = "Layer color";
+      cp.setAttribute("aria-label", `Color: ${node.label}`);
+      cp.className = "tekto-swatch";
+      cp.style.setProperty("--tekto-swatch-border", d ? "#9ca3af" : "#6b7280");
+      cp.addEventListener("change", (e) => {
+        e.stopPropagation();
+        this._onChange({ [node.id]: { ...state, color: cp.value } });
+      });
+      row.appendChild(cp);
+    }
     this.el.appendChild(row);
     if (hasChildren && !isCollapsed) {
       for (const child of node.children) {
-        this._renderNode(child, depth + 1, effectiveVisible);
+        this._renderNode(child, depth + 1, effectiveVisible, effectiveLocked);
       }
     }
   }
@@ -6240,17 +7135,13 @@ var LayerPanel = class {
 
 // src/sketch/sketchLayout.ts
 function buildSketchLayout(container, config, t) {
-  const defaultWidth = config.panelWidth ?? 320;
-  const storageKey = `tekto.panelWidth.${config.title ?? "default"}`;
-  const stored = parseInt(localStorage.getItem(storageKey) ?? "", 10);
-  const panelWidth = Number.isFinite(stored) && stored >= 200 && stored <= 800 ? stored : defaultWidth;
   const inShell = container instanceof HTMLElement && container.dataset.shell != null;
   const showHeader = config.showHeader ?? !inShell;
   const headerRow = showHeader ? "44px " : "";
-  let fileMenusEl = null;
+  let menuHost = null;
   const root = document.createElement("div");
   root.style.cssText = `
-    display:grid; grid-template-columns:${panelWidth}px 1fr; grid-template-rows:${headerRow}1fr;
+    display:grid; grid-template-columns:320px 1fr; grid-template-rows:${headerRow}1fr;
     height:100%; width:100%; overflow:hidden; position:relative;
     background:${t.bg};
     color:${t.text};
@@ -6270,9 +7161,9 @@ function buildSketchLayout(container, config, t) {
       <span style="font-size:9px;padding:2px 6px;border-radius:3px;
         background:${t.hoverBg};color:${t.accent}">LIVE</span>
     `;
-    fileMenusEl = document.createElement("div");
-    fileMenusEl.style.cssText = "margin-left:auto;display:flex;gap:8px;position:relative;";
-    header.appendChild(fileMenusEl);
+    menuHost = document.createElement("div");
+    menuHost.style.cssText = "display:flex;align-items:center;margin-left:8px;";
+    header.appendChild(menuHost);
     root.appendChild(header);
   }
   const panelEl = document.createElement("div");
@@ -6283,84 +7174,6 @@ function buildSketchLayout(container, config, t) {
     position:relative; grid-column:1;
   `;
   root.appendChild(panelEl);
-  const resizeHandle = document.createElement("div");
-  resizeHandle.title = "Drag to resize panel \xB7 double-click to reset";
-  const handleIdle = t.isDark ? "rgba(255,255,255,.14)" : "rgba(0,0,0,.14)";
-  const handleHover = t.isDark ? "rgba(255,255,255,.35)" : "rgba(0,0,0,.30)";
-  resizeHandle.style.cssText = `
-    position:absolute; top:${showHeader ? 44 : 0}px; bottom:0;
-    left:${panelWidth - 3}px; width:6px;
-    cursor:col-resize; z-index:10;
-    background:${handleIdle};
-    transition:background .15s;
-  `;
-  resizeHandle.addEventListener("mouseenter", () => {
-    resizeHandle.style.background = handleHover;
-  });
-  resizeHandle.addEventListener("mouseleave", () => {
-    resizeHandle.style.background = handleIdle;
-  });
-  resizeHandle.addEventListener("dblclick", () => applyWidth(defaultWidth));
-  resizeHandle.addEventListener("mousedown", (e) => {
-    e.preventDefault();
-    const startX = e.clientX;
-    const startWidth = parseInt(root.style.gridTemplateColumns, 10) || panelWidth;
-    const onMove = (ev) => {
-      const next = Math.max(200, Math.min(800, startWidth + (ev.clientX - startX)));
-      applyWidth(next);
-    };
-    const onUp = () => {
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
-      document.body.style.cursor = "";
-    };
-    document.body.style.cursor = "col-resize";
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
-  });
-  root.appendChild(resizeHandle);
-  let curWidth = panelWidth;
-  const applyWidth = (w) => {
-    curWidth = w;
-    root.style.gridTemplateColumns = `${w}px 1fr`;
-    resizeHandle.style.left = `${w - 3}px`;
-    collapseBtn.style.left = `${w - 26}px`;
-    localStorage.setItem(storageKey, String(w));
-    requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
-  };
-  const collapseKey = `tekto.panelCollapsed.${config.title ?? "default"}`;
-  const btnCss = (left) => `
-    position:absolute; top:${(showHeader ? 44 : 0) + 6}px; left:${left}px;
-    width:20px; height:24px; z-index:11; cursor:pointer; user-select:none;
-    display:flex; align-items:center; justify-content:center;
-    font:13px/1 ui-monospace,monospace;
-    border:1px solid ${t.controlBorder}; border-radius:4px;
-    background:${t.panelBg}; color:${t.accent};
-  `;
-  const collapseBtn = document.createElement("div");
-  collapseBtn.title = "Collapse panel";
-  collapseBtn.textContent = "\u2039";
-  collapseBtn.style.cssText = btnCss(panelWidth - 26);
-  root.appendChild(collapseBtn);
-  const expandBtn = document.createElement("div");
-  expandBtn.title = "Show panel";
-  expandBtn.textContent = "\u203A";
-  expandBtn.style.cssText = btnCss(4);
-  expandBtn.style.display = "none";
-  root.appendChild(expandBtn);
-  const applyCollapsed = (c) => {
-    root.style.gridTemplateColumns = c ? "28px 1fr" : `${curWidth}px 1fr`;
-    panelEl.style.display = c ? "none" : "";
-    resizeHandle.style.display = c ? "none" : "";
-    collapseBtn.style.display = c ? "none" : "flex";
-    collapseBtn.style.left = `${curWidth - 26}px`;
-    expandBtn.style.display = c ? "flex" : "none";
-    localStorage.setItem(collapseKey, c ? "1" : "0");
-    requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
-  };
-  collapseBtn.addEventListener("click", () => applyCollapsed(true));
-  expandBtn.addEventListener("click", () => applyCollapsed(false));
-  if (localStorage.getItem(collapseKey) === "1") applyCollapsed(true);
   const vpWrap = document.createElement("div");
   vpWrap.style.cssText = "position:relative;overflow:hidden;grid-column:2;";
   const viewportEl = document.createElement("div");
@@ -6370,10 +7183,10 @@ function buildSketchLayout(container, config, t) {
   logEl.style.cssText = `
     position:absolute; bottom:12px; left:12px;
     padding:8px 12px; border-radius:6px;
-    background:rgba(7,8,14,.85); backdrop-filter:blur(8px);
-    font-size:11px; line-height:1.7; color:#7a80a0;
+    background:rgba(30,30,30,.92); backdrop-filter:blur(8px);
+    font-size:11px; line-height:1.7; color:#a8a8a8;
     pointer-events:none; max-width:300px;
-    border:1px solid rgba(22,24,42,.8);
+    border:1px solid rgba(255,255,255,.1);
     display:none;
   `;
   vpWrap.appendChild(logEl);
@@ -6384,74 +7197,34 @@ function buildSketchLayout(container, config, t) {
     container.style.overflow = "hidden";
   }
   container.appendChild(root);
-  return { root, fileMenusEl, panelEl, viewportEl, viewportWrap: vpWrap, logEl };
+  return { root, menuHost, panelEl, viewportEl, viewportWrap: vpWrap, logEl, headerHeight: showHeader ? 44 : 0 };
 }
-function renderFileMenus(host, exports, imports, t) {
-  host.innerHTML = "";
-  const menu = (label, items) => {
-    if (!items.length) return;
-    const wrap = document.createElement("div");
-    wrap.style.cssText = "position:relative;";
-    const btn = document.createElement("button");
-    btn.textContent = `${label} \u25BE`;
-    btn.style.cssText = `font:12px ${t.font};padding:4px 10px;border-radius:4px;cursor:pointer;
-      background:${t.panelBg};color:${t.text};border:1px solid ${t.controlBorder};`;
-    const list = document.createElement("div");
-    list.style.cssText = `position:absolute;right:0;top:calc(100% + 4px);min-width:180px;z-index:30;display:none;
-      background:${t.panelBg};border:1px solid ${t.controlBorder};border-radius:6px;padding:4px;box-shadow:0 4px 16px rgba(0,0,0,.3);`;
-    for (const it of items) {
-      const b = document.createElement("button");
-      b.textContent = it.name;
-      if (it.title) b.title = it.title;
-      b.style.cssText = `display:block;width:100%;text-align:left;font:12px ${t.font};padding:6px 10px;border:0;border-radius:4px;
-        background:transparent;color:${t.text};cursor:pointer;`;
-      b.addEventListener("mouseenter", () => {
-        b.style.background = t.hoverBg;
-      });
-      b.addEventListener("mouseleave", () => {
-        b.style.background = "transparent";
-      });
-      b.addEventListener("click", async () => {
-        list.style.display = "none";
-        try {
-          await it.run();
-        } catch (e) {
-          console.error(`tekto ${label.toLowerCase()} "${it.name}":`, e);
-        }
-      });
-      list.appendChild(b);
-    }
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const open = list.style.display === "none";
-      for (const l of host.querySelectorAll("[data-tekto-menu]")) l.style.display = "none";
-      list.style.display = open ? "block" : "none";
-    });
-    list.dataset.tektoMenu = "";
-    document.addEventListener("click", () => {
-      list.style.display = "none";
-    });
-    wrap.append(btn, list);
-    host.appendChild(wrap);
-  };
-  menu("Export", exports.map((it) => ({
-    name: it.name,
-    title: `Download as ${it.fileName}`,
-    run: async () => download(await it.handler(), it.fileName, it.mimeType ? { type: it.mimeType } : {})
-  })));
-  menu("Import", imports.map((it) => ({
-    name: it.name,
-    run: () => {
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = it.accept ?? "";
-      input.onchange = async () => {
-        const f = input.files?.[0];
-        if (f) await it.handler(f);
-      };
-      input.click();
-    }
-  })));
+function fileCommands(exports, imports) {
+  const slug = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const verb = (v, name) => new RegExp(`^${v}\\b`, "i").test(name) ? name : `${v} ${name}`;
+  return [
+    ...imports.map((it) => ({
+      id: `file.import.${slug(it.name)}`,
+      label: verb("Import", it.name),
+      group: "File",
+      run: () => {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = it.accept ?? "";
+        input.onchange = async () => {
+          const f = input.files?.[0];
+          if (f) await it.handler(f);
+        };
+        input.click();
+      }
+    })),
+    ...exports.map((it) => ({
+      id: `file.export.${slug(it.name)}`,
+      label: verb("Export", it.name),
+      group: "File",
+      run: async () => download(await it.handler(), it.fileName, it.mimeType ? { type: it.mimeType } : {})
+    }))
+  ];
 }
 
 // src/sketch/handles.ts
@@ -6823,6 +7596,303 @@ function shapeHandle(scene, obj) {
   return handle;
 }
 
+// src/sketch/StepsPanel.ts
+var W = 172;
+var H = 60;
+var GAP_X = 60;
+var GAP_Y = 14;
+var PAD = 16;
+var StepsPanel = class {
+  constructor(host, opts) {
+    this.host = host;
+    this.opts = opts;
+    this.el = document.createElement("div");
+    this.pill = document.createElement("button");
+    this.graph = document.createElement("div");
+    this.details = document.createElement("div");
+    this.summaryEl = document.createElement("span");
+    this.saveBtn = document.createElement("button");
+    this.trace = null;
+    this.selected = null;
+    this.marks = [];
+    this.open = false;
+    const t = opts.theme;
+    this.pill.type = "button";
+    this.pill.dataset.tektoSteps = "pill";
+    this.pill.style.cssText = `position:absolute;bottom:12px;left:50%;transform:translateX(-50%);z-index:20;display:none;
+      padding:5px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.18);background:rgba(30,30,30,.92);
+      backdrop-filter:blur(8px);color:${t.text};font:500 11px/1.2 ${t.font};cursor:pointer;`;
+    this.pill.addEventListener("click", () => this.setOpen(true));
+    this.el.dataset.tektoSteps = "panel";
+    this.el.style.cssText = `position:absolute;left:0;right:0;bottom:0;height:38%;min-height:200px;max-height:340px;z-index:20;
+      display:none;flex-direction:column;background:rgba(30,30,30,.96);backdrop-filter:blur(8px);
+      border-top:1px solid rgba(255,255,255,.12);color:${t.textDim};font:11px/1.45 ${t.font};`;
+    const head = document.createElement("div");
+    head.style.cssText = "display:flex;align-items:center;gap:10px;padding:6px 10px 6px 14px;border-bottom:1px solid rgba(255,255,255,.08);";
+    const title = document.createElement("b");
+    title.textContent = "Steps";
+    title.style.color = t.text;
+    this.summaryEl.style.cssText = "flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;";
+    this.saveBtn.type = "button";
+    this.saveBtn.style.cssText = button(t);
+    this.saveBtn.addEventListener("click", () => void this.save());
+    const close = document.createElement("button");
+    close.type = "button";
+    close.textContent = "\xD7";
+    close.title = "Hide steps";
+    close.style.cssText = button(t) + "font-size:14px;padding:0 8px;";
+    close.addEventListener("click", () => this.setOpen(false));
+    head.append(title, this.summaryEl, this.saveBtn, close);
+    const body = document.createElement("div");
+    body.style.cssText = "flex:1;min-height:0;display:flex;";
+    this.graph.style.cssText = "flex:1;min-width:0;overflow:auto;position:relative;";
+    this.details.style.cssText = `width:280px;flex:none;overflow:auto;padding:10px 12px;border-left:1px solid rgba(255,255,255,.08);`;
+    body.append(this.graph, this.details);
+    this.el.append(head, body);
+    host.append(this.pill, this.el);
+  }
+  /** Show a run's steps (`null` or no steps: nothing to show, the panel and its button go). */
+  show(trace) {
+    this.trace = trace && trace.steps.length ? trace : null;
+    if (this.selected && !this.trace?.steps.some((s) => s.id === this.selected)) this.selected = null;
+    this.paint();
+  }
+  /** Pick a step (from a click on its geometry), opening the panel. */
+  select(id) {
+    this.selected = id;
+    if (id) this.open = true;
+    this.paint();
+    this.notifySelect();
+  }
+  /** The step that drew an object (its top-level step), if any. */
+  stepOfObject(objectId) {
+    const s = this.trace?.steps.find((r) => r.objects.includes(objectId));
+    return s ? this.topOf(s.id) : void 0;
+  }
+  get isOpen() {
+    return this.open && !!this.trace;
+  }
+  /** The marks not yet saved. */
+  get pendingMarks() {
+    return this.marks;
+  }
+  dispose() {
+    this.pill.remove();
+    this.el.remove();
+  }
+  // ── Drawing ──
+  setOpen(on) {
+    this.open = on;
+    if (!on && this.selected) {
+      this.selected = null;
+      this.notifySelect();
+    }
+    this.paint();
+  }
+  topOf(id) {
+    const byId = new Map(this.trace?.steps.map((s2) => [s2.id, s2]) ?? []);
+    let s = byId.get(id);
+    while (s?.parent && byId.has(s.parent)) s = byId.get(s.parent);
+    return s?.id ?? id;
+  }
+  paint() {
+    const t = this.opts.theme;
+    const trace = this.trace;
+    this.pill.style.display = trace && !this.open ? "block" : "none";
+    this.el.style.display = trace && this.open ? "flex" : "none";
+    if (!trace) return;
+    const a = trace.analysis;
+    const top = trace.steps.filter((s) => !s.parent);
+    this.pill.textContent = `Steps \xB7 ${top.length}${a.errors.length ? ` \xB7 ${a.errors.length} error${a.errors.length > 1 ? "s" : ""}` : ""}`;
+    const slow = a.slowest[0];
+    this.summaryEl.textContent = [
+      `${top.length} steps`,
+      `${a.totalMs.toFixed(1)} ms`,
+      slow ? `slowest ${slow.id} (${Math.round(slow.share * 100)} %)` : "",
+      a.unused.length ? `${a.unused.length} unused` : "",
+      a.errors.length ? `${a.errors.length} errors` : ""
+    ].filter(Boolean).join(" \xB7 ");
+    this.saveBtn.style.display = this.marks.length ? "" : "none";
+    this.saveBtn.textContent = `Save ${this.marks.length} mark${this.marks.length > 1 ? "s" : ""} for agent`;
+    const topIds = new Set(top.map((s) => s.id));
+    const edges = /* @__PURE__ */ new Map();
+    for (const e of trace.edges) {
+      if (!topIds.has(e.to)) continue;
+      const from = this.topOf(e.from);
+      if (from !== e.to) edges.set(`${from}>${e.to}>${e.input}`, { from, to: e.to, input: e.input });
+    }
+    const depth = /* @__PURE__ */ new Map();
+    for (const s of top) {
+      let d = 0;
+      for (const e of edges.values()) if (e.to === s.id) d = Math.max(d, (depth.get(e.from) ?? 0) + 1);
+      depth.set(s.id, d);
+    }
+    const lift = (e) => {
+      const span = (depth.get(e.to) ?? 0) - (depth.get(e.from) ?? 0);
+      return span > 1 ? 40 + (span - 2) * 8 : 0;
+    };
+    const top0 = PAD + Math.min(90, Math.max(0, ...[...edges.values()].map(lift)));
+    const rows = /* @__PURE__ */ new Map();
+    const at = /* @__PURE__ */ new Map();
+    for (const s of top) {
+      const d = depth.get(s.id), r = rows.get(d) ?? 0;
+      rows.set(d, r + 1);
+      at.set(s.id, { x: PAD + d * (W + GAP_X), y: top0 + r * (H + GAP_Y) });
+    }
+    const width = PAD * 2 + (Math.max(...depth.values()) + 1) * (W + GAP_X) - GAP_X;
+    const height = top0 + PAD + Math.max(...rows.values()) * (H + GAP_Y) - GAP_Y;
+    this.graph.textContent = "";
+    const canvas = document.createElement("div");
+    canvas.style.cssText = `position:relative;width:${width}px;height:${height}px;`;
+    const svgNS = "http://www.w3.org/2000/svg";
+    const svg3 = document.createElementNS(svgNS, "svg");
+    svg3.setAttribute("width", String(width));
+    svg3.setAttribute("height", String(height));
+    svg3.style.cssText = "position:absolute;left:0;top:0;pointer-events:none;";
+    for (const e of edges.values()) {
+      const a0 = at.get(e.from), b0 = at.get(e.to);
+      if (!a0 || !b0) continue;
+      const target = trace.steps.find((s) => s.id === e.to);
+      const linked = target.inputs.filter((i) => [...edges.values()].some((x) => x.to === e.to && x.input === i.name));
+      const k = Math.max(0, linked.findIndex((i) => i.name === e.input));
+      const y1 = a0.y + H / 2, y2 = b0.y + Math.min(H - 8, 14 + k * 12);
+      const x1 = a0.x + W, x2 = b0.x, dx = Math.max(28, (x2 - x1) / 2);
+      const hot = this.selected === e.from || this.selected === e.to;
+      const up = Math.min(90, lift(e));
+      const path = document.createElementNS(svgNS, "path");
+      path.setAttribute("d", up ? `M${x1},${y1} C${x1 + 40},${y1 - up * 1.33} ${x2 - 40},${y2 - up * 1.33} ${x2},${y2}` : `M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}`);
+      path.setAttribute("fill", "none");
+      path.setAttribute("stroke", hot ? "#ffffff" : "rgba(255,255,255,.35)");
+      path.setAttribute("stroke-width", hot ? "1.6" : "1.1");
+      svg3.append(path);
+      const label = document.createElementNS(svgNS, "text");
+      label.setAttribute("x", String(x2 - 5));
+      label.setAttribute("y", String(y2 - 3));
+      label.setAttribute("text-anchor", "end");
+      label.setAttribute("fill", hot ? "#ffffff" : "rgba(232,235,240,.55)");
+      label.setAttribute("font-size", "9.5");
+      label.textContent = e.input;
+      svg3.append(label);
+    }
+    canvas.append(svg3);
+    const own = new Map(a.slowest.map((s) => [s.id, s.share]));
+    const unused = new Set(a.unused);
+    for (const s of top) {
+      const p = at.get(s.id);
+      const node = document.createElement("button");
+      node.type = "button";
+      node.dataset.step = s.id;
+      const sel = this.selected === s.id;
+      const share = own.get(s.id) ?? (a.totalMs > 0 ? s.ms / a.totalMs : 0);
+      node.style.cssText = `position:absolute;left:${p.x}px;top:${p.y}px;width:${W}px;height:${H}px;text-align:left;cursor:pointer;
+        padding:6px 9px;border-radius:6px;background:${sel ? "rgba(255,255,255,.12)" : "rgba(255,255,255,.04)"};
+        border:1px ${unused.has(s.id) ? "dashed" : "solid"} ${s.error ? "#e5484d" : sel ? "#ffffff" : "rgba(255,255,255,.18)"};
+        color:${t.textDim};font:11px/1.35 ${t.font};overflow:hidden;opacity:${unused.has(s.id) ? 0.6 : 1};`;
+      const marked = this.marks.some((m) => m.step === s.id) ? " \u270E" : "";
+      const inner = trace.steps.filter((c) => c.parent === s.id).length;
+      node.innerHTML = `<div style="display:flex;gap:6px;color:${s.error ? "#ff8c8f" : t.text}"><b style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></b><span></span></div><div class="out" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div><div style="position:absolute;left:9px;right:9px;bottom:6px;height:3px;background:rgba(255,255,255,.08);border-radius:2px"><div style="height:100%;width:${Math.min(100, Math.max(2, share * 100)).toFixed(0)}%;background:#ffb020;border-radius:2px"></div></div>`;
+      node.querySelector("b").textContent = s.id + marked;
+      node.querySelector("span").textContent = `${s.ms.toFixed(1)} ms`;
+      node.querySelector(".out").textContent = s.error ? `\u2715 ${s.error}` : `\u2192 ${s.output}${inner ? ` \xB7 ${inner} inside` : ""}`;
+      node.title = [`${s.id}: ${s.output}`, ...s.inputs.map((i) => `  ${i.name} = ${i.summary}${i.from ? ` \u2190 ${i.from.join(", ")}` : ""}`)].join("\n");
+      node.addEventListener("click", () => this.select(this.selected === s.id ? null : s.id));
+      canvas.append(node);
+    }
+    this.graph.append(canvas);
+    const picked = this.selected ? canvas.querySelector(`[data-step="${CSS.escape(this.selected)}"]`) : null;
+    if (picked) {
+      const g = this.graph, left = picked.offsetLeft, right = left + picked.offsetWidth;
+      if (left < g.scrollLeft || right > g.scrollLeft + g.clientWidth) g.scrollLeft = Math.max(0, left - (g.clientWidth - picked.offsetWidth) / 2);
+    }
+    this.paintDetails();
+  }
+  paintDetails() {
+    const t = this.opts.theme;
+    const d = this.details;
+    d.textContent = "";
+    const step = this.trace?.steps.find((s) => s.id === this.selected);
+    if (!step) {
+      d.style.color = t.textFaint;
+      d.textContent = "Click a step for its inputs, output and code, and to leave a note for the agent. Click geometry to find the step that made it.";
+      return;
+    }
+    d.style.color = t.textDim;
+    const line = (label, value, strong = false) => {
+      const row = document.createElement("div");
+      row.style.cssText = "margin-bottom:3px;word-break:break-word;";
+      const k = document.createElement("span");
+      k.textContent = `${label} `;
+      k.style.color = t.textFaint;
+      const v = document.createElement("span");
+      v.textContent = value;
+      if (strong) v.style.color = t.text;
+      row.append(k, v);
+      d.append(row);
+    };
+    const h = document.createElement("div");
+    h.textContent = step.id;
+    h.style.cssText = `color:${t.text};font-weight:600;margin-bottom:6px;`;
+    d.append(h);
+    if (step.src) line("code", shortSrc(step.src));
+    line("time", `${step.ms.toFixed(2)} ms`);
+    for (const i of step.inputs) line(`in ${i.name}`, `${i.summary}${i.from ? ` \u2190 ${i.from.join(", ")}` : ""}`);
+    line("out", step.error ? `threw: ${step.error}` : step.output, true);
+    const inner = this.trace.steps.filter((c) => c.parent === step.id);
+    if (inner.length) line("inside", `${inner.length} steps (${[...new Set(inner.map((c) => c.name))].join(", ")})`);
+    if (step.objects.length) line("drew", `${step.objects.length} objects`);
+    const note = document.createElement("textarea");
+    note.placeholder = "What should change in this step?";
+    note.rows = 3;
+    const existing = this.marks.find((m) => m.step === step.id);
+    note.value = existing?.note ?? "";
+    note.style.cssText = `width:100%;box-sizing:border-box;margin-top:8px;resize:vertical;background:rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.15);border-radius:5px;color:${t.text};font:11px/1.4 ${t.font};padding:5px 7px;`;
+    note.addEventListener("keydown", (e) => e.stopPropagation());
+    const mark = document.createElement("button");
+    mark.type = "button";
+    mark.textContent = existing ? "Update note" : "Mark step for agent";
+    mark.style.cssText = button(t) + "margin-top:6px;";
+    mark.addEventListener("click", () => {
+      const text = note.value.trim();
+      this.marks = this.marks.filter((m) => m.step !== step.id);
+      if (text) this.marks.push({ step: step.id, note: text, name: step.name, inputs: step.inputs, output: step.output, ms: step.ms, ...step.src ? { src: step.src } : {} });
+      this.paint();
+    });
+    d.append(note, mark);
+  }
+  async save() {
+    if (!this.marks.length) return;
+    this.saveBtn.disabled = true;
+    try {
+      const where = await this.opts.onSave(this.marks);
+      this.marks = [];
+      this.paint();
+      this.summaryEl.textContent = where ? `Saved for the agent: ${where}` : "Saved for the agent";
+    } finally {
+      this.saveBtn.disabled = false;
+    }
+  }
+  notifySelect() {
+    const trace = this.trace;
+    if (!trace || !this.selected) {
+      this.opts.onSelect(null, []);
+      return;
+    }
+    const step = trace.steps.find((s) => s.id === this.selected) ?? null;
+    const ids = /* @__PURE__ */ new Set([this.selected]);
+    for (const s of trace.steps) if (s.parent && ids.has(s.parent)) ids.add(s.id);
+    this.opts.onSelect(step, trace.steps.filter((s) => ids.has(s.id)).flatMap((s) => s.objects));
+  }
+};
+function button(t) {
+  return `cursor:pointer;padding:3px 9px;border-radius:5px;border:1px solid rgba(255,255,255,.18);background:transparent;
+    color:${t.text};font:11px/1.4 ${t.font};`;
+}
+function shortSrc(src) {
+  const m = /([^/?#]+?)(?:\?[^:]*)?:(\d+):\d+$/.exec(src);
+  return m ? `${m[1]}:${m[2]}` : src;
+}
+
 // src/sketch/Sketch.ts
 function spaceToConstrain(space) {
   switch (space.kind) {
@@ -6882,6 +7952,7 @@ var SketchInstance = class {
     // Param model: values live in the shared ParamStore, panel placement in
     // `items`, and the DOM is rendered by the shared ControlPanel (src/gui/).
     this.store = new ParamStore({});
+    this.panelFrame = null;
     this.items = /* @__PURE__ */ new Map();
     this.layerTrees = /* @__PURE__ */ new Map();
     this.buttons = [];
@@ -6947,9 +8018,15 @@ var SketchInstance = class {
     // records the user-code line that created it, so a mark can point at source.
     this.markup = null;
     this.bridge = null;
+    /** This run's steps (`lab.step`), drawn in the steps panel once a run has any. */
+    this._trace = new StepTrace();
+    this._stepsPanel = null;
+    /** Notes on steps on their way into a snapshot (`saveStepMarks`). */
+    this._stepMarks = [];
     // Export ▾ / Import ▾ in the sketch's own header (a shell's top bar does it otherwise).
-    this._fileMenusEl = null;
-    this._fileMenusSig = "";
+    this._menuHost = null;
+    this._menuBar = null;
+    this.history = new ParamHistory(this.store);
     this._trackSource = false;
     this._srcById = /* @__PURE__ */ new Map();
     this.separatorCount = 0;
@@ -6973,10 +8050,20 @@ var SketchInstance = class {
     // scopes, keyed by layer name. Reset every run — ids don't survive clear().
     this._viewLayerStack = [];
     this._viewLayerObjects = /* @__PURE__ */ new Map();
+    // Which of the view's style settings the last run read (lab.renderMode / lab.lightingMode):
+    // a change to one of them — from the shading bar, a shell or code — re-runs the sketch.
+    this._readsStyle = /* @__PURE__ */ new Set();
+    this._objectViewLayer = /* @__PURE__ */ new Map();
+    // Layer ids locked in any layer tree (own or a parent's lock): objects on
+    // them — by `.layer()` name or view layer — can't be picked or hovered.
+    this._lockedLayers = /* @__PURE__ */ new Set();
+    /** File ▸ Import … / Export …: a command per registered entry, replaced when the entries change. */
+    this._fileCommandsOff = null;
     this.fn = fn;
     this.config = config;
     this.scene = new Scene();
     this.scene.on((e) => {
+      if (e.type === "object:add") this._trace.current?.objects.push(e.id);
       if (e.type === "object:add" && this._trackSource) {
         const site = callSite();
         if (site) this._srcById.set(e.id, site);
@@ -6984,6 +8071,7 @@ var SketchInstance = class {
       if (e.type === "object:add" && this._viewLayerStack.length > 0) {
         const name = this._viewLayerStack[this._viewLayerStack.length - 1];
         this._viewLayerObjects.get(name).push(e.id);
+        this._objectViewLayer.set(e.id, name);
       }
     });
     if (typeof config.container === "string") {
@@ -6995,8 +8083,18 @@ var SketchInstance = class {
     }
     this.buildDOM();
     this.initRenderer();
+    this.renderer.setPickFilter((id) => !this.onLockedLayer(id));
+    this.scene.on((e) => {
+      if (!this._running && (e.type === "scene:renderMode" && this._readsStyle.has("renderMode") || e.type === "scene:lightingMode" && this._readsStyle.has("lightingMode"))) this.runSketch();
+    });
+    this.commands.add(this.history.commands());
     this.commands.add(viewCommands(this.renderer));
     this._unbindCommandKeys = this.commands.bindKeys();
+    const slot = menuSlot(this._menuHost);
+    if (slot) {
+      this._menuBar = menuBar(this.commands, { theme: this.theme });
+      slot.appendChild(this._menuBar.el);
+    }
     this.wireInput();
     this.runSketch();
     this.startLoop();
@@ -7006,7 +8104,7 @@ var SketchInstance = class {
   buildDOM() {
     this.theme = getTheme(this.config.theme);
     const layout = buildSketchLayout(this.container, this.config, this.theme);
-    this._fileMenusEl = layout.fileMenusEl;
+    this._menuHost = layout.menuHost;
     this.panelEl = layout.panelEl;
     this.viewportEl = layout.viewportEl;
     this.viewportWrap = layout.viewportWrap;
@@ -7017,15 +8115,28 @@ var SketchInstance = class {
       theme: t,
       getButtons: () => this.buttons,
       onCommit: (key) => {
+        this.history.commit();
         if (this.isDisplayChange(key)) this.runDisplayPass();
         else this.commitRun();
       },
       onAction: () => this.runSketch(),
       onTabChange: (tab) => {
         this._onTabChange?.(tab);
-      }
+      },
+      tabs: this.config.tabs,
+      onRender: () => this.panelFrame?.fit()
     });
     this.panelEl.appendChild(this.panel.el);
+    this.panelFrame = panelFrame({
+      root: layout.root,
+      panelEl: this.panelEl,
+      theme: t,
+      top: layout.headerHeight,
+      width: this.config.panelWidth ?? 320,
+      title: this.config.panelTitle ?? "Parameters",
+      storageKey: this.config.title ?? "default",
+      preferred: () => this.panel.preferredWidth()
+    });
     this.store.onChange((key) => {
       if (this._running || this._squelch) return;
       if (this.isDisplayChange(key)) this.runDisplayPass();
@@ -7040,14 +8151,18 @@ var SketchInstance = class {
   initRenderer() {
     const zUp = this.config.up === "z";
     this.renderer = new ThreeRenderer(this.scene, this.viewportEl, {
-      backgroundColor: this.config.background ?? 460814,
+      backgroundColor: this.config.background ?? VIEW_BG_DARK,
       showGrid: this.config.grid !== false,
       showAxes: this.config.axes !== false,
       cameraPosition: this.config.camera ?? (zUp ? [8, -10, 6] : [5, 6, 8]),
       cameraTarget: this.config.target ?? [0, 0, 0],
       up: this.config.up ?? "y",
-      navGizmo: this.config.navGizmo ?? false,
-      shadingBar: this.config.shadingBar ?? false,
+      // The view's tools are the same in every 3D view: the header strip and the axis widget.
+      navGizmo: this.config.navGizmo ?? true,
+      shadingBar: this.config.shadingBar ?? "header",
+      viewerTools: this.config.viewerTools ?? {},
+      headerHost: this.viewportWrap,
+      // above overlay() layers and ✎ Markup's drawing layer
       units: this.config.units ?? null
     });
   }
@@ -7103,6 +8218,23 @@ var SketchInstance = class {
       this._pickUnsub = null;
       this.setSelected(null);
     }
+  }
+  /** Recompute which layer ids are locked, and drop a selection that is now on one. */
+  refreshLocks() {
+    this._lockedLayers.clear();
+    for (const lt of this.layerTrees.values()) {
+      const locked = computeEffectiveLock(lt.nodes, lt.value);
+      for (const id in locked) if (locked[id]) this._lockedLayers.add(id);
+    }
+    if (!this._running && this._selectedId && this.onLockedLayer(this._selectedId)) this.setSelected(null);
+  }
+  /** Whether scene object `id` is on a locked layer: its `.layer()` name or its view layer is a locked layer id. */
+  onLockedLayer(id) {
+    if (this._lockedLayers.size === 0) return false;
+    const layer = this.scene.get(id)?.style.layer;
+    if (layer && this._lockedLayers.has(layer)) return true;
+    const view = this._objectViewLayer.get(id);
+    return !!view && this._lockedLayers.has(view);
   }
   setGizmoMode(mode) {
     this.renderer.setGizmoMode(mode);
@@ -7173,6 +8305,7 @@ var SketchInstance = class {
   // ── Run Sketch ──
   runSketch() {
     const __runT0 = performance.now();
+    this._trace = new StepTrace();
     this.scene.clear();
     this._srcById.clear();
     this.buttons = [];
@@ -7196,10 +8329,13 @@ var SketchInstance = class {
     this._displayKeys.clear();
     this._viewLayerStack = [];
     this._viewLayerObjects.clear();
+    this._objectViewLayer.clear();
     this._dragHandleSeq = 0;
     this.renderer.beginDragHandleSweep();
     const usedParams = /* @__PURE__ */ new Set();
     const lab = this.buildLab(usedParams);
+    this._readsStyle.clear();
+    this.renderer.setFrameBounds(null);
     this._running = true;
     try {
       this.fn(lab);
@@ -7209,6 +8345,7 @@ var SketchInstance = class {
     }
     this._running = false;
     this.renderer.endDragHandleSweep();
+    this.showSteps();
     for (const key of this.store.keys()) {
       if (!usedParams.has(key)) {
         this.store.remove(key);
@@ -7218,6 +8355,8 @@ var SketchInstance = class {
     for (const key of this.layerTrees.keys()) {
       if (!usedParams.has(key)) this.layerTrees.delete(key);
     }
+    this.refreshLocks();
+    this.history.adopt();
     const hasTabControls = [...this.items.values()].some((it) => it.tab) || this.buttons.some((b) => b.tab) || [...this.layerTrees.values()].some((lt) => lt.tab);
     const hasInfoTab = hasTabControls && this.logs.length > 0;
     const fingerprint = [
@@ -7231,7 +8370,7 @@ var SketchInstance = class {
       this.panelRender(hasInfoTab);
     }
     if (this._selectedId) {
-      if (this.scene.has(this._selectedId)) {
+      if (this.scene.has(this._selectedId) && !this.onLockedLayer(this._selectedId)) {
         this.renderer.setSelectionHighlight(this._selectedId);
         this.renderer.attachGizmo(this._selectedId);
       } else {
@@ -7331,10 +8470,15 @@ var SketchInstance = class {
         const key = `layertree:${opts?.group ?? ""}:${label}`;
         usedParams.add(key);
         let lt = self.layerTrees.get(key);
+        const changed = (state2) => {
+          self.refreshLocks();
+          if (state2.display && self._onDisplayFns.length > 0) self.runDisplayPass();
+          else self.runSketch();
+        };
         if (!lt) {
           const state2 = {
             key,
-            value: {},
+            value: layerDefaults(nodes),
             nodes,
             group: opts?.group ?? "Layers",
             tab: opts?.tab ?? "",
@@ -7342,20 +8486,23 @@ var SketchInstance = class {
           };
           state2.panel = new LayerPanel({
             nodes,
-            value: {},
+            value: state2.value,
             isDark: self.theme.isDark,
-            onChange: (updates) => {
+            active: opts?.active,
+            columns: opts?.columns,
+            onChange: (updates, active) => {
               state2.value = { ...state2.value, ...updates };
-              state2.panel.update(state2.nodes, state2.value);
-              if (state2.display && self._onDisplayFns.length > 0) self.runDisplayPass();
-              else self.runSketch();
+              state2.panel.update(state2.nodes, state2.value, active);
+              changed(state2);
             }
           });
           lt = state2;
           self.layerTrees.set(key, state2);
+          self.refreshLocks();
         } else {
           lt.nodes = nodes;
           lt.display = !!opts?.display;
+          lt.value = { ...layerDefaults(nodes), ...lt.value };
           lt.panel.update(nodes, lt.value);
         }
         const state = lt;
@@ -7363,14 +8510,32 @@ var SketchInstance = class {
           get value() {
             return state.value;
           },
+          get active() {
+            return state.panel.active;
+          },
           set(update) {
             const next = { ...state.value };
-            for (const [id, v] of Object.entries(update)) next[id] = { ...next[id], ...v };
+            for (const [id, v] of Object.entries(keepActiveOn(state.nodes, state.panel.active, update))) {
+              next[id] = { ...next[id], ...v };
+            }
             state.value = next;
             state.panel.update(state.nodes, state.value);
-            if (self._running) return;
-            if (state.display && self._onDisplayFns.length > 0) self.runDisplayPass();
-            else self.runSketch();
+            if (self._running) {
+              self.refreshLocks();
+              return;
+            }
+            changed(state);
+          },
+          setActive(id) {
+            if (opts?.columns?.active === false) return;
+            if (id === state.panel.active || !(id in layerDefaults(state.nodes))) return;
+            state.value = { ...state.value, ...activateLayer(state.nodes, state.value, id) };
+            state.panel.update(state.nodes, state.value, id);
+            if (self._running) {
+              self.refreshLocks();
+              return;
+            }
+            changed(state);
           }
         };
       },
@@ -7399,12 +8564,12 @@ var SketchInstance = class {
       registerExport(opts) {
         self.exports.set(opts.name, { ...opts });
         for (const l of self._exportListeners) l();
-        self.renderFileMenus();
+        self.syncFileCommands();
       },
       registerImport(opts) {
         self.imports.set(opts.name, { ...opts });
         for (const l of self._importListeners) l();
-        self.renderFileMenus();
+        self.syncFileCommands();
       },
       // ── Geometry Builders ──
       mesh(m, style) {
@@ -7485,6 +8650,10 @@ var SketchInstance = class {
       },
       cameraUp(x, y, z) {
         self.renderer.setCameraUp(x, y, z);
+      },
+      // ── Steps ──
+      step(name, inputs, fn) {
+        return self._trace.step(name, inputs, fn, { src: callSite() });
       },
       // ── Info ──
       log(label, value) {
@@ -7611,6 +8780,21 @@ var SketchInstance = class {
       },
       get activeTab() {
         return self.panel.getActiveTab();
+      },
+      get viewerHeader() {
+        const h = self.renderer.viewerHeader;
+        return h ? { left: h.left, right: h.right } : null;
+      },
+      get renderMode() {
+        self._readsStyle.add("renderMode");
+        return self.scene.renderMode;
+      },
+      get lightingMode() {
+        self._readsStyle.add("lightingMode");
+        return self.scene.lightingMode;
+      },
+      frameBounds(min, max) {
+        self.renderer.setFrameBounds({ min, max });
       },
       onTabChange(fn) {
         self._onTabChange = fn;
@@ -8027,6 +9211,8 @@ var SketchInstance = class {
       snapshotPng: () => snapshotWithOverlays(this.renderer, this.viewportWrap),
       describe: (id) => this.describeObject(id),
       context: () => this.markupContext(),
+      buttonHost: this.renderer.viewerHeader?.end,
+      top: this.renderer.viewerHeader ? VIEWER_HEADER_H : 0,
       setTracking(on) {
         if (on === self._trackSource) return;
         self._trackSource = on;
@@ -8042,8 +9228,46 @@ var SketchInstance = class {
       camera: (pos, target) => {
         this.renderer.setCameraPosition(pos[0], pos[1], pos[2]);
         if (target) this.renderer.lookAt(target[0], target[1], target[2]);
-      }
+      },
+      section: (cut) => this.renderer.setSection(cut),
+      steps: () => this._trace.steps.length ? { ...this._trace.toJSON(), marks: [...this._stepsPanel?.pendingMarks ?? []] } : null
     });
+  }
+  /** The run's steps in the panel (made the first time a run records any), and a click on geometry finds its step. */
+  showSteps() {
+    if (!this._trace.steps.length && !this._stepsPanel) return;
+    if (!this._stepsPanel) {
+      this._stepsPanel = new StepsPanel(this.viewportWrap, {
+        theme: this.theme,
+        onSelect: (_step, objects) => this.renderer.setSelectionHighlight(objects.length ? objects : null),
+        onSave: (marks) => this.saveStepMarks(marks)
+      });
+      let down = null;
+      const canvas = this.renderer.canvasEl;
+      canvas.addEventListener("pointerdown", (e) => {
+        down = { x: e.clientX, y: e.clientY };
+      });
+      canvas.addEventListener("pointerup", (e) => {
+        const panel = this._stepsPanel;
+        if (!down || !panel?.isOpen || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 4) return;
+        const hit = this.renderer.hitAt(e.clientX, e.clientY);
+        const step = hit ? panel.stepOfObject(hit.id) : void 0;
+        if (step) panel.select(step);
+      });
+    }
+    this._stepsPanel.show(this._trace.steps.length ? this._trace.toJSON() : null);
+  }
+  /** A snapshot for the agent carrying the notes on steps (markup.json `stepMarks`). */
+  async saveStepMarks(marks) {
+    if (!this.markup) return void 0;
+    this._stepMarks = [...marks];
+    try {
+      const n = marks.length;
+      const bundle = await this.markup.capture({ note: `${n} note${n > 1 ? "s" : ""} on steps`, label: "steps" });
+      return bundle.dir;
+    } finally {
+      this._stepMarks = [];
+    }
   }
   describeObject(id) {
     return describeSceneObject(this.scene, id, this._srcById.get(id));
@@ -8057,16 +9281,14 @@ var SketchInstance = class {
       params: this.store.getAll(),
       logs: this.logs.map((l) => ({ ...l })),
       errors: this.bridge?.errors() ?? [],
-      commands: this.commands.list()
+      commands: this.commands.list(),
+      ...this._trace.steps.length ? { steps: this._trace.toJSON() } : {},
+      ...this._stepMarks.length ? { stepMarks: this._stepMarks } : {}
     };
   }
-  /** Rebuild the header's Export / Import menus when the registered names change. */
-  renderFileMenus() {
-    if (!this._fileMenusEl) return;
-    const sig = [...this.exports.keys()].join("\0") + "|" + [...this.imports.keys()].join("\0");
-    if (sig === this._fileMenusSig) return;
-    this._fileMenusSig = sig;
-    renderFileMenus(this._fileMenusEl, this.getExports(), this.getImports(), this.theme);
+  syncFileCommands() {
+    this._fileCommandsOff?.();
+    this._fileCommandsOff = this.commands.add(fileCommands(this.getExports(), this.getImports()));
   }
   /** The current value of every control, keyed for `setParams` — save it to reopen a design. */
   getParams() {
@@ -8077,7 +9299,9 @@ var SketchInstance = class {
    * returned — and re-run once. Reports names it could not apply instead of dropping them.
    */
   setParams(values) {
-    return this.store.setByName(values);
+    const result = this.store.setByName(values);
+    this.history.commit();
+    return result;
   }
   /** Destroy the sketch and clean up */
   dispose() {
@@ -8085,6 +9309,7 @@ var SketchInstance = class {
     this.markup?.dispose();
     this.bridge?.dispose();
     this._unbindCommandKeys?.();
+    this._menuBar?.dispose();
     if (this._boundKeyDown) window.removeEventListener("keydown", this._boundKeyDown);
     if (this._boundKeyUp) window.removeEventListener("keyup", this._boundKeyUp);
     this._boundKeyDown = null;
@@ -8093,23 +9318,10 @@ var SketchInstance = class {
     this.renderer.dispose();
   }
 };
-function callSite() {
-  const limit = Error.stackTraceLimit;
-  Error.stackTraceLimit = 40;
-  const stack = new Error().stack ?? "";
-  Error.stackTraceLimit = limit;
-  for (const line of stack.split("\n").slice(1)) {
-    const m = line.match(/(https?:\/\/[^\s)]+):(\d+):(\d+)/) ?? line.match(/@(\S+):(\d+):(\d+)$/);
-    if (!m) continue;
-    const url = m[1];
-    if (/\/tekto\/(src|dist)\/|node_modules|\/@vite\/|\/@fs\/.*\/tekto\/src\//.test(url)) continue;
-    return `${url}:${m[2]}:${m[3]}`;
-  }
-  return void 0;
-}
 
 // src/sketch/Notes.ts
 var INK = "#ffb020";
+var DONE = "#9aa0aa";
 var NotesLayer = class {
   constructor(renderer, doc, opts = {}) {
     this.renderer = renderer;
@@ -8122,6 +9334,7 @@ var NotesLayer = class {
     this.shown = true;
     this.offs = [];
     this.collection = opts.collection ?? "notes";
+    this.author = opts.author;
     const host = opts.host ?? renderer.canvasEl.parentElement;
     if (!host) throw new Error("notesLayer: the renderer's canvas is not in the page yet (or pass opts.host)");
     if (getComputedStyle(host).position === "static") host.style.position = "relative";
@@ -8137,6 +9350,7 @@ var NotesLayer = class {
     this.offs.push(doc.onChange((changes) => {
       if (!changes.some((c) => c.collection === this.collection)) return;
       if (this.openId && !doc.has(this.collection, this.openId)) this.closeCard();
+      else if (this.openId && changes.some((c) => c.collection === this.collection && c.id === this.openId)) this.openCard(this.openId);
       renderer.requestRender();
     }));
     renderer.requestRender();
@@ -8149,7 +9363,36 @@ var NotesLayer = class {
   add(note) {
     return this.doc.add(this.collection, note, { label: "Add note" });
   }
-  /** Keep several notes as one undo step ("Keep as notes"). Returns their ids. */
+  /** The notes as a list reads them (an agent's `tekto_notes`): the open ones, or all. */
+  describe(status = "open") {
+    return this.list().map(([id, n], i) => ({
+      id,
+      key: `${this.collection}/${id}`,
+      n: i + 1,
+      text: n.text,
+      ...n.author ? { author: n.author } : {},
+      createdAt: n.createdAt,
+      status: n.status ?? "open",
+      keys: n.keys,
+      pin: n.pin,
+      replies: n.replies ?? []
+    })).filter((n) => status === "all" || n.status === "open");
+  }
+  /** Answer a note: one undo step. Throws if the note does not exist. */
+  reply(id, text, author) {
+    const r = { text, ...author ? { author } : {}, at: (/* @__PURE__ */ new Date()).toISOString() };
+    this.doc.update(this.collection, id, (n) => ({ ...n, replies: [...n.replies ?? [], r] }), { label: "Reply to note" });
+  }
+  /** Mark a note done, with a last reply saying what was done if `text` is given: one undo step. */
+  resolve(id, text, author) {
+    const r = text ? { text, ...author ? { author } : {}, at: (/* @__PURE__ */ new Date()).toISOString() } : null;
+    this.doc.update(this.collection, id, (n) => ({ ...n, status: "done", ...r ? { replies: [...n.replies ?? [], r] } : {} }), { label: "Resolve note" });
+  }
+  /** Open a done note again. */
+  reopen(id) {
+    this.doc.update(this.collection, id, (n) => ({ ...n, status: "open" }), { label: "Reopen note" });
+  }
+  /** Keep several notes as one undo step ("Pin notes to the model"). Returns their ids. */
   keep(notes) {
     return this.doc.transact(notes.length > 1 ? "Add notes" : "Add note", () => notes.map((n) => this.doc.add(this.collection, n)));
   }
@@ -8207,7 +9450,7 @@ var NotesLayer = class {
         g.strokeStyle = colour;
         g.fillStyle = colour;
         g.lineWidth = width;
-        for (const [, n] of notes) for (const s of n.strokes) {
+        for (const [, n] of notes) for (const s of n.status === "done" ? [] : n.strokes) {
           if (s.length === 1) {
             const q = project(s[0]);
             if (q.visible) {
@@ -8237,8 +9480,12 @@ var NotesLayer = class {
       seen.add(id);
       const q = at(n.pin);
       const pin = this.pins.get(id) ?? this.makePin(id);
+      const done = n.status === "done";
       pin.textContent = String(i + 1);
-      pin.title = n.text || "(no text)";
+      pin.title = `${done ? "Done: " : ""}${n.text || "(no text)"}`;
+      pin.dataset.status = done ? "done" : "open";
+      pin.style.background = done ? DONE : INK;
+      pin.style.opacity = done ? "0.75" : "1";
       pin.style.display = q.visible ? "flex" : "none";
       pin.style.left = `${q.x - 11}px`;
       pin.style.top = `${q.y - 11}px`;
@@ -8254,7 +9501,7 @@ var NotesLayer = class {
     b.type = "button";
     b.dataset.note = id;
     b.setAttribute("aria-label", "Note");
-    b.style.cssText = `position:absolute;width:22px;height:22px;border-radius:50%;border:2px solid #fff;background:${INK};color:#14161e;font:700 11px/1 system-ui,sans-serif;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;pointer-events:auto;box-shadow:0 1px 4px rgba(0,0,0,.45);`;
+    b.style.cssText = `position:absolute;width:22px;height:22px;border-radius:50%;border:2px solid #fff;background:${INK};color:#1e1e1e;font:700 11px/1 system-ui,sans-serif;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;pointer-events:auto;box-shadow:0 1px 4px rgba(0,0,0,.45);`;
     b.addEventListener("click", (e) => {
       e.stopPropagation();
       this.openId === id ? this.closeCard() : this.openCard(id);
@@ -8271,7 +9518,7 @@ var NotesLayer = class {
     this.openId = id;
     const card = this.card = document.createElement("div");
     card.dataset.noteCard = id;
-    card.style.cssText = "position:absolute;z-index:17;width:230px;padding:10px 12px;border-radius:8px;pointer-events:auto;background:#11131a;border:1px solid rgba(255,255,255,.12);box-shadow:0 6px 18px rgba(0,0,0,.45);color:#e8ebf0;font:12px/1.45 system-ui,sans-serif;";
+    card.style.cssText = "position:absolute;z-index:17;width:230px;padding:10px 12px;border-radius:8px;pointer-events:auto;background:#1e1e1e;border:1px solid rgba(255,255,255,.12);box-shadow:0 6px 18px rgba(0,0,0,.45);color:#e8ebf0;font:12px/1.45 system-ui,sans-serif;";
     const text = document.createElement("div");
     text.textContent = n.text || "(no text)";
     text.style.cssText = "white-space:pre-wrap;margin-bottom:6px;";
@@ -8292,8 +9539,41 @@ var NotesLayer = class {
       });
       return b;
     };
-    row.append(btn("Go to view", () => this.goTo(id)), btn("Delete", () => this.remove(id)), btn("Close", () => this.closeCard()));
-    card.append(text, meta, row);
+    const done = n.status === "done";
+    const replies = document.createElement("div");
+    replies.dataset.noteReplies = "";
+    for (const r of n.replies ?? []) {
+      const line = document.createElement("div");
+      line.style.cssText = "margin:0 0 6px;padding-left:8px;border-left:2px solid rgba(255,255,255,.18);white-space:pre-wrap;";
+      const who = document.createElement("span");
+      who.textContent = `${r.author ?? "Reply"}: `;
+      who.style.color = "rgba(232,235,240,.55)";
+      line.append(who, document.createTextNode(r.text));
+      replies.appendChild(line);
+    }
+    const answer = document.createElement("input");
+    answer.placeholder = "Reply\u2026";
+    answer.style.cssText = "width:100%;box-sizing:border-box;margin-bottom:8px;padding:4px 7px;border-radius:5px;font:11px system-ui,sans-serif;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.05);color:#e8ebf0;";
+    const send = () => {
+      const t = answer.value.trim();
+      if (t) this.reply(id, t, this.author);
+    };
+    answer.addEventListener("keydown", (e) => {
+      e.stopPropagation();
+      if (e.key === "Enter") send();
+    });
+    row.style.flexWrap = "wrap";
+    row.append(
+      done ? btn("Reopen", () => this.reopen(id)) : btn("Done", () => {
+        const t = answer.value.trim();
+        this.resolve(id, t || void 0, this.author);
+      }),
+      btn("Go to view", () => this.goTo(id)),
+      btn("Delete", () => this.remove(id)),
+      btn("Close", () => this.closeCard())
+    );
+    if (done) meta.textContent = `Done \xB7 ${meta.textContent}`;
+    card.append(text, meta, replies, answer, row);
     this.pinLayer.appendChild(card);
     this.renderer.requestRender();
   }
@@ -8316,11 +9596,13 @@ function notesLayer(renderer, doc, opts = {}) {
 // src/sketch/AppShell.ts
 function appShell(config) {
   const t = getTheme(config.theme);
-  const panelWidth = config.panelWidth ?? 260;
+  const showHeader = config.showHeader ?? (config.container.dataset.shell == null || !!config.topBar);
+  const headerH = showHeader ? 36 : 0;
+  const bodyRow = showHeader ? 2 : 1;
   const root = document.createElement("div");
   root.style.cssText = `
-    display:grid; grid-template-columns:${panelWidth}px 1fr;
-    grid-template-rows:36px 1fr;
+    display:grid; grid-template-columns:260px 1fr;
+    grid-template-rows:${showHeader ? "36px " : ""}1fr; position:relative;
     width:100%; height:100%; font-family:${t.font};
     font-size:12px; color:${t.text}; background:${t.panelBg};
   `;
@@ -8336,34 +9618,78 @@ function appShell(config) {
     <span style="font-size:9px;padding:2px 6px;border-radius:3px;
       background:${t.hoverBg};color:${t.accent}">LIVE</span>
   `;
-  root.appendChild(header);
+  if (showHeader) root.appendChild(header);
   const panelEl = document.createElement("div");
   panelEl.style.cssText = `
-    overflow-y:auto; overflow-x:hidden; padding:0;
+    overflow-y:auto; overflow-x:hidden; padding:0; grid-column:1; grid-row:${bodyRow};
     background:${t.panelBg}; border-right:1px solid ${t.border};
   `;
   root.appendChild(panelEl);
   const vpWrap = document.createElement("div");
-  vpWrap.style.cssText = "position:relative;overflow:hidden;";
+  vpWrap.style.cssText = `position:relative;overflow:hidden;grid-column:2;grid-row:${bodyRow};`;
   const viewportEl = document.createElement("div");
   viewportEl.style.cssText = "width:100%;height:100%;isolation:isolate;";
   vpWrap.appendChild(viewportEl);
   const statusEl = document.createElement("div");
+  statusEl.dataset.tektoStatus = "";
   statusEl.style.cssText = `
     position:absolute; bottom:12px; left:12px;
-    padding:8px 12px; border-radius:6px;
-    background:rgba(7,8,14,.85); backdrop-filter:blur(8px);
+    border-radius:6px;
+    background:rgba(30,30,30,.92); backdrop-filter:blur(8px);
     font-size:11px; line-height:1.7; color:${t.textDim};
     pointer-events:none; max-width:340px;
-    border:1px solid rgba(22,24,42,.8);
-    white-space:pre; font-family:${t.font};
-    display:none;
+    border:1px solid rgba(255,255,255,.1);
+    font-family:${t.font};
+    display:none; align-items:flex-start;
   `;
+  const statusTextEl = document.createElement("div");
+  statusTextEl.style.cssText = "white-space:pre;overflow:hidden;text-overflow:ellipsis;padding:8px 2px 8px 12px;";
+  const statusToggle = document.createElement("button");
+  statusToggle.type = "button";
+  statusToggle.style.cssText = `
+    pointer-events:auto; cursor:pointer; flex:none; border:none; background:transparent;
+    color:${t.textDim}; font:600 11px/1 ${t.font}; padding:0; width:22px; height:22px;
+    margin:4px 4px 0 0; border-radius:4px;
+  `;
+  statusToggle.addEventListener("pointerenter", () => {
+    statusToggle.style.color = t.text;
+  });
+  statusToggle.addEventListener("pointerleave", () => {
+    statusToggle.style.color = t.textDim;
+  });
+  statusEl.append(statusTextEl, statusToggle);
   vpWrap.appendChild(statusEl);
+  const statusKey = `tekto.appShell.statusCollapsed.${config.title ?? "app"}`;
+  let statusCollapsed = config.statusCollapsed ?? false;
+  try {
+    const stored = localStorage.getItem(statusKey);
+    if (stored !== null) statusCollapsed = stored === "1";
+  } catch {
+  }
+  const paintStatus = () => {
+    statusTextEl.style.display = statusCollapsed ? "none" : "";
+    statusToggle.style.margin = statusCollapsed ? "2px" : "4px 4px 0 0";
+    statusToggle.textContent = statusCollapsed ? "i" : "\u2013";
+    statusToggle.title = statusCollapsed ? `Show status${statusTextEl.textContent ? `: ${statusTextEl.textContent}` : ""}` : "Hide status";
+    statusToggle.setAttribute("aria-label", statusCollapsed ? "Show status" : "Hide status");
+    statusToggle.setAttribute("aria-expanded", String(!statusCollapsed));
+  };
+  statusToggle.addEventListener("click", (e) => {
+    e.stopPropagation();
+    statusCollapsed = !statusCollapsed;
+    try {
+      localStorage.setItem(statusKey, statusCollapsed ? "1" : "0");
+    } catch {
+    }
+    paintStatus();
+  });
+  paintStatus();
   root.appendChild(vpWrap);
   config.container.appendChild(root);
   const params = new ParamStore(config.params);
-  const panel = new ControlPanel({ store: params, theme: t });
+  let frame = null;
+  const history = new ParamHistory(params);
+  const panel = new ControlPanel({ store: params, theme: t, tabs: config.tabs, onRender: () => frame?.fit(), onCommit: () => history.commit() });
   const groups = config.groups ?? { Parameters: Object.keys(config.params) };
   const items = [];
   for (const [groupName, keys] of Object.entries(groups)) {
@@ -8371,35 +9697,67 @@ function appShell(config) {
   }
   panel.render(items);
   panelEl.appendChild(panel.el);
+  frame = panelFrame({
+    root,
+    panelEl,
+    theme: t,
+    top: headerH,
+    width: config.panelWidth ?? 260,
+    title: config.panelTitle ?? "Parameters",
+    storageKey: config.title ?? "app",
+    preferred: () => panel.preferredWidth()
+  });
   const scene = new Scene();
   const renderer = new ThreeRenderer(scene, viewportEl, {
-    backgroundColor: config.background ?? 658196,
+    backgroundColor: config.background ?? VIEW_BG_DARK,
     cameraPosition: config.camera ?? [6, 8, 10],
     cameraTarget: config.target ?? [0, 0, 0],
     // Z-up by default — matches the tekto convention (XY = ground plane) and
     // the architectural / BIM / voxel geometry these apps usually build. Pass
     // `up: "y"` if you're showing the Y-up built-in primitives (box/cylinder/sphere).
     up: config.up ?? "z",
-    navGizmo: config.navGizmo ?? false,
-    shadingBar: config.shadingBar ?? false,
+    navGizmo: config.navGizmo ?? true,
+    shadingBar: config.shadingBar ?? "header",
+    viewerTools: config.viewerTools ?? {},
+    headerHost: vpWrap,
+    // the viewer header (shadingBar: "header") above overlays and ✎ Markup
     units: config.units ?? null,
     ...config.renderer
   });
   const commands = new Commands();
+  commands.add(history.commands());
   commands.add(viewCommands(renderer));
   const unbindKeys = commands.bindKeys();
-  const toolbar = config.topBar === false ? null : viewerToolbar(scene, renderer, { ...config.topBar === true || config.topBar === void 0 ? {} : config.topBar, theme: t });
+  const menuHost = menuSlot(showHeader ? header : null);
+  const menus = menuHost ? menuBar(commands, { theme: t }) : null;
+  if (menus) menuHost.appendChild(menus.el);
+  const toolbar = !config.topBar ? null : viewerToolbar(scene, renderer, { ...config.topBar === true ? {} : config.topBar, theme: t });
   if (toolbar) header.appendChild(toolbar.el);
   const notesCfg = config.notes ? "doc" in config.notes ? config.notes : { doc: config.notes } : null;
-  const notes = notesCfg ? new NotesLayer(renderer, notesCfg.doc, { collection: notesCfg.collection, host: vpWrap }) : null;
+  const notes = notesCfg ? new NotesLayer(renderer, notesCfg.doc, {
+    collection: notesCfg.collection,
+    host: vpWrap,
+    ..."author" in notesCfg && notesCfg.author ? { author: notesCfg.author } : {}
+  }) : null;
   let buildFn = null;
   let displayFn = null;
+  let trace = new StepTrace();
+  let stepsPanel = null;
+  let stepMarks = [];
+  scene.on((e) => {
+    if (e.type === "object:add") trace.current?.objects.push(e.id);
+  });
+  const build = () => {
+    trace = new StepTrace();
+    buildFn?.();
+    showSteps();
+  };
   params.onChange((key) => {
     const def = params.getDef(key);
     if (def?.display) {
       displayFn?.();
     } else {
-      buildFn?.();
+      build();
       displayFn?.();
     }
   });
@@ -8440,14 +9798,16 @@ function appShell(config) {
       displayFn = fn;
     },
     rebuild() {
-      buildFn?.();
+      build();
       displayFn?.();
     },
+    step: (name, inputs, fn) => trace.step(name, inputs, fn, { src: callSite() }),
     status(text) {
       statusText = text;
       if (text) {
-        statusEl.textContent = text;
-        statusEl.style.display = "block";
+        statusTextEl.textContent = text;
+        statusEl.style.display = "flex";
+        paintStatus();
       } else {
         statusEl.style.display = "none";
       }
@@ -8461,6 +9821,7 @@ function appShell(config) {
       bridge.dispose();
       unbindKeys();
       toolbar?.dispose();
+      menus?.dispose();
       notes?.dispose();
       panel.dispose();
       renderer.dispose();
@@ -8475,7 +9836,9 @@ function appShell(config) {
     params: params.getAll(),
     logs: statusText ? [{ label: "status", value: statusText }] : [],
     commands: commands.list(),
-    errors: bridge.errors()
+    errors: bridge.errors(),
+    ...trace.steps.length ? { steps: trace.toJSON() } : {},
+    ...stepMarks.length ? { stepMarks } : {}
   });
   const markup2 = config.markup === false ? null : new MarkupOverlay({
     viewport: vpWrap,
@@ -8487,9 +9850,8 @@ function appShell(config) {
     context,
     setTracking: () => {
     },
-    ...notes ? { keep: (ns) => {
-      notes.keep(ns);
-    } } : {},
+    ...renderer.viewerHeader ? { buttonHost: renderer.viewerHeader.end, top: VIEWER_HEADER_H } : {},
+    ...notes ? { keep: (ns) => notes.keep(ns).map((id) => `${notes.collection}/${id}`) } : {},
     ...notesCfg && "author" in notesCfg && notesCfg.author ? { author: notesCfg.author } : {}
   });
   const bridge = installAgentBridge({
@@ -8508,29 +9870,74 @@ function appShell(config) {
     camera: (pos, target) => {
       renderer.setCameraPosition(pos[0], pos[1], pos[2]);
       if (target) renderer.lookAt(target[0], target[1], target[2]);
-    }
+    },
+    section: (cut) => renderer.setSection(cut),
+    notes: () => notes,
+    steps: () => trace.steps.length ? { ...trace.toJSON(), marks: [...stepsPanel?.pendingMarks ?? []] } : null
   });
   return instance;
+  function showSteps() {
+    if (!trace.steps.length && !stepsPanel) return;
+    if (!stepsPanel) {
+      stepsPanel = new StepsPanel(vpWrap, {
+        theme: t,
+        onSelect: (_step, objects) => renderer.setSelectionHighlight(objects.length ? objects : null),
+        onSave: async (marks) => {
+          if (!markup2) return void 0;
+          stepMarks = [...marks];
+          try {
+            const n = marks.length;
+            return (await markup2.capture({ note: `${n} note${n > 1 ? "s" : ""} on steps`, label: "steps" })).dir;
+          } finally {
+            stepMarks = [];
+          }
+        }
+      });
+      let down = null;
+      renderer.canvasEl.addEventListener("pointerdown", (e) => {
+        down = { x: e.clientX, y: e.clientY };
+      });
+      renderer.canvasEl.addEventListener("pointerup", (e) => {
+        if (!down || !stepsPanel?.isOpen || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 4) return;
+        const hit = renderer.hitAt(e.clientX, e.clientY);
+        const step = hit ? stepsPanel.stepOfObject(hit.id) : void 0;
+        if (step) stepsPanel.select(step);
+      });
+    }
+    stepsPanel.show(trace.steps.length ? trace.toJSON() : null);
+  }
 }
 
 // src/collab/PresenceBar.ts
+function headerSlot(host) {
+  for (let el = host, up = 0; el && up < 4; el = el.parentElement, up++) {
+    const slot = el.querySelector(":scope > [data-tekto-viewer-header] > [data-tekto-header-slot=right]");
+    if (slot) return slot;
+  }
+  return null;
+}
 var STATUS_COL = { online: "#2f9e44", connecting: "#f08c00", offline: "#adb5bd", error: "#e03131" };
 var PresenceBar = class {
   constructor(store, host, opts = {}) {
     this.store = store;
     this.opts = opts;
     this.unsubs = [];
+    /** In the viewer header's (dark) row, not floating on its own white card. */
+    this.inHeader = false;
     this.el = document.createElement("div");
-    this.el.style.cssText = `position:absolute;${opts.position ?? "top:10px;right:100px;"}z-index:22;display:flex;gap:6px;align-items:center;font:12px system-ui,sans-serif;background:#fff;border:1px solid #d0d0d6;border-radius:7px;padding:3px 6px;box-shadow:0 2px 8px rgba(0,0,0,.12);`;
+    const slot = opts.position ? null : headerSlot(host);
+    this.inHeader = !!slot;
+    this.el.dataset.tektoPresence = slot ? "header" : "floating";
+    this.el.style.cssText = slot ? "display:flex;gap:6px;align-items:center;font:12px system-ui,sans-serif;" : `position:absolute;${opts.position ?? "top:10px;right:100px;"}z-index:22;display:flex;gap:6px;align-items:center;font:12px system-ui,sans-serif;background:#fff;border:1px solid #d0d0d6;border-radius:7px;padding:3px 6px;box-shadow:0 2px 8px rgba(0,0,0,.12);`;
     this.dot = document.createElement("span");
     this.dot.style.cssText = "width:8px;height:8px;border-radius:50%;display:inline-block;";
     this.people = document.createElement("div");
     this.people.style.cssText = "display:flex;gap:3px;align-items:center;";
     this.btn = document.createElement("button");
-    this.btn.style.cssText = "font:12px system-ui,sans-serif;padding:3px 8px;border-radius:5px;border:1px solid #d0d0d6;background:#fff;color:#222;cursor:pointer;";
+    this.btn.style.cssText = slot ? "font:11px system-ui,sans-serif;padding:3px 8px;border-radius:5px;border:1px solid rgba(255,255,255,.22);background:transparent;color:#e8ebf0;cursor:pointer;" : "font:12px system-ui,sans-serif;padding:3px 8px;border-radius:5px;border:1px solid #d0d0d6;background:#fff;color:#222;cursor:pointer;";
     this.btn.addEventListener("click", () => void (store.user ? store.signOut() : store.signIn()));
     this.el.append(this.dot, this.people, this.btn);
-    host.appendChild(this.el);
+    (slot ?? host).appendChild(this.el);
     this.unsubs.push(store.onPresence(() => this.render()), store.onStatus(() => this.render()), store.onUser(() => this.render()));
     this.render();
   }
@@ -8552,7 +9959,7 @@ var PresenceBar = class {
       seen.add(p.user.id);
       const b = document.createElement("span");
       const me = p.session === this.store.session;
-      b.style.cssText = `width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font:600 10px system-ui,sans-serif;color:#fff;background:${p.color};box-shadow:0 0 0 2px ${me ? "#222" : "#fff"};overflow:hidden;`;
+      b.style.cssText = `width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font:600 10px system-ui,sans-serif;color:#fff;background:${p.color};box-shadow:0 0 0 2px ${this.inHeader ? me ? "#fff" : "transparent" : me ? "#222" : "#fff"};overflow:hidden;`;
       if (p.user.avatarUrl) {
         const img = document.createElement("img");
         img.src = p.user.avatarUrl;
@@ -8566,15 +9973,171 @@ var PresenceBar = class {
       b.title = `${p.user.name}${me ? " (you)" : ""}${what ? ` \u2014 ${what}` : ""}`;
       this.people.appendChild(b);
     }
+    for (const p of this.store.presence) {
+      const agent = p.state.agent;
+      if (!agent?.name) continue;
+      const b = document.createElement("span");
+      b.dataset.agent = agent.name;
+      b.style.cssText = "height:22px;padding:0 6px;border-radius:5px;display:inline-flex;align-items:center;font:600 10px system-ui,sans-serif;color:#1e1e1e;background:#ffb020;white-space:nowrap;";
+      b.textContent = agent.name;
+      const me = p.session === this.store.session;
+      b.title = `${agent.name}, through ${me ? "your" : `${p.user.name}'s`} window${agent.doing ? `: ${agent.doing}` : ""}`;
+      this.people.appendChild(b);
+    }
+  }
+};
+
+// src/collab/ProposalBar.ts
+var show = (v) => {
+  if (v === void 0) return "\u2014";
+  if (typeof v === "number") return String(Math.round(v * 1e3) / 1e3);
+  const s = typeof v === "string" ? v : JSON.stringify(v);
+  return s.length > 34 ? `${s.slice(0, 33)}\u2026` : s;
+};
+var ProposalBar = class {
+  constructor(doc, host, opts = {}) {
+    this.doc = doc;
+    this.opts = opts;
+    this.index = 0;
+    this.error = "";
+    this.pending = 0;
+    this.shown = "";
+    this.t = opts.theme ?? getTheme();
+    const t = this.t;
+    this.el = document.createElement("div");
+    this.el.dataset.tektoProposals = "";
+    this.el.setAttribute("role", "region");
+    this.el.setAttribute("aria-label", "Proposals");
+    this.el.style.cssText = `position:absolute;${opts.position ?? "left:50%;bottom:56px;transform:translateX(-50%);"}z-index:24;display:none;
+      width:min(420px,calc(100% - 32px));max-height:60%;overflow-y:auto;box-sizing:border-box;padding:10px 12px;
+      background:${t.popupBg};color:${t.text};border:1px solid ${t.controlBorder};border-radius:8px;
+      box-shadow:0 6px 22px rgba(0,0,0,${t.isDark ? ".45" : ".16"});font:12px/1.45 ${t.font};`;
+    host.appendChild(this.el);
+    this.off = doc.onChange(() => {
+      if (!this.pending) this.pending = requestAnimationFrame(() => {
+        this.pending = 0;
+        this.render();
+      });
+    });
+    this.render();
+  }
+  destroy() {
+    this.off();
+    if (this.pending) cancelAnimationFrame(this.pending);
+    this.el.remove();
+  }
+  decider() {
+    return this.opts.by?.() ?? this.doc.store.user?.name;
+  }
+  render() {
+    const t = this.t;
+    const open = listProposals(this.doc);
+    if (!open.length) {
+      this.el.style.display = "none";
+      this.el.replaceChildren();
+      this.shown = "";
+      this.error = "";
+      return;
+    }
+    this.index = Math.min(this.index, open.length - 1);
+    const p = open[this.index];
+    if (p.id !== this.shown) {
+      this.shown = p.id;
+      this.error = "";
+    }
+    this.el.style.display = "block";
+    const make = (tag, css, text) => {
+      const e = document.createElement(tag);
+      e.style.cssText = css;
+      if (text !== void 0) e.textContent = text;
+      return e;
+    };
+    const button2 = (label, solid, run) => {
+      const b = make("button", `padding:5px 12px;border-radius:5px;font:inherit;cursor:pointer;border:1px solid ${solid ? t.accent : t.controlBorder};
+        background:${solid ? t.accent : "transparent"};color:${solid ? t.popupBg : t.text};`, label);
+      b.type = "button";
+      b.addEventListener("click", run);
+      return b;
+    };
+    const head = make("div", `display:flex;align-items:center;gap:6px;color:${t.textDim};font-size:11px;`);
+    head.append(make("span", "flex:1;", `${p.by} proposes${open.length > 1 ? ` \xB7 ${this.index + 1} of ${open.length}` : ""}`));
+    if (open.length > 1) {
+      const step = (d, label, name) => {
+        const b = button2(label, false, () => {
+          this.index = (this.index + d + open.length) % open.length;
+          this.render();
+        });
+        b.style.padding = "1px 8px";
+        b.setAttribute("aria-label", name);
+        return b;
+      };
+      head.append(step(-1, "\u2039", "Previous proposal"), step(1, "\u203A", "Next proposal"));
+    }
+    const title = make("div", "font-weight:600;font-size:13px;margin:3px 0 2px;", p.label);
+    title.dataset.proposal = p.id;
+    const rows = [head, title];
+    if (p.note) rows.push(make("div", `color:${t.textDim};margin-bottom:6px;white-space:pre-wrap;`, p.note));
+    const list = make("div", `margin:6px 0;padding:6px 0;border-top:1px solid ${t.controlBorder};border-bottom:1px solid ${t.controlBorder};display:grid;gap:3px;`);
+    for (const c of p.changes) {
+      const row = make("button", `display:block;width:100%;text-align:left;padding:2px 4px;border:0;border-radius:4px;background:transparent;color:${t.text};font:inherit;cursor:${this.opts.onFocus ? "pointer" : "default"};`);
+      row.type = "button";
+      row.dataset.change = c.key;
+      const sign = c.kind === "add" ? "+" : c.kind === "remove" ? "\u2212" : "~";
+      row.append(make("span", `display:inline-block;width:14px;color:${t.textDim};`, sign), make("span", "", c.key));
+      if (c.kind === "change") for (const f of c.fields ?? []) row.append(make("div", `padding-left:14px;color:${t.textDim};`, `${f.name}: ${show(f.from)} \u2192 ${show(f.to)}`));
+      row.setAttribute("aria-label", `${c.kind === "add" ? "Adds" : c.kind === "remove" ? "Removes" : "Changes"} ${c.key}`);
+      if (this.opts.onFocus) {
+        row.addEventListener("click", () => this.opts.onFocus([c.key]));
+        row.addEventListener("mouseenter", () => {
+          row.style.background = t.hoverBg;
+        });
+        row.addEventListener("mouseleave", () => {
+          row.style.background = "transparent";
+        });
+      }
+      list.append(row);
+    }
+    rows.push(list);
+    if (p.stale.length) rows.push(make("div", `color:${t.textDim};margin-bottom:6px;`, `Changed since it was proposed: ${p.stale.join(", ")}`));
+    if (this.error) {
+      const e = make("div", "color:#ff8a80;margin-bottom:6px;white-space:pre-wrap;", this.error);
+      e.setAttribute("role", "alert");
+      rows.push(e);
+    }
+    const foot = make("div", "display:flex;gap:6px;align-items:center;");
+    const reason = make("input", `flex:1;min-width:0;padding:5px 8px;border-radius:5px;border:1px solid ${t.controlBorder};background:transparent;color:${t.text};font:inherit;`);
+    reason.placeholder = "Reason, if you reject";
+    reason.setAttribute("aria-label", "Reason for rejecting");
+    const reject = () => {
+      rejectProposal(this.doc, p.id, { by: this.decider(), reason: reason.value.trim() || void 0 });
+      this.render();
+    };
+    reason.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") reject();
+      e.stopPropagation();
+    });
+    foot.append(reason, button2("Reject", false, reject), button2("Accept", true, () => {
+      const r = acceptProposal(this.doc, p.id, { schema: this.opts.schema, by: this.decider() });
+      this.error = r.ok ? "" : `It no longer applies:
+${r.rejected.map((x) => `${x.key}: ${x.message}`).join("\n")}`;
+      this.render();
+    }));
+    rows.push(foot);
+    this.el.replaceChildren(...rows);
   }
 };
 export {
   AABB,
   Algo,
   ArcCurve,
+  Axonometric,
+  BUILDING_COLLECTIONS,
+  BUILDING_SCHEMA,
   BalloonFrame,
   BlobDetect,
   BspTree,
+  Building,
+  BuildingSession,
   Callouts,
   Capsule2D,
   CltConstruction,
@@ -8585,6 +10148,7 @@ export {
   CurveUtils,
   DASH_PATTERNS,
   DEFAULT_BACKGROUND,
+  DRAWING_PALETTE,
   Delaunay2D,
   DistanceTransform,
   Doc,
@@ -8626,7 +10190,10 @@ export {
   PGFace,
   PGHalfEdge,
   PGVertex,
+  PROPOSALS,
+  ParamHistory,
   ParamStore,
+  Particles2D,
   PixelView,
   PlanarGraph,
   PlanarGraphCleanup,
@@ -8636,6 +10203,7 @@ export {
   PolygonBool,
   PolylineCurve,
   PresenceBar,
+  ProposalBar,
   Ray,
   RibbonEndTrim,
   RibbonFrame,
@@ -8643,6 +10211,8 @@ export {
   RibbonOpening,
   RibbonSystem,
   RigidBody2D,
+  Roof,
+  SUN_PLACES,
   SVGRenderer,
   Scene,
   SdfBlend,
@@ -8695,6 +10265,8 @@ export {
   SpringSystem3D,
   Stair,
   StairType,
+  StepTrace,
+  StepsPanel,
   StreamlineTracer,
   SunPosition,
   ThreeRenderer,
@@ -8705,6 +10277,7 @@ export {
   Vec3,
   Vec4,
   VecMath,
+  Voronoi2D,
   VoxelGrid,
   VoxelGrid2D,
   Wall,
@@ -8712,55 +10285,77 @@ export {
   WallOpening,
   WallSystem,
   WallType,
+  acceptProposal,
   aciFromHex,
+  activateLayer,
+  agentDoc,
   appShell,
+  applyPatch,
+  bindBuilding,
   bindScene,
   boundingWalls,
   boxOf,
   buildCutList,
+  buildingPlan,
+  buildingSchema,
+  checkRecord,
   chooseJoistDirection,
   clampedUniformKnots,
   closestPointOnSegment,
   cltLayers,
   collabColor,
+  computeEffectiveLock,
   computeEffectiveVisibility,
   contactBetween,
   createLayout,
   createParams,
   createRandom,
+  defaultBuildingTypes,
+  describeValue,
   devServerAdapter,
   download,
   drawSheet,
   easeInOut,
   edgeOutwardVisibility,
   edgeStyle,
+  encodePNG,
   extractVisiblePolylines,
   findAdjacent,
   fitRadius,
   fitSheet,
+  flatLights,
   formatKeys,
   getTheme,
   groundAppearance,
   hiddenLineIdBuffer,
+  hiddenLinePage,
   holzrahmenbauLayers,
+  inkOn,
   joistDirectionFromBounds,
   joistDirectionFromPCA,
   joistDirectionFromSupports,
   keyMatches,
   labelWidthFor,
+  layerDefaults,
   layoutLabels,
   lightBalance,
   lineClipPolygon,
+  listProposals,
   localAdapter,
   markup,
   memoryAdapter,
+  menuBar,
+  menuSlot,
   modeBackground,
   nearestAxis,
   neighboursOf,
   noise,
   notesLayer,
+  openingFill,
   orbitFor,
   orthoFrustum,
+  patchChanges,
+  patchedCollections,
   perpVisibility,
   perpVisibilityOfPolys,
   pickPrim,
@@ -8768,8 +10363,12 @@ export {
   polygonIntersection,
   polylinesToSVG,
   processWorkerRequest,
+  propose,
+  rasterizeSheet,
   realize,
+  realizeBuilding,
   realizeSlab,
+  rejectProposal,
   repelBodies,
   reverse as reverseContact,
   sectionAppearance,
@@ -8778,13 +10377,17 @@ export {
   selectOnClick,
   setClipSnap,
   shareSelection,
+  sheetToPNG,
   shortestTurn,
   sketch,
   sketch2d,
   stampName,
   standardOrbit,
+  studioLights,
+  sunFor,
   supabaseAdapter,
   surfaceAppearance,
+  validateBuilding,
   viewCommands,
   viewModeIconShapes,
   viewModeIconSvg,

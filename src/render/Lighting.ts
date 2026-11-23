@@ -7,7 +7,8 @@ import * as THREE from "three";
 import { Vec3 } from "../core/math/vectors";
 import type { LightingMode } from "../scene/Scene";
 import type { RendererCore } from "./RendererCore";
-import { daylight, flatLights, sunDirection, SUN_PRESETS, type SunPreset } from "./viewRules";
+import { daylight, flatLights, studioLights, sunDirection, SUN_PRESETS, type SunPreset } from "./viewRules";
+import { sunFor, type SunSite } from "./sunSite";
 
 export class Lighting {
   ambientLight: THREE.AmbientLight;
@@ -126,6 +127,7 @@ export class Lighting {
 
   setSunDirection(direction: Vec3, distance = 50): void {
     this.currentSunPreset = null;
+    this.currentSunSite = null;
     const x = direction.x;
     const y = this.core.isZUp ? direction.y :  direction.z;
     const z = this.core.isZUp ? direction.z : -direction.y;
@@ -185,6 +187,18 @@ export class Lighting {
     this.currentSunPreset = name;
   }
 
+  /** The date and place `sunAt` last set, until the sun is moved another way. */
+  currentSunSite: SunSite | null = null;
+
+  /** The sun for a date, an hour and a place: Studio, the light following the sun (night included). */
+  sunAt(site: SunSite): void {
+    const sun = sunFor(site);
+    this.core.gScene.setLightingMode("studio");
+    this.setDaylight(true);
+    this.setSunDirection(sun.direction);
+    this.currentSunSite = { ...site };
+  }
+
   setDaylight(on: boolean): void {
     this.daylightOn = on;
     if (on) this.sunDirty = true;
@@ -203,15 +217,27 @@ export class Lighting {
     this.hemiLight.intensity = d.skyIntensity;
     this.ambientLight.intensity = d.ambient;
     this.core.renderer.toneMappingExposure = d.exposure;
-    if (!(this.envBackground && this.envSourceTex)) {
-      this.core.threeScene.background = new THREE.Color(this.core.config.backgroundColor).lerp(new THREE.Color(d.background), d.backgroundAmount);
+    this.applyPage();
+  }
+
+  /**
+   * The colour behind the model: the page, tinted by the sky while Studio's light follows
+   * the sun. A hidden-line drawing keeps its page plain. An image as background stays.
+   */
+  applyPage(): void {
+    if (this.envBackground && this.envSourceTex) return;
+    const page = new THREE.Color(this.core.pageColor());
+    if (this.daylightOn && this.currentLighting === "studio" && this.core.gScene.renderMode !== "hiddenline") {
+      const d = daylight(this.sunAltitude());
+      page.lerp(new THREE.Color(d.background), d.backgroundAmount);
     }
+    this.core.threeScene.background = page;
   }
 
   /** Back to the plain balance of the current mode. */
   private _resetDaylight(): void {
     this.dirLight.color.setHex(0xffffff);              // the sky's colours come back with applyMode
-    if (!(this.envBackground && this.envSourceTex)) this.core.threeScene.background = new THREE.Color(this.core.config.backgroundColor);
+    this.applyPage();
     this.applyMode(this.currentLighting);
   }
 
@@ -228,19 +254,21 @@ export class Lighting {
     // Soft PCF: from r180 three makes PCFShadowMap soft and warns that PCFSoftShadowMap is
     // deprecated (it maps it to PCFShadowMap anyway), so ask for what each version draws soft.
     this.core.renderer.shadowMap.type    = parseInt(THREE.REVISION, 10) >= 180 ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
-    this.core.renderer.toneMapping       = studio ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping;
+    const studioBalance = studioLights(this.core.config.studioLighting);
+    this.core.renderer.toneMapping       = studio && studioBalance.toneMapped
+      ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping;
     this.core.renderer.toneMappingExposure = 1.0;
     this.core.renderer.outputColorSpace  = THREE.SRGBColorSpace;
 
     // ── Lights: rebalance so Studio reads more like a sunlit scene ─
     if (studio) {
-      // Studio's own sky, whatever Flat was given (daylight retints it after this)
-      const sketch = flatLights("sketch");
-      this.hemiLight.color.setHex(sketch.skyColour);
-      this.hemiLight.groundColor.setHex(sketch.groundColour);
-      this.ambientLight.intensity = 0.35;
-      this.hemiLight.intensity    = 0.30;
-      this.dirLight.intensity     = 2.8;
+      // Studio's own sky and balance, whatever Flat was given: filmic, or
+      // plain colours (studioLights). Daylight retints it after this.
+      this.hemiLight.color.setHex(studioBalance.skyColour);
+      this.hemiLight.groundColor.setHex(studioBalance.groundColour);
+      this.ambientLight.intensity = studioBalance.ambient;
+      this.hemiLight.intensity    = studioBalance.sky;
+      this.dirLight.intensity     = studioBalance.sun;
       this.dirLight.castShadow    = true;
       this.dirLight.shadow.mapSize.set(2048, 2048);
       this.dirLight.shadow.bias   = -0.0005;
@@ -258,7 +286,7 @@ export class Lighting {
       // Daylight is Studio's: flat draws in the plain colours.
       if (this.daylightOn) {
         this.dirLight.color.setHex(0xffffff);
-        if (!(this.envBackground && this.envSourceTex)) this.core.threeScene.background = new THREE.Color(this.core.config.backgroundColor);
+        this.applyPage();
       }
     }
 
@@ -350,7 +378,8 @@ export class Lighting {
       this.core.threeScene.background = this.envSourceTex;
     } else if ((this.core.threeScene.background as THREE.Texture | null)?.isTexture) {
       // The image off: the plain background comes back (it stayed up before).
-      this.core.threeScene.background = new THREE.Color(this.core.config.backgroundColor);
+      this.core.threeScene.background = null;
+      this.applyPage();
     }
   }
 

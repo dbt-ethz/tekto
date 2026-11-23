@@ -20,43 +20,41 @@ const PALETTE = [
 
 // ── Build colored grid mesh ──
 
+/**
+ * The grid as pixels: one square per value, in that value's colour, centred on its grid point.
+ * Each square has four vertices of its own, so the colour is flat across it and its edge is
+ * sharp at any zoom. (One vertex per value, shared by the squares around it, would blend
+ * each colour into its neighbours: a blurred picture of the grid.)
+ */
 function buildGridMesh(
   grid: VoxelGrid2D,
   colorFn: (val: number, x: number, y: number) => [number, number, number, number],
 ): FlatMeshData {
   const { nx, ny } = grid;
-  const vertCount = nx * ny;
-  const positions = new Float32Array(vertCount * 3);
-  const normals = new Float32Array(vertCount * 3);
-  const colors = new Float32Array(vertCount * 4);
+  const cells = nx * ny;
+  const positions = new Float32Array(cells * 4 * 3);
+  const normals = new Float32Array(cells * 4 * 3);
+  const colors = new Float32Array(cells * 4 * 4);
+  const indices = new Uint32Array(cells * 6);
+  const h = grid.cellSize / 2;
+  // The square's corners around its centre, in the order the triangles below use them.
+  const corners = [[-h, -h], [h, -h], [h, h], [-h, h]];
 
   for (let x = 0; x < nx; x++) {
     for (let y = 0; y < ny; y++) {
-      const vi = x * ny + y;
+      const cell = x * ny + y;
       const pos = grid.getPosition(x, y);
-      positions[vi * 3] = pos.x;
-      positions[vi * 3 + 1] = 0;
-      positions[vi * 3 + 2] = pos.y; // 2D Y → 3D Z
-      normals[vi * 3 + 1] = 1; // Y-up normal
-      const c = colorFn(grid.values[vi], x, y);
-      colors[vi * 4] = c[0];
-      colors[vi * 4 + 1] = c[1];
-      colors[vi * 4 + 2] = c[2];
-      colors[vi * 4 + 3] = c[3];
-    }
-  }
-
-  const indexCount = (nx - 1) * (ny - 1) * 6;
-  const indices = new Uint32Array(indexCount);
-  let ii = 0;
-  for (let x = 0; x < nx - 1; x++) {
-    for (let y = 0; y < ny - 1; y++) {
-      const v00 = x * ny + y;
-      const v10 = (x + 1) * ny + y;
-      const v11 = (x + 1) * ny + y + 1;
-      const v01 = x * ny + y + 1;
-      indices[ii++] = v00; indices[ii++] = v10; indices[ii++] = v11;
-      indices[ii++] = v00; indices[ii++] = v11; indices[ii++] = v01;
+      const c = colorFn(grid.values[cell], x, y);
+      for (let k = 0; k < 4; k++) {
+        const vi = cell * 4 + k;
+        positions[vi * 3] = pos.x + corners[k][0];
+        positions[vi * 3 + 1] = 0;
+        positions[vi * 3 + 2] = pos.y + corners[k][1]; // 2D Y → 3D Z
+        normals[vi * 3 + 1] = 1; // Y-up normal
+        colors.set(c, vi * 4);
+      }
+      const v = cell * 4;
+      indices.set([v, v + 1, v + 2, v, v + 2, v + 3], cell * 6);
     }
   }
 
@@ -331,7 +329,6 @@ export default function (container: HTMLElement): SketchInstance {
   }, {
     container,
     title: "Voxel Grid 2D",
-    background: 0x0a0b14,
     camera: [0, 12, 0],
     target: [0, 0, 0],
   });

@@ -404,11 +404,82 @@ export class VoxelGrid {
 // ═════════════════════════════════════════════
 
 /**
- * Iso-contour of a 2D scalar grid as loose line segments in world coordinates (marching squares).
+ * Iso-contours of a 2D scalar grid (marching squares): `contours` gives polylines, closed
+ * loops and open lines that run off the grid's edge; `extract` gives the loose segments.
  *
- * @experimental No app uses this yet; it may still change.
+ * The grid's layout, as `VoxelGrid2D` keeps it: `nx × ny` samples, stored x-major, the
+ * value at column `x`, row `y` is `values[x * ny + y]`, and it sits at
+ * (`originX + x * cellSize`, `originY + y * cellSize`). Values above `iso` are inside: a
+ * contour keeps them on its left, so a loop around a high region runs counter-clockwise.
+ *
+ *   const loops = MarchingSquares.contoursFromGrid(grid, 0.5).filter((c) => c.closed);
  */
 export const MarchingSquares = {
+  /**
+   * The iso-contours as polylines: each `{ points, closed }`, with the inside (values above
+   * `iso`) on the left. A closed loop does not repeat its first point; an open line starts
+   * and ends on the grid's border.
+   */
+  contours(
+    values: ArrayLike<number>, nx: number, ny: number,
+    iso = 0, cellSize = 1, originX = 0, originY = 0,
+  ): { points: Vec2[]; closed: boolean }[] {
+    // Every crossing lies on a grid edge; key it by that edge so neighbouring cells meet exactly.
+    // Edge keys: horizontal edge from (x, y) to (x + 1, y) → 2·(x·ny + y); vertical (x, y) to (x, y + 1) → +1.
+    const point = new Map<number, Vec2>();
+    const next = new Map<number, number>();          // segment start edge → end edge
+    const ends = new Set<number>();
+    const n = new Float32Array(4);
+    for (let x = 0; x < nx - 1; x++) {
+      for (let y = 0; y < ny - 1; y++) {
+        n[0] = values[x * ny + y];
+        n[1] = values[(x + 1) * ny + y];
+        n[2] = values[(x + 1) * ny + y + 1];
+        n[3] = values[x * ny + y + 1];
+        let caseNum = 0;
+        for (let i = 3; i >= 0; i--) {
+          if (n[i] > iso) caseNum++;
+          if (i > 0) caseNum <<= 1;
+        }
+        const x1 = originX + x * cellSize, y1 = originY + y * cellSize;
+        const keyOf = (edge: number) => edge === 0 ? 2 * (x * ny + y) : edge === 1 ? 2 * ((x + 1) * ny + y) + 1
+          : edge === 2 ? 2 * (x * ny + y + 1) : 2 * (x * ny + y) + 1;
+        for (let i = caseNum * 4; i < caseNum * 4 + 4; i += 2) {
+          const e1 = MS_EDGE_TABLE[i], e2 = MS_EDGE_TABLE[i + 1];
+          if (e1 < 0 || e2 < 0) break;
+          const a = keyOf(e1), b = keyOf(e2);
+          if (!point.has(a)) point.set(a, msEdgePoint(e1, n, x1, y1, x1 + cellSize, y1 + cellSize, iso, cellSize));
+          if (!point.has(b)) point.set(b, msEdgePoint(e2, n, x1, y1, x1 + cellSize, y1 + cellSize, iso, cellSize));
+          next.set(a, b);
+          ends.add(b);
+        }
+      }
+    }
+    const out: { points: Vec2[]; closed: boolean }[] = [];
+    const walk = (start: number) => {
+      const keys = [start];
+      let k = next.get(start);
+      next.delete(start);
+      while (k !== undefined && k !== start) {
+        keys.push(k);
+        const nk = next.get(k);
+        next.delete(k);
+        k = nk;
+      }
+      return { points: keys.map((key) => point.get(key)!), closed: k === start };
+    };
+    // Open lines first (they start where no segment ends: on the border), then the loops.
+    for (const start of [...next.keys()]) if (!ends.has(start) && next.has(start)) out.push(walk(start));
+    for (const start of [...next.keys()]) if (next.has(start)) out.push(walk(start));
+    return out;
+  },
+
+  /** `contours` of a `VoxelGrid2D`. */
+  contoursFromGrid(grid: VoxelGrid2D, iso = 0): { points: Vec2[]; closed: boolean }[] {
+    return MarchingSquares.contours(grid.values, grid.nx, grid.ny, iso, grid.cellSize, grid.x1, grid.y1);
+  },
+
+  /** The iso-contour as loose segments, in no order (`contours` joins them). Same layout as `contours`. */
   extract(
     values: ArrayLike<number>, nx: number, ny: number,
     iso = 0, cellSize = 1, originX = 0, originY = 0,
@@ -449,6 +520,7 @@ export const MarchingSquares = {
     return segments;
   },
 
+  /** `extract` of a `VoxelGrid2D`. */
   extractFromGrid(grid: VoxelGrid2D, iso = 0): { a: Vec2; b: Vec2 }[] {
     return MarchingSquares.extract(
       grid.values, grid.nx, grid.ny, iso, grid.cellSize, grid.x1, grid.y1,

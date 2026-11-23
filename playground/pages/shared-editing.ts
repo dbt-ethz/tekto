@@ -62,7 +62,6 @@ export default function (container: HTMLElement): { dispose(): void } {
   }, {
     container,
     title: "Shared Editing",
-    background: 0x0a0b14,
     camera: [0, 9, 0.01],
     target: [0, 0, 0],
   });

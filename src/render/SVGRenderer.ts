@@ -28,7 +28,7 @@ const DEFAULTS: SVGRendererConfig = {
   width: 800,
   height: 600,
   viewBox: { minX: -5, minY: -5, width: 10, height: 10 },
-  backgroundColor: "#0a0b14",
+  backgroundColor: "#0b0b0b",
   showGrid: true,
   gridSpacing: 1,
   gridColor: "#1a1c3a",

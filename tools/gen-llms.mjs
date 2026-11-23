@@ -106,7 +106,7 @@ const llms = `# tekto
 
 > ${pkg.description}
 
-tekto ${pkg.version}. One function becomes an interactive CAD app in the browser; people point at what to change on the viewport (✎ Markup) and agents check their own work (\`npm run snap\`). Docs: [README](README.md) · [agent rules (CLAUDE.md)](CLAUDE.md) · [changelog](CHANGELOG.md) · [full API index (llms-full.txt)](llms-full.txt) · examples in [playground/pages](playground/pages/).
+tekto ${pkg.version}. One function becomes an interactive CAD app in the browser; people point at what to change on the viewport (✎ Markup) and agents check their own work (\`npm run snap\`). Docs: [README](README.md) · [rules for editing tekto itself (CLAUDE.md, on GitHub)](https://github.com/dbt-ethz/tekto/blob/main/CLAUDE.md) · [changelog](CHANGELOG.md) · [full API index (llms-full.txt)](llms-full.txt) · examples in [playground/pages](playground/pages/).
 
 ## Start here
 
@@ -122,7 +122,8 @@ ${ENTRIES.map(e => `- \`import … from "${e.spec}"\` — ${e.about} (${byEntry[
 - [README → Two scene models](README.md#two-scene-models-rebuilt-vs-retained): rebuilt (\`sketch\`) or retained (\`appShell\`).
 - [README → One mesh](README.md#one-mesh): the \`Mesh\` class — ids, connectivity, arrays, \`validate()\`.
 - [README → Markup](README.md#markup--instructions-for-an-ai-drawn-on-the-view): reading a person's marks; \`snap\` for your own.
-- [CLAUDE.md](CLAUDE.md): conventions, gotchas and what never to do without asking.
+- [CHANGELOG.md](CHANGELOG.md): what changed in each release — read it when you upgrade (renames, moved functions, changed defaults).
+- [CLAUDE.md on GitHub](https://github.com/dbt-ethz/tekto/blob/main/CLAUDE.md): conventions and gotchas for working on tekto itself.
 `;
 
 const full = `# tekto ${pkg.version} — API index

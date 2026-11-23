@@ -6,6 +6,16 @@ before 1.0, breaking changes bump the minor version. See
 
 ## Unreleased
 
+From the lecture apps' upgrade to 0.11.0 (29 `sketch2d` figures in one book):
+
+- **Agents find the docs from a consuming project.** The README's first screen says to read `node_modules/tekto/llms.txt`; every entry's `.d.ts` starts with a pointer to `llms.txt`, `llms-full.txt` and `CHANGELOG.md`; the package now ships `CHANGELOG.md` and exports `tekto/llms.txt`, `tekto/llms-full.txt`, `tekto/CHANGELOG.md` and `tekto/package.json`. The llms.txt link to CLAUDE.md (rules for editing tekto itself) goes to GitHub, as the file is not shipped.
+- **Start-here table:** rows for 3D booleans (`BspTree` → `Mesh.fromArrays`), contours (`MarchingSquares.contours`), distance fields (`Sdf*` → `VoxelGrid` → `MarchingCubes`) and hidden-line drawings.
+- **`sketch2d({ keys: "app" | false })`**: keys only while the app has focus, or none, so several apps on one page each undo their own. `Commands.bindKeys(target)` takes any `EventTarget`.
+- **Panel styling hooks, stable:** `[data-tekto-controls]` on the controls column, and the CSS variables `--tekto-panel-bg`, `--tekto-panel-border`, `--tekto-status-bg` beside the existing `data-tekto-panel*`, `data-tekto-status` and `--tekto-label-w` (docs: Sketch 2D → Several apps on one page).
+- **Panel:** the first group, when it is the default "Parameters", has no heading under the panel's own "Parameters" row. In a narrow panel the label column gives way to the control (down to 40 % of the row), so a long label wraps instead of cutting the slider's value off; the value never shrinks.
+
+Also new:
+
 - **Colour ramps and a legend**: `ColorRamp` (in `tekto/core`) colours analysis values by the
   job the colour does — `sequential()` for magnitude (one blue, light → dark; the near-zero end
   recedes into the background, so on tekto's dark view low is the dark step), `diverging()` for
@@ -18,9 +28,380 @@ before 1.0, breaking changes bump the minor version. See
   the view (in snapshots and ✎ Markup) or in a panel row. Lit faces darken their colour: the
   renderer config `flatLighting: "plain"` keeps them true to the legend. New page *Colour
   Ramps*; *Voxel Grid 2D*'s Blur scene uses the sequential ramp in place of its own rainbow.
-- **A `Mesh` with node colours is drawn in them.** `scene.addMesh` / `lab.mesh` ignored
+
+## 0.11.0 — 2026-11-22
+
+An agent on the live model and a person who decides: the MCP server joins a shared document with nobody's app open (or works on a file), looks at floor plans it draws itself, and proposes changes that wait for a person to accept or reject. One interface for every app: a shared panel frame, a paper style for 2D figures, a menu bar with Undo, the viewer header in every 3D view, a grey dark theme, the sun by date and place, hidden line on paper. Also: closed round meshes, contours as polylines, drag handles and axonometric views for 2D sketches, timber/steel/concrete stairs, drawings in an architectural graphic language, and the 28 lecture apps in the playground.
+
+**Breaking:** `MeshFactory.sphere`, `torus`, `cylinder` and a full `revolve` have fewer vertices (seams, poles and axis points are shared): code that counts their vertices or reads them by index in the old layout must change. A sketch's Export ▾ / Import ▾ buttons are now File menu items (`lab.registerExport` / `registerImport` as before). **Changed defaults:** the dark theme is neutral grey (`getTheme()`; the view `#0b0b0b`, was `#0a0b14`); hidden line draws on white paper in a dark app (`hiddenLineInverse: true` keeps it dark); `sketch`, `sketch2d` and `appShell` show a menu bar and a panel top row, and an app without controls has no panel; `appShell` shows the viewer header; a 2D sketch redraws after its pointer handlers; drawings' annotation is smaller (text 2 mm, dimensions 1.8 mm) and view titles carry their scale.
+
+- **The panel has a top row of its own, and an empty panel is not there.** The first row of
+  the panel in `sketch`, `sketch2d` and `appShell` belongs to its frame: the panel's name on
+  the left ("Parameters"; `panelTitle` changes it, `""` leaves it free; a paper figure shows
+  its title there) and the fold chevron on the right. The controls start below it, so nothing
+  sits beside the chevron any more, and the row is as high as the viewer header, one band
+  across the app. An app that declares no control has no panel at all — no column, no rail,
+  no chevron — and the view takes the whole width; the panel appears with its first content.
+  A panel whose controls are all ungrouped lists them without the "Parameters" heading
+  (the top row says it already).
+  A folded panel takes no room either (it used to leave a rail down the whole height): the
+  chevron that brings it back sits in the view's top left corner, where the viewer header
+  moves its own content aside.
+
+- **Hidden line is a drawing on white paper, in a dark app too.** It used to fill the faces
+  with the view's background and draw the creases in a fixed dark grey: on a dark view, faint
+  grey lines on black. Now the view turns white while the mode is on, with dark lines and a
+  pale grid (an app whose background is light keeps it); a sunset no longer tints the page.
+  Clicking the Hidden line button again, or View ▸ Hidden line: paper / inverse
+  (`view.hiddenLineInverse`), draws it inverse: light lines on the dark view
+  (`renderer.setHiddenLineInverse(on)`, `hiddenLineInverse` in the config). Lines, points,
+  labels and edge colours that would vanish into the page (a white line on white paper) are
+  drawn in the drawing's ink; others keep their colour. `hiddenLinePage` and `inkOn` are the
+  rules, exported. An app that relied on hidden line staying dark sets `hiddenLineInverse: true`.
+
+- **The sun by date and place is in the viewer's sun menu.** The sun button of the viewer
+  header (and of the corner shading bar) has a fourth choice beside Morning, Noon and Sunset:
+  Date, which opens a place (24 cities, or a latitude and longitude), the model's north, a
+  day, an hour and Now under the row, with the sun's altitude and azimuth. North is CAD's
+  "true north": degrees clockwise from the model's +Y axis (up on the plan) to north, 0 by
+  default (`north` on the site). It lights the model as the named suns
+  do (Studio, the light following the sun, so the evening and the night come with the hour),
+  and it is in every 3D view: `sketch`, `appShell`, a bare `ThreeRenderer`. In code:
+  `renderer.setSunAt({ latitude, longitude, date: "2026-06-21", hour: 17 })` and
+  `renderer.sunSite`; `sunFor(site)`, `SUN_PLACES` and the `SunSite` type are exported. Hours
+  are the place's standard time (no summer time). The place last chosen is remembered. The
+  playground's own Sun dropdown in its top bar is gone, and with it the sun it pushed into
+  every sketch page on load: a page starts with the renderer's default sun.
+
+- **The dark theme is grey, not blue.** Panels, bars, menus and the viewer header are a neutral
+  dark grey (`#1e1e1e`, as an editor's dark theme), with grey borders and text; the view behind
+  them (a 3D view, a 2D canvas) is darker still, almost black (`#0b0b0b`, was the navy
+  `#0a0b14`), and its grid lines are grey. `getTheme()` returns the new colours, so an app
+  that reads the theme follows; an app that set `background: 0x0a0b14` itself keeps it. No
+  chrome is green: the playground's name and hovers are white.
+
+- **A menu bar, and Undo in every app.** `sketch`, `sketch2d` and `appShell` now show a menu
+  bar drawn from the app's commands: File, Edit and View first, then the app's own menus, each
+  command in the menu its `group` names (`app.commands.add({ id: "file.save", label: "Save
+  JSON", keys: "Mod+S", group: "File", run })`, `lab.command(…)`), with its keys beside it and
+  greyed while it cannot run. It sits in the title bar, or in the slot of a shell that has a
+  bar of its own (an element marked `data-tekto-menu-slot`, as the playground's); `menuBar(
+  commands)` and `menuSlot` are exported for an app with its own chrome. Exports and imports
+  registered with `lab.registerExport` / `registerImport` are File items and commands
+  (`file.export.ifc`); the sketch's own Export ▾ / Import ▾ buttons are gone. Edit ▸ Undo and
+  Redo (Mod+Z, Shift+Mod+Z) work over the controls of every app (`ParamHistory`: one step per
+  finished change, a slider drag is one); an app with a `Doc` declares `edit.undo` over its
+  document as before, which replaces it. A 2D sketch has `commands` now. The paper style shows
+  no menu bar; its keys work. The playground's House, Site Editor, Framed Floor, Roofs and
+  Drawing Sheet pages moved their File and History buttons from the sidebar into the menus.
+
+- **✎ Markup's bar says what it is for.** Its first line is a sentence on what to do next
+  (draw, type what should change at the mark, where the marks go), and the buttons say what
+  they act on: **Undo mark**, **Clear marks**, **Pin notes to the model** (was "Keep as
+  notes") and **Save for Claude** (was "Save"). The box in the bar is the "general
+  instruction, not tied to a mark", a mark's own box asks "what should change here?". The
+  buttons that need a mark are greyed out until there is one. No API change.
+
+- **The viewer's tools in every 3D view.** The viewer header (a strip across the top of the
+  view with icons for the render style, lighting, ambient occlusion, sun, section, overlays and
+  snapshot, ✎ Markup at its end) and the axis widget with the zoom column under it are now the
+  default of `sketch()` and `appShell()`, also inside a shell such as the playground.
+  `viewerTools: { sun: false, section: false, … }` drops single tools (`ViewerTools`: `modes`,
+  `light`, `sun`, `section`, `overlays`, `snapshot`, `zoom`), and
+  `renderer.setViewerToolsVisible(false)` hides them while the view shows something they do not
+  apply to (a drawing laid over it). **Changed defaults:** `navGizmo` is on (`navGizmo: false`
+  for an app with its own panels in that corner); `appShell`'s `shadingBar` is `"header"` (was
+  off) and its text toolbar `topBar` is off (was on): `topBar: true` shows it as before, and it
+  is the only place with the sun for a date and a site. An `appShell` inside a shell (`<div
+  data-shell>`) drops its title bar (`showHeader: true` keeps it). The playground's own Render,
+  Cut and Light dropdowns are gone: they repeated the header.
+  `PresenceBar` (shared editing) now takes its place in the header's row by itself, between
+  the view's tools and ✎ Markup, when the view has a header; a given `position` floats it as
+  before.
+
+- **One panel frame, a paper style, tabs down the side.** The control panel now behaves the
+  same in `sketch`, `sketch2d` and `appShell`: drag its right edge to resize it (double-click to
+  reset), fold it with the chevron at its top right corner (it used to sit in the header of a
+  2D sketch, and an `appShell` had none), both remembered per app title. `panelWidth: "auto"`
+  sizes the panel to its longest label and widest control, and the label column now fits its
+  labels (56 to 170 px) instead of a fixed 80. `tabs: "side"` lists a panel's tabs down its left
+  edge, each with its number of controls, for more and longer names than the bar on top holds;
+  `lab.slider/toggle/select/colorPicker/button` of a 2D sketch take `tab`. `sketch2d(fn,
+  { style: "paper" })` draws the app as a figure in a book: white, one ink, no title bar, section
+  names without arrows, the panel as wide as it needs (`UiStyle`, `getTheme("paper")`). The
+  playground's lecture apps use it. Changed for every app: labels are shown as written
+  ("Width m" was shown as "Width M"; a control declared without a label gets one from its key,
+  "floorHeight" reads "Floor height"); the status line of a 2D sketch (`lab.log`) is a row under
+  the canvas and no longer a box over the drawing; a 2D sketch inside a shell (`<div
+  data-shell>`) drops its own title bar, as a 3D sketch does (`showHeader: true` keeps it).
+
+- **Round meshes are closed.** `MeshFactory.sphere`, `torus`, `cylinder` (and a cone, a top
+  or bottom radius of 0) and a full `revolve` no longer repeat the seam, the poles, a cone's tip
+  or a profile point on the axis: each is one vertex, so these meshes have no open edges and
+  subdivision, curvature and booleans work on them without `weldVertices`. They have fewer
+  vertices than before (a torus `segments × sides`, was `(segments + 1) × (sides + 1)`), and
+  vertex normals are now smooth across the seam. Code that counted vertices or read them by
+  index in the old layout needs updating.
+
+- **Contours as polylines.** `MarchingSquares.contours(values, nx, ny, iso, …)` and
+  `contoursFromGrid(grid, iso)` join the iso-lines into `{ points, closed }` polylines: closed
+  loops (counter-clockwise around values above `iso`, clockwise around a hole) and open lines
+  from border to border. The grid layout (`values[x * ny + y]`) is now documented.
+
+- **2D sketches redraw after pointer input, and have drag handles.** After an
+  `onPointerDown/Move/Up` handler runs, the canvas is drawn again, so a drag shows live without
+  `lab.animate(() => {})`. `lab.redraw()` draws once more after other changes.
+  `lab.dragHandle(x, y, { name, view, constrain })` is a point the person drags: drawn over the
+  drawing, found under the pointer, its moves re-run the sketch; with `view` (`{ scale, x, y }`,
+  what `fitSheet` returns) it works in model coordinates, y up.
+
+- **Axonometric views for 2D drawings.** `Axonometric({ azimuth, elevation, up })` (and
+  `Axonometric.isometric()`) projects 3D points for a canvas or a Sheet: `polygons` and
+  `meshFaces` cull the faces turned away, sort the rest far to near and give each a light value;
+  `fit` places them in an area; `sheetProjection()` is a Sheet view's `project`. In
+  `tekto/core` and `tekto/2d`. New playground page: Axonometric.
+- **Proposals: an agent's change waits for a person.** `tekto_propose` (in every mode of the
+  MCP server) stores a patch in the document as an open proposal instead of applying it, with a
+  label and a note saying why, and answers with what the check would say if it were applied:
+  the issues it would cause and the ones it would settle. `ProposalBar` shows each open proposal
+  over the view (who, why, the records added, changed field by field, removed) with Accept and
+  Reject: accepting is one undo step, and undoing it reopens the proposal; a rejection keeps the
+  reason for the agent, which reads it with `tekto_proposals`. `tools/mcp.mjs --propose` offers
+  no `tekto_apply` and no `tekto_undo`: the way to run an agent in the background on a shared
+  model. Proposals are records in the document's `proposals` collection, so they are shared
+  live, saved with a file and kept as history. In code: `propose`, `listProposals`,
+  `acceptProposal`, `rejectProposal`, `patchedCollections`; `BuildingSession.propose`,
+  `.proposals`, `.accept`, `.reject`, `.preview`, and `snapshot({ proposal })`, which draws the
+  plans as the proposal would leave them, its changes in red (`buildingPlan({ highlight })`);
+  `applyPatch(…, { dryRun: true })`; `agentDoc({ preview })`. The House page has the bar.
+
+- **An agent on the live model, with nobody's app open.** `tools/mcp.mjs --doc house` makes the
+  MCP server join a shared document as one more participant instead of reaching into an open
+  tab: people who have the app open see the agent's edits arrive, it sees theirs, and there is
+  one model, not copies of a file. `--file house.json` does the same on a file when there is no
+  server (the document the House app saves and opens, created with the first edit). Both offer
+  `tekto_info`, `tekto_records`, `tekto_apply`, `tekto_check`, `tekto_undo`, `tekto_snapshot`
+  (a floor plan per storey as an image, every part labelled with its record id, the model's
+  coordinates along the edges) and the new `tekto_export` (IFC, or the plans as SVG or DXF).
+  In code: `BuildingSession` (in `tekto/core`, no three.js) holds a `Doc`, saved JSON or plain
+  records and gives `info`, `records`, `apply`, `check`, `undo`, `snapshot`, `toJSON`, `toIfc`.
+  `devServerAdapter({ endpoint, user })` now also runs in Node (a fixed `user`, the event
+  stream read with fetch). The page mode of the server is unchanged.
+
+- **Floor plans of a building, and drawings as PNG.** `buildingPlan(building, { storey })`
+  draws a building's plans as a `Sheet`: walls solid between their openings, windows with their
+  glass line, rooms in their colour with name and area, stairs, each part keyed by its record.
+  `sheet.toPNG({ width })` (and `rasterizeSheet`, `encodePNG`) draws any sheet into pixels with
+  no browser, text in a built-in stroke font, so an agent in Node can look at what it drew.
+
+- **Stairs built as timber, steel or concrete.** `new Stair({ structure })`, and `structure` on
+  a building's stair record, choose how the flights are built: `"concrete"` puts the steps on a
+  160 mm waist slab, `"timber"` sets 50 mm treads between two 60 × 300 mm stringers with open
+  risers, `"steel"` folds an 8 mm plate into treads and risers on two flat stringers. The default
+  stays `"solid"` (each step a block down to the floor, the massing), so existing stairs are
+  unchanged. The landing defaults to the structure's thickness (0.2 m, 0.12 timber, 0.08 steel).
+  `stair.parts()` gives each flight's parts as side profiles (`StairPart`: the outline along the
+  flight and its height, and where it runs across), for sections and elevations drawn from the
+  same stair; the Sketch + drawing page draws a section through it. The House page's stair is
+  timber; Framed Floor chooses the structure.
+
+- **Drawings that read as architectural plans.** A `Sheet` now draws in a minimal graphic
+  language, the way an office's plans do. Annotation is smaller: text 2 mm on paper (was 2.5),
+  dimensions, levels and leaders 1.8 mm. View titles sit above the view on the left, at 3.5 mm,
+  and say their scale: `{ title: "Plan" }` on a 1:50 sheet reads "Plan 1:50", a detail enlarged
+  five times "Column head 1:10". A title that already gives a scale keeps it as written, and
+  `titleScale: false` leaves it off. `sheet.titleBlock({ office, project, title, phase, number,
+  date, drawn, checked, format, revisions, notes })` adds the plan head (Plankopf) beside the
+  drawing, level with its top: who and what, the plan number in a ruled box with its date, scale
+  and format, a revisions table and notes. `DRAWING_PALETTE` gives the colours to draw with:
+  ink and greys for lines and annotation, pale fills for what is cut (steel, concrete, timber,
+  poche) and one accent to use sparingly. The view titles and annotation sizes are visible
+  changes: apps that set `size` or give titles with a scale ("Plan 1:50") draw as before,
+  except that titles now sit above-left rather than centred below.
+- **Labels line up in drawings.** A level mark's text stands on a level line through the
+  triangle's tip (it was centred beside the triangle, floating), and a leader that does not end
+  level gets a 3 mm level shoulder, so its text always continues a level line.
+
+## 0.10.1 — 2026-11-15
+
+Callouts as a key beside the model: one label with a leader to each thing it names, curved leaders, labels as a list, and leader ends for an app's own column (BuildGraph's products view).
+
+- **One callout, many leaders.** `CalloutItem.leaders: "each"` draws a leader from one label to
+  each entry of `objects` (an object id, or a record key and everything drawn for it), and the
+  label sits level with the middle of their ends. For a label that names what many elements
+  share, a product or a material: the margin holds one label per thing rather than one per
+  element, and every element still has its line. Only the entries the reader can see get one;
+  an entry behind another, even one of the same label, gets none. `CalloutItem.side` keeps a
+  label to one margin whichever half its anchors are in, so a column of products down the left
+  reads as a key. The default is unchanged: one leader to the centre of everything in
+  `objects`, in the nearer margin. Leaders are SVG paths now (`leaderPath`), a fan sharing one
+  knee, or with `leaderShape: "curve"` a curve to each end, level where it leaves the label and
+  level where it arrives, as a diagram's edges are drawn. `setCalloutHighlight(ids, colour)`
+  shows labels and their leaders as the ones meant, the one naming what the pointer is over
+  in the model, say, without touching the layout. `setCallouts(items, { stack: "list", title })`
+  lists the labels from the top of their margin in the order given, on a column headed by
+  `title`, like a key: they stay put while the model turns, only the leaders move, and a label
+  whose things are all behind others stays listed without a leader; what lies under the column
+  counts as out of sight. With `labels: false` it draws no
+  labels and reports, after every frame, where each callout's leaders would end (`onEnds`): for
+  an app that lists the labels in a column of its own, outside the view, and draws the leaders
+  into it, with the same rule for what the reader can see.
+## 0.10.0 — 2026-11-15
+
+A building as data that an agent can write, read and correct in the app a person has open: building records with checks, roofs, stairs with landings and filled openings; an MCP server over the open tab; notes as the agent's to-do list; a program read as its steps. Also the viewer header and shading bar in every sketch, Rhino-style layers, Voronoi and particle relaxation in 2D.
+
+**Breaking:** a `Stair` flight draws `risers − 1` treads (see below). **Changed defaults:** `sketch()` shows the viewer header; `IfcWriter` writes doors and windows with their frame, glass and leaves (`openingFills: false` keeps the box).
+
+- **Notes are how a person tells an agent what to change**: a `Note` has a `status` (open
+  until done) and `replies`; `NotesLayer` gains `reply`, `resolve`, `reopen` and `describe`
+  (the notes as a list), and its card shows the replies with a reply box and Done / Reopen; a
+  done note keeps a grey pin. In an app with notes, ✎ Markup's **Save** keeps the marks as
+  notes too (the bundle names each mark's `noteKey`). Agents: `__tekto.notes`, relay calls
+  `notes` / `noteReply` / `noteResolve`, MCP tools **`tekto_notes`**, **`tekto_note_reply`**,
+  **`tekto_note_resolve`**; `tekto_info` reports how many notes are open. `appShell({ notes })`
+  shares its notes by itself; other apps pass `agentDoc(doc, { notes: layer })`.
+- **The agent is visible**: while it works through a window, a chip at the top of the page
+  names it and what it is doing, and on a shared document `PresenceBar` shows its badge beside
+  that person (presence `state.agent`). The MCP server sends the client's name (`TEKTO_AGENT`
+  overrides it).
+- **A relay call can name its page**: `"page": "house"` (MCP: `TEKTO_PAGE`) picks the newest
+  tab whose URL or title contains it; without it the newest tab takes the call, as before.
+- The House page keeps notes with the building and, shared (`?shared=1`), shows who is online
+  and what they have selected.
+- **A program as its steps**: `lab.step(name, inputs, fn)` (and `app.step` in an `appShell`)
+  records a part of a program as it runs — its inputs, output, time, error, the line that
+  called it and the objects it drew — and which step fed which, read off the values. The
+  **steps panel** draws the run as a graph (time and share per step, errors red, unused
+  outputs dashed): click a step for its details and its geometry, click geometry for its step,
+  and leave a note on a step for the agent; a snapshot carries the steps (`markup.json`
+  `steps`) and the notes (`stepMarks`). Agents: `__tekto.steps()`, the relay's `steps`, the MCP
+  tool `tekto_steps`. `StepTrace` / `describeValue` in `tekto/core`; `StepsPanel` in `tekto`.
+  Playground: **Steps**, a generated site plan written as steps.
+
+- **`Voronoi2D`: clipped Voronoi and power diagrams with neighbour labels.** The dual of
+  `Delaunay2D`: `Voronoi2D.cells(sites, { clip, radii })` gives each site the part of the clip
+  region nearer to it than to any other site, as a counter-clockwise polygon whose every edge
+  names the site across it (`neighbors[k]`, `-1` along the clip). The clip is any simple ring,
+  convex or not (default: the sites' bounds grown by half their larger side). `cells[i].site ===
+  i` and holds the piece with the site in it; where a concave clip cuts a cell in two, the further
+  pieces follow the first `sites.length` entries. With `radii` it is a power (Laguerre) diagram,
+  whose boundary between two touching circles runs through their contact point, for relaxed
+  circle packings. `Voronoi2D.neighbors(cells, n)` lists each site's neighbours. Exact half-plane
+  clipping over a uniform grid with a security radius, independent of `Delaunay2D`: 5,000 sites
+  in 15–40 ms in Node. Coincident and collinear sites each get their cell (or an empty one). The
+  **Voronoi** playground page shows it on four clips.
+- **`Particles2D`**: circles in the plane relaxed step by step — overlapping circles push
+  apart, springs (`addSpring`) pull pairs toward a rest length, pinned circles stay put, and a
+  `boundary` ring (any simple polygon, concave too) keeps every circle its radius inside. A
+  step gathers the overlap and spring corrections and moves all circles at once, so the
+  result does not depend on their order and a given input always relaxes the same way.
+  `Particles2D.pack(ring, r, { seed })` is the packing of a 2008 office-building applet:
+  area/(2√3 r²) seeded points, 200 steps inside the ring, centres left outside dropped.
+  Overlaps are found with a spatial hash: a step over 3,000 circles takes about 1 ms. The
+  *Circle Packing* page animates a packing in a square, an L or a site, and a bubble
+  diagram of rooms linked by springs.
+- **`studioLighting: "plain"`** (renderer config): Studio's sun and shadows under a white sky
+  without tone mapping, the balance the old `Viewport` drew shadows with
+  (`lightBalance("shaded", true)`: sun 2.6, sky 1.1). The default, `"filmic"`, tone-maps with
+  ACES under a dim blue sky, and on a model of saturated colours the side turned from the sun
+  goes nearly black: BuildGraph's evidence colours there no longer matched their legend, so
+  it kept its sun off. With `"plain"` a face toward the sun and sky shows about its own
+  colour and one turned away a darker tone of it. The Studio counterpart of
+  `flatLighting: "plain"`; `studioLights(style)` is the rule. Daylight still retints either.
+
+- **The status line folds away**: the info box `app.status(…)` shows over an `appShell`'s view
+  has a button that folds it to an ⓘ in the corner (its text in the tooltip) and back; the
+  choice is remembered per app. `appShell({ statusCollapsed: true })` starts folded. The box
+  still lets clicks through to the view.
+
+- **Fix: a `Mesh` with node colours is drawn in them.** `scene.addMesh` / `lab.mesh` ignored
   `Mesh.setColors` and drew the style colour; only `addFlatMesh` drew node colours. Now both do.
   A mesh without node colours draws as before.
+- **The viewer header**, as Blender has one: `shadingBar: "header"` — now the default of `sketch()`
+  outside the testbench — is a strip across the top of the view. On its left the app's own
+  controls (`lab.viewerHeader.left` / `.right`, `renderer.viewerHeader`: view tabs, tools, who is
+  here); on its right the render style, lighting, sun, section, overlays, snapshot and ✎ Markup.
+  The axis widget sits top right under it, and zoom in / out / to bounds in a column below that;
+  in a strict-2D view the header keeps the snapshot and ✎ Markup and the column moves up. The
+  header is above ✎ Markup's drawing layer (its Done stays in reach) and above `lab.overlay()`
+  layers. A corner (`shadingBar: true` / `"top-left"` …) is the compact bar as before. New:
+  `ShadingBarPlacement`, `renderer.navGizmoEl`; `MarkupHost.buttonHost` / `.top`.
+- **The 2D palette has a hand.** In a strict-2D view the palette (the header's nav column) has a
+  hand above the zoom buttons. On, a left drag (one finger) moves the view along under a grab
+  cursor — before, a plain left drag did nothing in 2D — over drag handles too; a click still
+  picks. It turns off when the view turns 3D. New: `renderer.setHandMode(on)` / `renderer.handMode`.
+- **A sketch's Info tab can hold controls.** Controls declared with `tab: "Info"` show in the Info
+  tab above the log; before, the tab drew only the log and they were lost. In general an extra
+  tab of a `ControlPanel` shows the controls declared in it above its own content.
+- **The shading bar is on in every `sketch()`, and has a 2D palette.** `sketch()` shows the
+  shading bar (render style, lighting, sun, section, overlays, frame, snapshot as icons in the
+  view) unless the page passes `shadingBar: false`, or it runs inside a shell with its own bar
+  (the testbench's `data-shell`); `shadingBar` also takes a corner (`"bottom-left"` …), as in
+  `appShell`. In a strict-2D view — orbit rotation off (`lab.setOrbitRotateEnabled(false)`,
+  `renderer.setOrbitRotateEnabled(false)`) — the bar is the 2D palette instead: zoom in, zoom
+  out and zoom to bounds (the selection, or everything); with rotation on again it is the 3D
+  bar. The axis widget (`navGizmo`) hides in a strict-2D view too. What Frame / zoom to bounds
+  frames with nothing selected can be set: `lab.frameBounds(min, max)` (per run) or
+  `renderer.setFrameBounds(box)`, say the model without its site. New: `renderer.zoomBy(factor)` (animated; closer in perspective, a larger zoom in
+  orthographic) and `renderer.orbitRotateEnabled`.
+- **A sketch can follow the view's style.** `lab.renderMode` and `lab.lightingMode` read the
+  render style and the lighting, however they were chosen (the shading bar, a shell, code). A
+  sketch that reads one is re-run when it changes, so its build can follow the style, as the
+  Buchholz stair leaves its line work out when shaded; a sketch that never reads them is not.
+- **A Rhino-style layer panel.** `LayerPanel` (and so `lab.layerTree`) shows per layer, after
+  its name, an active-layer check, an on/off bulb, a padlock and a square colour swatch (a flat
+  12 px chip instead of the browser's rounded picker), like Rhino's layer panel.
+  - **Active layer** (Rhino: current), the one new objects go on: `lab.layerTree(…).active` and
+    `.setActive(id)`, `opts.active` for the initial one (default: the first layer that is on).
+    It and its parents are always on and unlocked: making a layer active turns them on and
+    unlocks them (`activateLayer`), and their bulb and lock are disabled.
+  - **Lock**: `LayerState.locked`, `LayerNode.defaultLocked`, `computeEffectiveLock` (a locked
+    parent masks its children, like visibility). In a sketch, objects tagged `.layer(id)` or drawn
+    in `lab.viewLayer(id, …)` on a locked layer are drawn but can't be picked or hovered — the
+    click goes through to what is behind — and a selection on one is dropped.
+    `ThreeRenderer.setPickFilter` is the hook underneath, for apps with their own selection.
+  - `opts.columns` hides the active, lock or colour column. Without the active column the tree
+    has no active layer (`.active` is ""), so nothing is kept on — a viewer's tree, with just the
+    bulb and the swatch.
+  - `lab.layerTree(…).value` now holds every layer's state from the start (`layerDefaults`);
+    before, only the layers someone had changed were in it, so a sketch saw no colour for an
+    untouched layer even though the panel showed one. `.set` on an untouched layer no longer
+    loses its colour.
+  - The on/off control is a bulb button (`role="checkbox"`, named `On: <label>`) instead of a
+    checkbox before the name; scripts that clicked `input[type=checkbox]` in the layer panel
+    should use the role instead. Each row carries its layer id (`data-layer="<id>"`), so a script
+    finds a layer by id rather than by its label. A new playground page, *Layers*, shows all of it.
+- **`Building.check()` scales to generated buildings.** It compared every room with every
+  room (`spaces-overlap`), every wall end with every wall (`wall-end-free`) and every room
+  with every opening (`space-no-door`, `space-no-window`), so a storey of square 5 m cells
+  took 146 ms with 400 rooms, 0.7 s with 900 and 5.4 s with 2500. It now finds the pairs
+  whose bounding boxes touch first (a sweep along x) and measures only those, and builds
+  each room's polygon once: 2, 4 and 13 ms. On irregular cells that tile, like a Voronoi
+  plan, with a wall on every edge and a door or window in each, 900 rooms and 1860 walls
+  check in 42 ms instead of 949 ms, 2500 rooms and 5100 walls in 147 ms instead of 7 s.
+  The issues are the same, in the same order.
+- **Space types: a room's use carries its colour and what it needs.** `BuildingTypes.spaces`
+  maps a lower-cased `SpaceRecord.use` to a `BuildingSpaceType`: the `colour` `bindBuilding`
+  draws the room in, `daylight` (it wants a window on its outline, else `space-no-window`) and
+  `door` (false for a room you walk into without one, such as an open-plan office cell: no
+  `space-no-door`). An office app can now add a canteen or a foyer and say its cells need no
+  door, which the house's colours and checks were hard-coded against. `defaultBuildingTypes()`
+  lists the house's rooms as before, and `spaces` is optional: types without it check and draw
+  as they did. `buildingSchema(types)` lists the known uses and what each needs in the `use`
+  description; `use` stays free text.
+- **OBJ keeps groups and materials.** `ObjFile.parse` read `g` groups but `ObjFile.serialize`
+  silently dropped them, and neither knew `usemtl`, so an export could not stay separable by
+  element type with its colours. `serialize` now writes the groups (faces in no group first, then
+  each group's run) and both ways carry a group's `material` (a `usemtl` change starts a new run
+  under the same name; `mtllib` is skipped on read). `serialize(data, { mtllib })` names the .mtl
+  and `ObjFile.serializeMtl(materials)` writes it (`Kd`, a small `Ka`, `d` for opacity;
+  `ObjMaterial`). `scene.toMeshData({ groupBy: "object" | "layer" })` groups a scene for Rhino or
+  Cinema 4D: one group per object (named by its `key`, else its id) or per `style.layer`, each
+  layer's faces together, with materials named by colour (`c_rrggbb`) and listed in `materials`;
+  without options the output is unchanged. The House page has an **Export OBJ** button: the house
+  by layer, with its .mtl.
+
+
 - **Fix: callouts on a large model fill the margins.** On BuildGraph's 446-element IFC with
   every element labelled, 4 labels showed and the rest never did: the visibility check
   restarted every few seconds and got through one element per frame.

@@ -18,7 +18,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { Scene as GScene, SceneObject, SceneEvent, type SectionRequest, type StandardView } from "../scene/Scene";
 import { Vec3 } from "../core/math/vectors";
-import type { CalloutItem } from "./Callouts";
+import type { CalloutItem, CalloutOptions } from "./Callouts";
 import type { RendererCore } from "./RendererCore";
 import { ObjectBuilder } from "./ObjectBuilder";
 import { Lighting } from "./Lighting";
@@ -26,14 +26,15 @@ import { CameraRig } from "./CameraRig";
 import { Pointer, type GizmoMode, type PickInfo } from "./Pointer";
 import { Marks } from "./Marks";
 import { FadingGrid } from "./FadingGrid";
-import { ShadingBar, type ShadingBarCorner } from "./ShadingBar";
+import { ShadingBar, VIEWER_HEADER_H, type ShadingBarPlacement, type ViewerTools } from "./ShadingBar";
 import { downloadSnapshot } from "./snapshot";
 
 /** The overlays a renderer has itself (an app can register more, such as notes). */
 type BuiltInOverlay = "grid" | "axes" | "wireframe" | "labels";
-import type { FlatLighting, SunPreset } from "./viewRules";
+import type { FlatLighting, StudioLighting, SunPreset } from "./viewRules";
+import type { SunSite } from "./sunSite";
 import { AmbientOcclusion, type AmbientOcclusionOptions } from "./AmbientOcclusion";
-import { shown } from "./viewRules";
+import { shown, hiddenLinePage, luminance } from "./viewRules";
 
 export type { GizmoMode, PickInfo } from "./Pointer";
 
@@ -64,9 +65,14 @@ export interface ThreeRendererConfig {
    *  elevation, drag it to orbit, double-click to square up, toggle persp/ortho under it. */
   navGizmo: boolean | "top-left" | "top-right" | "bottom-left" | "bottom-right";
   /** The shading bar in a corner of the view (`true` = top left): minimal icons for the
-   *  render style, the lighting and the sun (morning, noon, sunset), as Blender has in its
-   *  viewport header. The renderer draws it, so an app only switches it on. */
-  shadingBar: boolean | ShadingBarCorner;
+   *  render style, the lighting and the sun (morning, noon, sunset, or a date and a place), as Blender has in its
+   *  viewport header. The renderer draws it, so an app only switches it on. `"header"`: a strip
+   *  across the top of the view (Blender's viewport header) with slots for the app's controls
+   *  (`viewerHeader`), the axis widget top right under it and zoom in / out / to bounds below that
+   *  (and, in a strict-2D view, the hand). */
+  shadingBar: boolean | ShadingBarPlacement;
+  /** Which of the shading bar's tools are shown: each is on unless set to false (`{ sun: false }`). */
+  viewerTools: ViewerTools;
   /**
    * The scene's unit, as a label (`"m"`, `"mm"`, `"ft"`): readouts such as the shading bar's
    * section show coordinates in it, and a cut stays at its coordinate. Unset (null, the
@@ -74,12 +80,27 @@ export interface ThreeRendererConfig {
    * share of the content as the content changes. An app that knows its units says so.
    */
   units: string | null;
+  /** Where the viewer header goes (`shadingBar: "header"`): default the container. A sketch passes its
+   *  viewport wrapper, so the header stays above the overlay() layers and ✎ Markup's drawing layer. */
+  headerHost: HTMLElement | null;
   /**
    * How Flat lighting is balanced (`flatLights`). `"sketch"` (the default): a dim blue sky,
    * for a dark page. `"plain"`: a white sky bright enough that a face toward it shows its own
    * colour, for an app whose colours are a key beside the model. Studio is unaffected.
    */
   flatLighting: FlatLighting;
+  /**
+   * How Studio lighting is balanced (`studioLights`). `"filmic"` (the default): ACES tone
+   * mapping, a strong sun, a dim sky. `"plain"`: shadows under a white sky without tone
+   * mapping, so a colour stays readable against a key on the side turned from the sun too.
+   */
+  studioLighting: StudioLighting;
+  /**
+   * How a hidden-line drawing is drawn. False (the default): dark lines on light paper,
+   * whatever the background — the view turns white while the mode is on (the background
+   * itself, if it is light). True: inverse, light lines on a dark page.
+   */
+  hiddenLineInverse: boolean;
 }
 
 // Style keys that never change the three.js object: layer is metadata, WebGL
@@ -88,7 +109,7 @@ const INERT_STYLE_KEYS = new Set(["layer", "lineWidth", "noExport"]);
 
 const DEFAULTS: ThreeRendererConfig = {
   antialias: true,
-  backgroundColor: 0x0a0b14,
+  backgroundColor: 0x0b0b0b,
   showGrid: true,
   gridStyle: "lines",
   gridSize: 20,
@@ -103,8 +124,12 @@ const DEFAULTS: ThreeRendererConfig = {
   up: "y",
   navGizmo: false,
   shadingBar: false,
+  viewerTools: {},
   units: null,
+  headerHost: null,
   flatLighting: "sketch",
+  studioLighting: "filmic",
+  hiddenLineInverse: false,
 };
 
 /** How long a frame may spend building crease lines before it draws. */
@@ -139,6 +164,7 @@ export class ThreeRenderer {
   private gridHelper: THREE.Object3D | null = null;
   private fadingGrid: FadingGrid | null = null;
   private shadingBar: ShadingBar | null = null;
+  private frameBounds: THREE.Box3 | null = null;
   private overlayState: Record<BuiltInOverlay, boolean> = { grid: true, axes: true, wireframe: true, labels: true };
   private overlayExtra = new Map<string, { apply(on: boolean): void; on: boolean }>();
   private ao: AmbientOcclusion;
@@ -194,6 +220,7 @@ export class ThreeRenderer {
       gScene, threeScene: this.threeScene, renderer: this.renderer, container, isZUp: this.isZUp,
       objectMap: this.objectMap, externalObjects: this.externalObjects, config: this.config, camera: this.camera,
       overlay: (name: string) => this.overlayState[name as BuiltInOverlay] ?? true,
+      pageColor: () => this.pageColor(),
       get controls() { return self.controls; },
       get activeCamera() { return self.rig.activeCamera; },
       requestRender: () => this.requestRender(),
@@ -204,26 +231,23 @@ export class ThreeRenderer {
     this.lighting = new Lighting(this.core);
     this.marks = new Marks(this.core);
     this.ao = new AmbientOcclusion(this.core);
-    if (cfg.shadingBar) this.shadingBar = new ShadingBar(this.core, this.lighting, this.marks, this.ao, this, cfg.shadingBar === true ? "top-left" : cfg.shadingBar);
     // Apply whatever lighting mode the scene was last set to.
     this.lighting.applyMode(this.gScene.lightingMode);
     this.builder = new ObjectBuilder(this.core, this.lighting);
 
     // Helpers
     if (cfg.showGrid && cfg.gridStyle === "fading") {
-      this.fadingGrid = new FadingGrid(cfg.backgroundColor, this.isZUp);
+      this.fadingGrid = new FadingGrid(this.pageColor(), this.isZUp);
       this.gridHelper = this.fadingGrid.mesh;
       this.threeScene.add(this.fadingGrid.mesh);
     } else if (cfg.showGrid) {
-      const grid = new THREE.GridHelper(cfg.gridSize, cfg.gridDivisions, 0x3a3c5a, 0x2a2c4a);
-      if (this.isZUp) grid.rotation.x = Math.PI / 2;
-      this.gridHelper = grid;
-      this.threeScene.add(grid);
+      this.buildLineGrid(this.pageColor());
     }
     if (cfg.showAxes) {
       this.axesHelper = new THREE.AxesHelper(cfg.axesSize);
       this.threeScene.add(this.axesHelper);
     }
+    this.syncPage();                       // the scene may be in hidden line already
 
     // Orbit controls
     if (cfg.enableOrbitControls) {
@@ -235,8 +259,10 @@ export class ThreeRenderer {
       this.controls.addEventListener("change", () => this.requestRender());
     }
 
-    this.rig = new CameraRig(this.core, this.camera, orthoCam, cfg.navGizmo);
+    this.rig = new CameraRig(this.core, this.camera, orthoCam, cfg.navGizmo, cfg.shadingBar === "header" ? VIEWER_HEADER_H : 0);
     this.pointer = new Pointer(this.core, this.builder, this.marks);
+    // After the rig: the bar reads whether the view orbits (its 2D palette when it does not).
+    if (cfg.shadingBar) this.shadingBar = new ShadingBar(this.core, this.lighting, this.marks, this.ao, this, cfg.shadingBar === true ? "top-left" : cfg.shadingBar, cfg.headerHost, cfg.viewerTools);
 
     // A restored context comes back blank; nothing else would ask for a draw.
     this.renderer.domElement.addEventListener("webglcontextrestored", () => this.requestRender());
@@ -296,7 +322,9 @@ export class ThreeRenderer {
         this.clearThree();
         break;
       case "scene:renderMode":
-        this.rebuildAllMeshes();
+        // Into or out of a hidden-line drawing the page changes, and lines are inked for it.
+        if (this.syncPage()) this.rebuildAll();
+        else this.rebuildAllMeshes();
         break;
       case "scene:lightingMode":
         this.lighting.applyMode(event.mode);
@@ -418,6 +446,65 @@ export class ThreeRenderer {
     }
   }
 
+  /** Rebuild every object (the page changed: lines and marks are drawn for the page they are on). */
+  private rebuildAll() {
+    for (const obj of this.gScene.all()) {
+      this.removeFromThree(obj.id);
+      this.addToThree(obj);
+    }
+  }
+
+  // ── The page ──
+
+  /** The colour behind the model now: the background, or in hidden line the drawing's page. */
+  private pageColor(): number {
+    const background = new THREE.Color(this.config.backgroundColor as THREE.ColorRepresentation).getHex();
+    return this.gScene.renderMode === "hiddenline" ? hiddenLinePage(background, this.config.hiddenLineInverse) : background;
+  }
+
+  private page: number | null = null;
+  /** Put the page behind the model and rule the grid for it. True if the page changed. */
+  private syncPage(): boolean {
+    const page = this.pageColor();
+    this.lighting.applyPage();             // also when only the mode changed (no sky tint in a drawing)
+    if (page === this.page) return false;
+    const first = this.page === null;
+    this.page = page;
+    this.fadingGrid?.setBackground(page);
+    if (!this.fadingGrid && this.gridHelper && !first) {
+      const visible = this.gridHelper.visible;
+      this.threeScene.remove(this.gridHelper);
+      (this.gridHelper as THREE.GridHelper).dispose?.();
+      this.buildLineGrid(page);
+      this.gridHelper!.visible = visible;
+    }
+    this.requestRender();
+    return !first;
+  }
+
+  /** The grid of lines, ruled for the page it lies on: dark greys on a dark page, pale ones on paper. */
+  private buildLineGrid(page: number) {
+    const [major, minor] = luminance(page) > 0.5 && page !== new THREE.Color(this.config.backgroundColor as THREE.ColorRepresentation).getHex()
+      ? [0xb4b4b4, 0xdadada] : [0x3a3a3a, 0x262626];      // an app's own light background keeps the grid it had
+    const grid = new THREE.GridHelper(this.config.gridSize, this.config.gridDivisions, major, minor);
+    if (this.isZUp) grid.rotation.x = Math.PI / 2;
+    this.gridHelper = grid;
+    this.threeScene.add(grid);
+  }
+
+  /**
+   * Draw hidden line inverse — light lines on a dark page — or, with false, as a drawing
+   * on light paper (the default; `hiddenLineInverse` in the config).
+   */
+  setHiddenLineInverse(on: boolean): void {
+    this.config.hiddenLineInverse = on;
+    if (this.syncPage()) this.rebuildAll();
+    this.shadingBar?.paint();
+  }
+
+  /** Whether hidden line is drawn inverse (`setHiddenLineInverse`). */
+  get hiddenLineInverse(): boolean { return this.config.hiddenLineInverse; }
+
   // Line/point "helper" object types (vs solid meshes/polygons/planes).
   private _isHelper(type: unknown): boolean {
     return type === "segment" || type === "polyline" || type === "point" || type === "circle";
@@ -506,12 +593,21 @@ export class ThreeRenderer {
     return () => { this.overlayExtra.delete(name); this.shadingBar?.paint(); };
   }
 
-  /** Frame the selection (the highlighted objects), or everything when nothing is selected:
-   *  Blender's Frame Selected / Home. Animated. */
+  /** Frame the selection (the highlighted objects), or everything when nothing is selected —
+   *  or the frame bounds, when set (`setFrameBounds`): Blender's Frame Selected / Home. Animated. */
   frame(): void {
     const sel = this.marks.highlighted.filter((id) => this.objectMap.has(id));
+    if (!sel.length && this.frameBounds) { this.rig.fitBox(this.frameBounds.clone(), { margin: 1.3 }); return; }
     const ids = sel.length ? sel : [...this.objectMap.keys()].filter((id) => this.isObjectShown(id));
     if (ids.length) this.rig.fitTo(ids, sel.length ? {} : { margin: 1.3 });
+  }
+
+  /** What Frame — the shading bar's, its 2D palette's zoom to bounds — frames when nothing is
+   *  selected: this box (world coordinates) instead of everything shown, say the model without
+   *  its site. `null`: everything shown again. */
+  setFrameBounds(bounds: { min: Vec3; max: Vec3 } | null): void {
+    this.frameBounds = bounds && new THREE.Box3(
+      new THREE.Vector3(bounds.min.x, bounds.min.y, bounds.min.z), new THREE.Vector3(bounds.max.x, bounds.max.y, bounds.max.z));
   }
 
   /** Save the view as a PNG, as a person sees it (with notes and drawings over it), named
@@ -662,10 +758,10 @@ export class ThreeRenderer {
 
   /** Set the viewport background color. */
   setBackground(color: number | string) {
-    this.threeScene.background = new THREE.Color(color as any);
-    // Hidden-line occlusion faces are tinted from config.backgroundColor at
-    // mesh build time — keep it in sync so they always match the live bg.
     this.config.backgroundColor = color as unknown as number;
+    // A hidden-line drawing keeps its page (light paper, or the inverse); its faces and
+    // lines are tinted from the page when built, so they are rebuilt if it changed.
+    if (this.syncPage()) this.rebuildAll();
     this.requestRender();
   }
 
@@ -758,9 +854,20 @@ export class ThreeRenderer {
   get sunPreset(): SunPreset | null { return this.lighting.currentSunPreset; }
 
   /**
+   * The sun for a date, an hour and a place, as the sun menu's "Date" sets it: Studio, the
+   * light following the sun, so the hour gives the evening and the night too.
+   *
+   *   renderer.setSunAt({ latitude: 47.37, longitude: 8.55, date: "2026-06-21", hour: 17 });
+   */
+  setSunAt(site: SunSite): void { this.lighting.sunAt(site); this.shadingBar?.paint(); }
+
+  /** The date and place last set (`setSunAt`), or null once the sun was moved another way. */
+  get sunSite(): SunSite | null { return this.lighting.currentSunSite; }
+
+  /**
    * Let Studio's light follow the sun: with it on, the sun's colour and strength, the sky,
    * the exposure and the background come from the sun's altitude (`setSunDirection`, which
-   * the shell's Sun popover drives by date and hour), so evening and dusk follow from the
+   * `setSunAt` drives by date and hour), so evening and dusk follow from the
    * hour: noon as Studio is, a warm low sun, a blue dusk, night. Flat lighting is unchanged.
    * Off by default.
    */
@@ -827,8 +934,47 @@ export class ThreeRenderer {
    */
   worldToScreen(world: Vec3): { x: number; y: number; visible: boolean } { return this.rig.worldToScreen(world); }
 
-  /** Enable/disable orbit ROTATION (pan + zoom stay). Off → a strict-2D view. */
-  setOrbitRotateEnabled(enabled: boolean): void { this.rig.setOrbitRotateEnabled(enabled); }
+  /** Enable/disable orbit ROTATION (pan + zoom stay). Off → a strict-2D view: the shading bar
+   *  shows its 2D palette (the hand, zoom in, zoom out, zoom to bounds) and the axis widget hides. */
+  setOrbitRotateEnabled(enabled: boolean): void {
+    this.rig.setOrbitRotateEnabled(enabled);
+    this.pointer.handMode = this.rig.handMode;
+    this.shadingBar?.paint();
+  }
+
+  /** Hide or show the viewer's tools (the shading bar's icons, the zoom column, the axis widget)
+   *  while the view shows something they do not apply to, such as a drawing laid over it. The
+   *  header strip stays, with the app's own slots and ✎ Markup. */
+  setViewerToolsVisible(visible: boolean): void {
+    this.shadingBar?.setToolsVisible(visible);
+    this.rig.setGizmoShown(visible);
+  }
+
+  /** The hand, a strict-2D view's tool (the 2D palette has its button): on, the left button drags
+   *  the view along — over drag handles too — under a grab cursor; a click still picks. Off again
+   *  when the view turns 3D; ignored in a 3D view. */
+  setHandMode(on: boolean): void {
+    this.rig.setHandMode(on);
+    this.pointer.handMode = this.rig.handMode;
+    this.shadingBar?.paint();
+  }
+
+  /** Whether the hand is on (see `setHandMode`). */
+  get handMode(): boolean { return this.rig.handMode; }
+
+  /** False in a strict-2D view (see `setOrbitRotateEnabled`). */
+  get orbitRotateEnabled(): boolean { return this.rig.orbitRotateEnabled; }
+
+  /** The axis widget's element, or null without one (`navGizmo`). */
+  get navGizmoEl(): HTMLElement | null { return this.rig.navGizmoEl; }
+
+  /** With `shadingBar: "header"`: the header strip's slots — `left` and `right` for the app's own
+   *  controls (view tabs, tools, who is here), `end` where ✎ Markup goes. Null otherwise. */
+  get viewerHeader(): { left: HTMLElement; right: HTMLElement; end: HTMLElement } | null { return this.shadingBar?.header ?? null; }
+
+  /** Zoom in (`factor` > 1) or out (< 1) about the view's target, animated unless
+   *  `animate: false`: closer in perspective, a larger zoom in orthographic. */
+  zoomBy(factor: number, opts?: { animate?: boolean }): void { this.rig.zoomBy(factor, opts); }
 
   /** The camera as plain numbers, enough to reproduce the view. */
   cameraState(): { projection: "perspective" | "orthographic"; position: number[]; target: number[]; up: number[]; fov: number } { return this.rig.cameraState(); }
@@ -906,6 +1052,10 @@ export class ThreeRenderer {
 
   /** Raycast at viewport coordinates and return the topmost pickable scene id (or null). */
   pickAt(clientX: number, clientY: number): string | null { return this.pointer.pickAt(clientX, clientY); }
+
+  /** Only objects `filter` accepts can be picked or hovered; a rejected one lets the pick
+   *  through to what is behind it (a sketch rejects objects on locked layers). `null` clears it. */
+  setPickFilter(filter: ((id: string) => boolean) | null): void { this.pointer.setPickFilter(filter); }
 
   /** Like `pickAt`, but also returns the world-space hit point, and skips hidden objects
    *  (the raycaster alone tests invisible ones too). Used by the markup overlay. */
@@ -1028,9 +1178,15 @@ export class ThreeRenderer {
    * they never overlap and don't swim as the model turns; a label whose thing is hidden
    * behind other things is left out; what doesn't fit is counted, not dropped silently.
    * `objects` are scene ids or record keys (a key follows its record through rebuilds).
-   * Pass `[]` to clear. `onPick` / `onHover` hear clicks and hovers on the labels.
+   * Pass `[]` to clear. `onPick` / `onHover` hear clicks and hovers on the labels;
+   * `stack: "list"` lists them from the top on a column under `title`, like a key;
+   * `labels: false` draws none and reports where their leaders would end (`onEnds`), for an
+   * app that lists them outside the view.
    */
-  setCallouts(items: CalloutItem[], handlers: { onPick?: (id: string) => void; onHover?: (id: string | null) => void } = {}): void { this.marks.setCallouts(items, handlers); }
+  setCallouts(items: CalloutItem[], options: CalloutOptions = {}): void { this.marks.setCallouts(items, options); }
+  /** Show these callouts (by id), and their leaders, as the ones meant, in `colour`: the label
+   *  naming what the pointer is over, say. Null clears. Only the look changes. */
+  setCalloutHighlight(ids: readonly string[] | null, colour?: string): void { this.marks.setCalloutHighlight(ids, colour); }
 
   // ── Crease lines ──
 

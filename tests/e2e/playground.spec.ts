@@ -8,14 +8,20 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const PAGES = [
-  "primitives", "transforms", "lines-points", "shape-modes", "colors", "color-ramps",
+  "primitives", "transforms", "lines-points", "shape-modes", "colors", "color-ramps", "layers",
   "mesh-factory", "curves", "nurbs-surfaces", "mesh-ops", "curvature", "streamlines", "bsp-csg",
-  "sdf", "graph", "planar-graph", "voxel-2d",
-  "particles", "camera", "gizmo",
+  "sdf", "graph", "planar-graph", "voronoi", "voxel-2d",
+  "particles", "circle-packing", "camera", "gizmo",
   "app-shell", "site-editor", "drawing-sheet", "sketch-drawing",
-  "pointer-2d",
+  "pointer-2d", "panel-tabs", "axonometric",
   "timber", "framed-wall", "framed-floor", "roofs", "custom-viewer", "dxf-test", "dxf-3d",
-] as const;
+  // the lecture apps (pages/lecture/)
+  ...["house", "subdivision", "grammar", "lsystem", "landscape", "pareto", "biomorph",
+    "chain", "soft", "rigid", "boids", "walking", "isovist",
+    "teach", "playground", "latent", "textgen", "diffusion",
+    "camera", "light", "cornell", "translucency",
+    "slicing", "milling", "hotwire", "bricks", "woodfloor", "marble"].map((n) => `lecture-${n}`),
+];
 
 /** Console errors and uncaught exceptions seen since the call. */
 function watchErrors(page: Page): string[] {
@@ -79,14 +85,23 @@ test("a slider re-runs the sketch with the new value", async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
-test("the render mode and lighting controls apply", async ({ page }) => {
+test("the viewer header's render style and lighting apply, on a sketch page and an appShell page", async ({ page }) => {
   const errors = watchErrors(page);
-  await page.goto("/testbench.html?page=mesh-factory");
-  await expectLiveCanvas(page);
-  await page.locator("#render-mode").selectOption("wireframe");
-  await page.waitForTimeout(300);
-  await page.locator("#lighting-mode").selectOption("studio");
-  await page.waitForTimeout(500);
-  await expectLiveCanvas(page);
+  for (const slug of ["mesh-factory", "site-editor"]) {
+    await page.goto(`/testbench.html?page=${slug}`);
+    await expectLiveCanvas(page);
+    const header = page.locator("[data-tekto-viewer-header]");
+    await header.getByRole("button", { name: "Wireframe", exact: true }).click();
+    await page.waitForTimeout(300);
+    await header.getByRole("button", { name: /^Studio lighting/ }).click();
+    await page.waitForTimeout(500);
+    expect(await page.evaluate(() => {
+      const s = (window as any).__tekto.owner.scene;
+      return [s.renderMode, s.lightingMode];
+    })).toEqual(["wireframe", "studio"]);
+    await expectLiveCanvas(page);
+  }
+  // the playground's own bar no longer repeats them
+  await expect(page.locator("#render-mode, #lighting-mode, #section-axis")).toHaveCount(0);
   expect(errors).toEqual([]);
 });

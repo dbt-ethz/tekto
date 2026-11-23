@@ -4,6 +4,8 @@
  */
 import { sketch, SketchInstance, MeshFactory, Vec2, Vec3 } from "../../src";
 
+const STUDIO_EXPOSURE = 0.8;
+
 export default function (container: HTMLElement): SketchInstance {
   return sketch((lab) => {
     const subLevels = lab.slider("Subdivision Levels", 0, 3, 1, { step: 1 });
@@ -80,11 +82,12 @@ export default function (container: HTMLElement): SketchInstance {
     lab.info("Box, Sphere, Subdivided Sphere, Cylinder, Torus");
     lab.info("HeightGrid, Extrude, Revolve, Loft");
     lab.log("Subdivision levels", subLevels.value);
+    // Reading the lighting re-runs the sketch when the shading bar changes it: Studio a little darker.
+    lab.setExposure(lab.lightingMode === "studio" ? STUDIO_EXPOSURE : 1);
+    lab.log("Lighting", lab.lightingMode);
   }, {
     container,
     title: "MeshFactory",
-    background: 0x0a0b14,
-    shadingBar: true,
     camera: [10, 8, 12],
     target: [0, 0, 0],
   });

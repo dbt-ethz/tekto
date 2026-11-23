@@ -142,3 +142,30 @@ describe("open generators", () => {
     expect(m.faceCount).toBe(8);
   });
 });
+
+describe("round shapes are closed and welded", () => {
+  const vase = [new Vec2(0, 0), new Vec2(1, 0), new Vec2(1.2, 1), new Vec2(0.6, 2), new Vec2(0, 2)];
+  const shapes: [string, () => ReturnType<typeof MeshFactory.sphere>, number][] = [
+    ["sphere", () => MeshFactory.sphere(1, 12, 8), 2],
+    ["capped cylinder", () => MeshFactory.cylinder(1, 1, 2, 12), 2],
+    ["cone", () => MeshFactory.cylinder(0, 1, 2, 12), 2],
+    ["torus", () => MeshFactory.torus(1, 0.3, 12, 8), 0],
+    ["full revolve of a profile from the axis to the axis", () => MeshFactory.revolve(vase, 16), 2],
+  ];
+  for (const [name, make, euler] of shapes) {
+    it(`${name}: no open edges, outward, Euler characteristic ${euler}`, () => {
+      const m = make();
+      const v = m.validate();
+      expect(v.issues).toEqual([]);
+      expect(v.counts.boundaryEdges).toBe(0);
+      expect(v.counts.nonManifoldEdges).toBe(0);
+      expect(v.counts.nodes - v.counts.edges + v.counts.faces).toBe(euler);
+      expect(signedVolume(m)).toBeGreaterThan(0);                  // outward
+    });
+  }
+
+  it("an uncapped cylinder is open only at its two rims", () => {
+    expect(MeshFactory.cylinder(1, 1, 2, 12, false).validate().counts.boundaryEdges).toBe(24);
+  });
+});
+

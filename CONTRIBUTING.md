@@ -68,6 +68,8 @@ To release (maintainer):
 2. Bump `version` in `package.json`, move the **Unreleased** notes in
    `CHANGELOG.md` under the new version, run `npm run build` and
    `node tools/gen-llms.mjs` (the files carry the version), and commit `dist/` with them.
+   With the playground running, `node tools/doc-shots.mjs` refreshes the documentation's
+   screenshots (`docs/public/shots/`) from the playground pages.
 3. PR, green CI, squash-merge.
 4. Tag the merge commit and push the tag:
    `git tag -a vX.Y.Z -m "tekto vX.Y.Z" && git push origin vX.Y.Z`
@@ -78,7 +80,7 @@ Apps in other repos must depend on a release, never on the moving `main`. Two
 ways, same effect:
 
 ```json
-"tekto": "github:modellstadt/tekto#v0.4.0"
+"tekto": "github:dbt-ethz/tekto#v0.4.0"
 ```
 
 or a **vendored copy** of a release — its `package.json` plus `dist/` checked

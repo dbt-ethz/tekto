@@ -223,7 +223,6 @@ export default function (container: HTMLElement): SketchInstance {
   }, {
     container,
     title: "Streamlines (curvature)",
-    background: 0x0a0b14,
     camera: [2.8, 2.2, 3.5],
     target: [0, 0, 0],
   });

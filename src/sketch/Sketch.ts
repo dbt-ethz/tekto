@@ -40,17 +40,23 @@ import { Mesh } from "../core/geometry/mesh/Mesh";
 import { MeshFactory } from "../core/geometry/mesh/MeshFactory";
 import { Algo } from "../core/algo/algorithms";
 import { Scene, RenderMode } from "../scene/Scene";
-import { LayerPanel, LayerMap, LayerNode, LayerState } from "../gui/LayerPanel";
+import { VIEWER_HEADER_H } from "../render/ShadingBar";
+import { LayerPanel, LayerMap, LayerNode, LayerState, layerDefaults, computeEffectiveLock, activateLayer, keepActiveOn } from "../gui/LayerPanel";
 import { ParamStore } from "../gui/Params";
 import { ControlPanel, ControlItem, PanelButton, CustomRow, ExtraTab } from "../gui/ControlPanel";
-import { getTheme, Theme } from "../gui/theme";
+import { getTheme, Theme, VIEW_BG_DARK } from "../gui/theme";
 import { ThreeRenderer } from "../render/ThreeRenderer";
-import { buildSketchLayout, renderFileMenus } from "./sketchLayout";
+import { buildSketchLayout, fileCommands } from "./sketchLayout";
+import { menuBar, menuSlot } from "../gui/MenuBar";
+import { ParamHistory } from "../gui/ParamHistory";
+import { panelFrame, type PanelFrame } from "./panelFrame";
 import { Commands, viewCommands, type Command } from "../gui/Commands";
 import { meshHandle, flatMeshHandle, pointHandle, lineHandle, polylineHandle, shapeHandle } from "./handles";
 import type { SectionRequest } from "../scene/Scene";
 import { MarkupOverlay, MarkupCaptureOptions } from "./Markup";
-import { installAgentBridge, AgentBridge, describeSceneObject, sceneSummary, addOverlay, snapshotWithOverlays } from "./AgentBridge";
+import { installAgentBridge, AgentBridge, describeSceneObject, sceneSummary, addOverlay, snapshotWithOverlays, callSite } from "./AgentBridge";
+import { StepTrace } from "../core/steps/StepTrace";
+import { StepsPanel, type StepMark } from "./StepsPanel";
 import { noise } from "../core/math/noise";
 import { createRandom, SeededRandom } from "../core/math/random";
 
@@ -61,7 +67,7 @@ export type {
   SliderOpts, SelectOpts, ShapeMode,
   MeshHandle, PointHandle, LineHandle, ShapeHandle,
   ExportRegistration, ImportRegistration,
-  LayerNode, LayerState, LayerMap,
+  LayerNode, LayerState, LayerMap, LayerColumns, LayerTree,
 } from "./SketchTypes";
 import type {
   Lab, SketchConfig, ExportRegistration, ImportRegistration,
@@ -169,6 +175,7 @@ export class SketchInstance {
   // `items`, and the DOM is rendered by the shared ControlPanel (src/gui/).
   private store: ParamStore = new ParamStore({});
   private panel!: ControlPanel;
+  private panelFrame: PanelFrame | null = null;
   private items = new Map<string, ControlItem>();
   private layerTrees = new Map<string, LayerTreeState>();
   private theme!: Theme;
@@ -249,9 +256,15 @@ export class SketchInstance {
   // records the user-code line that created it, so a mark can point at source.
   private markup: MarkupOverlay | null = null;
   private bridge: AgentBridge | null = null;
+  /** This run's steps (`lab.step`), drawn in the steps panel once a run has any. */
+  private _trace = new StepTrace();
+  private _stepsPanel: StepsPanel | null = null;
+  /** Notes on steps on their way into a snapshot (`saveStepMarks`). */
+  private _stepMarks: StepMark[] = [];
   // Export ▾ / Import ▾ in the sketch's own header (a shell's top bar does it otherwise).
-  private _fileMenusEl: HTMLElement | null = null;
-  private _fileMenusSig = "";
+  private _menuHost: HTMLElement | null = null;
+  private _menuBar: { el: HTMLElement; dispose(): void } | null = null;
+  private history = new ParamHistory(this.store);
   private _trackSource = false;
   private _srcById = new Map<string, string>();
   private separatorCount = 0;
@@ -276,6 +289,13 @@ export class SketchInstance {
   // scopes, keyed by layer name. Reset every run — ids don't survive clear().
   private _viewLayerStack: string[] = [];
   private _viewLayerObjects = new Map<string, string[]>();
+  // Which of the view's style settings the last run read (lab.renderMode / lab.lightingMode):
+  // a change to one of them — from the shading bar, a shell or code — re-runs the sketch.
+  private _readsStyle = new Set<"renderMode" | "lightingMode">();
+  private _objectViewLayer = new Map<string, string>();
+  // Layer ids locked in any layer tree (own or a parent's lock): objects on
+  // them — by `.layer()` name or view layer — can't be picked or hovered.
+  private _lockedLayers = new Set<string>();
 
   constructor(fn: SketchFn, config: SketchConfig) {
     this.fn = fn;
@@ -285,6 +305,7 @@ export class SketchInstance {
     // View-layer capture: while a begin/endViewLayer scope is open, every
     // object added to the scene is recorded under the innermost layer name.
     this.scene.on((e) => {
+      if (e.type === "object:add") this._trace.current?.objects.push(e.id);
       if (e.type === "object:add" && this._trackSource) {
         const site = callSite();
         if (site) this._srcById.set(e.id, site);
@@ -292,6 +313,7 @@ export class SketchInstance {
       if (e.type === "object:add" && this._viewLayerStack.length > 0) {
         const name = this._viewLayerStack[this._viewLayerStack.length - 1];
         this._viewLayerObjects.get(name)!.push(e.id);
+        this._objectViewLayer.set(e.id, name);
       }
     });
 
@@ -306,8 +328,22 @@ export class SketchInstance {
 
     this.buildDOM();
     this.initRenderer();
+    this.renderer.setPickFilter(id => !this.onLockedLayer(id));
+    // A style the last run read (lab.renderMode / lab.lightingMode) changed: re-run. Subscribed
+    // after the renderer, so it has applied the change first — a lighting switch resets the
+    // exposure, which the re-run may set again. Set during a run (by the sketch itself), a
+    // style change is already part of that run.
+    this.scene.on((e) => {
+      if (!this._running && ((e.type === "scene:renderMode" && this._readsStyle.has("renderMode"))
+        || (e.type === "scene:lightingMode" && this._readsStyle.has("lightingMode")))) this.runSketch();
+    });
+    // Edit ▸ Undo / Redo over the controls' values (a sketch may declare its own `edit.undo`).
+    this.commands.add(this.history.commands());
     this.commands.add(viewCommands(this.renderer));
     this._unbindCommandKeys = this.commands.bindKeys();
+    // The menu bar, from the commands: in the title bar, or in the slot of a shell that has its own.
+    const slot = menuSlot(this._menuHost);
+    if (slot) { this._menuBar = menuBar(this.commands, { theme: this.theme }); slot.appendChild(this._menuBar.el); }
     this.wireInput();
     this.runSketch();
     this.startLoop();
@@ -319,7 +355,7 @@ export class SketchInstance {
   private buildDOM() {
     this.theme = getTheme(this.config.theme);
     const layout = buildSketchLayout(this.container, this.config, this.theme);
-    this._fileMenusEl = layout.fileMenusEl;
+    this._menuHost = layout.menuHost;
     this.panelEl = layout.panelEl;
     this.viewportEl = layout.viewportEl;
     this.viewportWrap = layout.viewportWrap;
@@ -333,13 +369,23 @@ export class SketchInstance {
       theme: t,
       getButtons: () => this.buttons,
       onCommit: (key) => {
+        this.history.commit();              // a finished change: one undo step
         if (this.isDisplayChange(key)) this.runDisplayPass();
         else this.commitRun();
       },
       onAction: () => this.runSketch(),
       onTabChange: (tab) => { this._onTabChange?.(tab); },
+      tabs: this.config.tabs,
+      onRender: () => this.panelFrame?.fit(),
     });
     this.panelEl.appendChild(this.panel.el);
+    this.panelFrame = panelFrame({
+      root: layout.root, panelEl: this.panelEl, theme: t, top: layout.headerHeight,
+      width: this.config.panelWidth ?? 320,
+      title: this.config.panelTitle ?? "Parameters",
+      storageKey: this.config.title ?? "default",
+      preferred: () => this.panel.preferredWidth(),
+    });
     this.store.onChange((key) => {
       if (this._running || this._squelch) return;
       if (this.isDisplayChange(key)) this.runDisplayPass();
@@ -356,14 +402,17 @@ export class SketchInstance {
   private initRenderer() {
     const zUp = this.config.up === "z";
     this.renderer = new ThreeRenderer(this.scene, this.viewportEl, {
-      backgroundColor: this.config.background ?? 0x07080e,
+      backgroundColor: this.config.background ?? VIEW_BG_DARK,
       showGrid: this.config.grid !== false,
       showAxes: this.config.axes !== false,
       cameraPosition: this.config.camera ?? (zUp ? [8, -10, 6] : [5, 6, 8]),
       cameraTarget: this.config.target ?? [0, 0, 0],
       up: this.config.up ?? "y",
-      navGizmo: this.config.navGizmo ?? false,
-      shadingBar: this.config.shadingBar ?? false,
+      // The view's tools are the same in every 3D view: the header strip and the axis widget.
+      navGizmo: this.config.navGizmo ?? true,
+      shadingBar: this.config.shadingBar ?? "header",
+      viewerTools: this.config.viewerTools ?? {},
+      headerHost: this.viewportWrap,   // above overlay() layers and ✎ Markup's drawing layer
       units: this.config.units ?? null,
     });
   }
@@ -428,6 +477,25 @@ export class SketchInstance {
       this._pickUnsub = null;
       this.setSelected(null);
     }
+  }
+
+  /** Recompute which layer ids are locked, and drop a selection that is now on one. */
+  private refreshLocks(): void {
+    this._lockedLayers.clear();
+    for (const lt of this.layerTrees.values()) {
+      const locked = computeEffectiveLock(lt.nodes, lt.value);
+      for (const id in locked) if (locked[id]) this._lockedLayers.add(id);
+    }
+    if (!this._running && this._selectedId && this.onLockedLayer(this._selectedId)) this.setSelected(null);
+  }
+
+  /** Whether scene object `id` is on a locked layer: its `.layer()` name or its view layer is a locked layer id. */
+  private onLockedLayer(id: string): boolean {
+    if (this._lockedLayers.size === 0) return false;
+    const layer = this.scene.get(id)?.style.layer;
+    if (layer && this._lockedLayers.has(layer)) return true;
+    const view = this._objectViewLayer.get(id);
+    return !!view && this._lockedLayers.has(view);
   }
 
   setGizmoMode(mode: "translate" | "rotate" | "scale" | "none"): void {
@@ -516,6 +584,7 @@ export class SketchInstance {
 
   private runSketch() {
     const __runT0 = performance.now();
+    this._trace = new StepTrace();
     // Clear scene but preserve params
     this.scene.clear();
     this._srcById.clear();
@@ -546,6 +615,7 @@ export class SketchInstance {
     this._displayKeys.clear();
     this._viewLayerStack = [];
     this._viewLayerObjects.clear();
+    this._objectViewLayer.clear();
 
     // Reset drag-handle declaration order; mark all currently-known handles
     // as "unseen" so any that aren't re-declared this run get removed.
@@ -557,6 +627,8 @@ export class SketchInstance {
 
     // Build the Lab context
     const lab = this.buildLab(usedParams);
+    this._readsStyle.clear();
+    this.renderer.setFrameBounds(null);   // declared per run (lab.frameBounds)
 
     // Execute. Param declarations during the run must not schedule re-runs.
     this._running = true;
@@ -570,6 +642,7 @@ export class SketchInstance {
 
     // Sweep out any drag handles that weren't re-declared this run.
     this.renderer.endDragHandleSweep();
+    this.showSteps();
 
     // Remove unused params + layer trees
     for (const key of this.store.keys()) {
@@ -581,6 +654,8 @@ export class SketchInstance {
     for (const key of this.layerTrees.keys()) {
       if (!usedParams.has(key)) this.layerTrees.delete(key);
     }
+    this.refreshLocks();
+    this.history.adopt();                   // controls declared by this run start from their value
 
     // Only rebuild panel DOM when the control structure changes
     // (params/buttons added/removed), not on value-only changes.
@@ -606,7 +681,7 @@ export class SketchInstance {
     // selection if this run no longer declares it. Without this, clicking an
     // object left the gizmo stranded at the origin.
     if (this._selectedId) {
-      if (this.scene.has(this._selectedId)) {
+      if (this.scene.has(this._selectedId) && !this.onLockedLayer(this._selectedId)) {
         this.renderer.setSelectionHighlight(this._selectedId);
         this.renderer.attachGizmo(this._selectedId);
       } else {
@@ -719,10 +794,17 @@ export class SketchInstance {
         const key = `layertree:${opts?.group ?? ""}:${label}`;
         usedParams.add(key);
         let lt = self.layerTrees.get(key);
+        // Any change to the tree — on/off, lock, colour, the active layer — re-runs
+        // the sketch, or runs the display pass for a `display` tree.
+        const changed = (state: LayerTreeState) => {
+          self.refreshLocks();
+          if (state.display && self._onDisplayFns.length > 0) self.runDisplayPass();
+          else self.runSketch();
+        };
         if (!lt) {
           const state = {
             key,
-            value: {} as LayerMap,
+            value: layerDefaults(nodes),
             nodes,
             group: opts?.group ?? "Layers",
             tab: opts?.tab ?? "",
@@ -730,34 +812,47 @@ export class SketchInstance {
           } as LayerTreeState;
           state.panel = new LayerPanel({
             nodes,
-            value: {},
+            value: state.value,
             isDark: self.theme.isDark,
-            onChange: (updates) => {
+            active: opts?.active,
+            columns: opts?.columns,
+            onChange: (updates, active) => {
               state.value = { ...state.value, ...updates };
-              state.panel.update(state.nodes, state.value);
-              if (state.display && self._onDisplayFns.length > 0) self.runDisplayPass();
-              else self.runSketch();
+              state.panel.update(state.nodes, state.value, active);
+              changed(state);
             },
           });
           lt = state;
           self.layerTrees.set(key, state);
+          self.refreshLocks();
         } else {
-          // Nodes may change between runs (e.g. async mesh load)
+          // Nodes may change between runs (e.g. async mesh load); new ones start from their defaults
           lt.nodes = nodes;
           lt.display = !!opts?.display;
+          lt.value = { ...layerDefaults(nodes), ...lt.value };
           lt.panel.update(nodes, lt.value);
         }
         const state = lt;
         return {
           get value() { return state.value; },
+          get active() { return state.panel.active; },
           set(update) {
             const next = { ...state.value };
-            for (const [id, v] of Object.entries(update)) next[id] = { ...next[id], ...v } as LayerState;
+            for (const [id, v] of Object.entries(keepActiveOn(state.nodes, state.panel.active, update))) {
+              next[id] = { ...next[id], ...v } as LayerState;
+            }
             state.value = next;
             state.panel.update(state.nodes, state.value);
-            if (self._running) return;
-            if (state.display && self._onDisplayFns.length > 0) self.runDisplayPass();
-            else self.runSketch();
+            if (self._running) { self.refreshLocks(); return; }
+            changed(state);
+          },
+          setActive(id) {
+            if (opts?.columns?.active === false) return;   // a tree without an active layer
+            if (id === state.panel.active || !(id in layerDefaults(state.nodes))) return;
+            state.value = { ...state.value, ...activateLayer(state.nodes, state.value, id) };
+            state.panel.update(state.nodes, state.value, id);
+            if (self._running) { self.refreshLocks(); return; }
+            changed(state);
           },
         };
       },
@@ -791,13 +886,13 @@ export class SketchInstance {
       registerExport(opts) {
         self.exports.set(opts.name, { ...opts });
         for (const l of self._exportListeners) l();
-        self.renderFileMenus();
+        self.syncFileCommands();
       },
 
       registerImport(opts) {
         self.imports.set(opts.name, { ...opts });
         for (const l of self._importListeners) l();
-        self.renderFileMenus();
+        self.syncFileCommands();
       },
 
       // ── Geometry Builders ──
@@ -880,6 +975,9 @@ export class SketchInstance {
       setSection(section) { self.renderer.setSection(section); },
       setView(view, opts) { self.renderer.setView(view, opts); },
       cameraUp(x, y, z) { self.renderer.setCameraUp(x, y, z); },
+
+      // ── Steps ──
+      step(name, inputs, fn) { return self._trace.step(name, inputs, fn, { src: callSite() }); },
 
       // ── Info ──
       log(label, value) {
@@ -980,6 +1078,10 @@ export class SketchInstance {
       onDisplay(fn) { self._onDisplayFns.push(fn); },
 
       get activeTab() { return self.panel.getActiveTab(); },
+      get viewerHeader() { const h = self.renderer.viewerHeader; return h ? { left: h.left, right: h.right } : null; },
+      get renderMode() { self._readsStyle.add("renderMode"); return self.scene.renderMode; },
+      get lightingMode() { self._readsStyle.add("lightingMode"); return self.scene.lightingMode; },
+      frameBounds(min, max) { self.renderer.setFrameBounds({ min, max }); },
 
       onTabChange(fn) { self._onTabChange = fn; },
 
@@ -1391,6 +1493,8 @@ export class SketchInstance {
       snapshotPng: () => snapshotWithOverlays(this.renderer, this.viewportWrap),
       describe: (id) => this.describeObject(id),
       context: () => this.markupContext(),
+      buttonHost: this.renderer.viewerHeader?.end,
+      top: this.renderer.viewerHeader ? VIEWER_HEADER_H : 0,
       setTracking(on) {
         if (on === self._trackSource) return;
         self._trackSource = on;
@@ -1409,7 +1513,44 @@ export class SketchInstance {
         if (target) this.renderer.lookAt(target[0], target[1], target[2]);
       },
       section: (cut) => this.renderer.setSection(cut),
+      steps: () => (this._trace.steps.length ? { ...this._trace.toJSON(), marks: [...(this._stepsPanel?.pendingMarks ?? [])] } : null),
     });
+  }
+
+  /** The run's steps in the panel (made the first time a run records any), and a click on geometry finds its step. */
+  private showSteps(): void {
+    if (!this._trace.steps.length && !this._stepsPanel) return;
+    if (!this._stepsPanel) {
+      this._stepsPanel = new StepsPanel(this.viewportWrap, {
+        theme: this.theme,
+        onSelect: (_step, objects) => this.renderer.setSelectionHighlight(objects.length ? objects : null),
+        onSave: (marks) => this.saveStepMarks(marks),
+      });
+      let down: { x: number; y: number } | null = null;
+      const canvas = this.renderer.canvasEl;
+      canvas.addEventListener("pointerdown", (e) => { down = { x: e.clientX, y: e.clientY }; });
+      canvas.addEventListener("pointerup", (e) => {
+        const panel = this._stepsPanel;
+        if (!down || !panel?.isOpen || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 4) return;
+        const hit = this.renderer.hitAt(e.clientX, e.clientY);
+        const step = hit ? panel.stepOfObject(hit.id) : undefined;
+        if (step) panel.select(step);
+      });
+    }
+    this._stepsPanel.show(this._trace.steps.length ? this._trace.toJSON() : null);
+  }
+
+  /** A snapshot for the agent carrying the notes on steps (markup.json `stepMarks`). */
+  private async saveStepMarks(marks: StepMark[]): Promise<string | undefined> {
+    if (!this.markup) return undefined;
+    this._stepMarks = [...marks];
+    try {
+      const n = marks.length;
+      const bundle = await this.markup.capture({ note: `${n} note${n > 1 ? "s" : ""} on steps`, label: "steps" });
+      return bundle.dir;
+    } finally {
+      this._stepMarks = [];
+    }
   }
 
   private describeObject(id: string) {
@@ -1426,16 +1567,16 @@ export class SketchInstance {
       logs: this.logs.map(l => ({ ...l })),
       errors: this.bridge?.errors() ?? [],
       commands: this.commands.list(),
+      ...(this._trace.steps.length ? { steps: this._trace.toJSON() } : {}),
+      ...(this._stepMarks.length ? { stepMarks: this._stepMarks } : {}),
     };
   }
 
-  /** Rebuild the header's Export / Import menus when the registered names change. */
-  private renderFileMenus() {
-    if (!this._fileMenusEl) return;
-    const sig = [...this.exports.keys()].join("\u0000") + "|" + [...this.imports.keys()].join("\u0000");
-    if (sig === this._fileMenusSig) return;
-    this._fileMenusSig = sig;
-    renderFileMenus(this._fileMenusEl, this.getExports(), this.getImports(), this.theme);
+  /** File ▸ Import … / Export …: a command per registered entry, replaced when the entries change. */
+  private _fileCommandsOff: (() => void) | null = null;
+  private syncFileCommands() {
+    this._fileCommandsOff?.();
+    this._fileCommandsOff = this.commands.add(fileCommands(this.getExports(), this.getImports()));
   }
 
   /** The current value of every control, keyed for `setParams` — save it to reopen a design. */
@@ -1445,7 +1586,11 @@ export class SketchInstance {
    * Set controls by label ("Radius"), "Group:Label" or key — e.g. the object `getParams()`
    * returned — and re-run once. Reports names it could not apply instead of dropping them.
    */
-  setParams(values: Record<string, unknown>) { return this.store.setByName(values); }
+  setParams(values: Record<string, unknown>) {
+    const result = this.store.setByName(values);
+    this.history.commit();                  // set from code or by an agent: an undo step like any other
+    return result;
+  }
 
   /** Destroy the sketch and clean up */
   dispose() {
@@ -1453,6 +1598,7 @@ export class SketchInstance {
     this.markup?.dispose();
     this.bridge?.dispose();
     this._unbindCommandKeys?.();
+    this._menuBar?.dispose();
     if (this._boundKeyDown) window.removeEventListener("keydown", this._boundKeyDown);
     if (this._boundKeyUp) window.removeEventListener("keyup", this._boundKeyUp);
     this._boundKeyDown = null;
@@ -1462,19 +1608,3 @@ export class SketchInstance {
   }
 }
 
-/** First stack frame outside tekto itself — the user's line that created an object.
- *  Raw "url:line:col"; the dev-server plugin maps it through the source map to "file.ts:line". */
-function callSite(): string | undefined {
-  const limit = (Error as any).stackTraceLimit;
-  (Error as any).stackTraceLimit = 40;
-  const stack = new Error().stack ?? "";
-  (Error as any).stackTraceLimit = limit;
-  for (const line of stack.split("\n").slice(1)) {
-    const m = line.match(/(https?:\/\/[^\s)]+):(\d+):(\d+)/) ?? line.match(/@(\S+):(\d+):(\d+)$/);
-    if (!m) continue;
-    const url = m[1];
-    if (/\/tekto\/(src|dist)\/|node_modules|\/@vite\/|\/@fs\/.*\/tekto\/src\//.test(url)) continue;
-    return `${url}:${m[2]}:${m[3]}`;
-  }
-  return undefined;
-}

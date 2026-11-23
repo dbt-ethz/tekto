@@ -143,7 +143,6 @@ export default function (container: HTMLElement): SketchInstance {
   }, {
     container,
     title: "NURBS Surfaces — Mushroom Column",
-    background: 0x0a0b14,
     camera: [6, 5, 9],
     target: [0, 3, 0],
   });

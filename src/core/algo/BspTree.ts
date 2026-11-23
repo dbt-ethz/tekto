@@ -388,7 +388,7 @@ function polygonsToMesh(polys: BspPolygon[]): { positions: Float32Array; indices
 /**
  * A BSP tree of convex polygons, for CSG on closed solids: build with `fromPolygons`/`fromMesh`,
  * combine with `union`/`subtract`/`intersect` (new trees, inputs unchanged), read back with `toMesh()`
- * (indexed typed arrays, not a `Mesh`). Also classifies points and walks polygons in depth order.
+ * (indexed typed arrays, not a `Mesh`; `Mesh.fromArrays(positions, indices)` makes one). Also classifies points and walks polygons in depth order.
  */
 export class BspTree {
   constructor(public root: BspNode | null) {}
@@ -412,7 +412,10 @@ export class BspTree {
     return allPolygons(this.root);
   }
 
-  /** Triangulate all polygons and return as typed arrays (shared vertices). */
+  /**
+   * Triangulate all polygons and return them as typed arrays (shared vertices) — not a `Mesh`.
+   * For a `Mesh`: `const { positions, indices } = tree.toMesh(); Mesh.fromArrays(positions, indices)`.
+   */
   toMesh(): { positions: Float32Array; indices: Uint32Array } {
     return polygonsToMesh(this.toPolygons());
   }

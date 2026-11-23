@@ -83,7 +83,10 @@ describe("Curvature.taubin", () => {
   });
 
   it("combDirections makes the field locally sign-consistent", () => {
-    const mesh = MeshFactory.sphere(1, 24, 16);
+    // A torus: closed, and its principal directions (along and around the tube) are defined
+    // everywhere. (On a sphere every point is umbilic and a direction field must have
+    // singularities, so combing cannot agree everywhere there.)
+    const mesh = MeshFactory.torus(1, 0.35, 48, 24);
     const result = Curvature.taubin(mesh);
     Curvature.combDirections(mesh, result);
 
@@ -98,10 +101,9 @@ describe("Curvature.taubin", () => {
         if (c.dirMax.dot(nc.dirMax) < 0) flipped++;
       }
     }
-    // After combing, the vast majority of neighbors should agree on sign.
-    // (Singularities — umbilic points on the sphere — and any leftover topology
-    // ambiguity can still produce a small fraction of disagreements.)
-    expect(flipped / total).toBeLessThan(0.05);
+    // After combing, neighbours agree on the sign.
+    expect(total).toBeGreaterThan(4000);
+    expect(flipped / total).toBeLessThan(0.01);
     void Vec3; // keep the import alive in case of future direction tests
   });
 });

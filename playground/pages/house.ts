@@ -9,15 +9,22 @@
  *   checks        what is wrong, as callouts on the records concerned (openings past a wall's
  *                 end, free wall ends, rooms that overlap…)
  *   undo / redo   every edit, including a whole house written at once, is one step
+ *   Export OBJ    the house for Rhino / Cinema 4D: one group per layer (walls, openings, roofs,
+ *                 stairs, slabs, spaces), coloured by the .mtl downloaded with it
  *   agentDoc      an agent reads and edits the records (`__tekto.doc`, or from outside through
  *                 the dev server: `tools/mcp.mjs`), each patch one undo step, answered with the issues
+ *   notes         ✎ Markup: draw on the house, "Pin notes to the model" — the marks become notes with the model
+ *                 (pinned, saved, undoable). An agent lists the open notes (`tekto_notes`), makes
+ *                 the change, and resolves each with what it did; the pin turns grey
  *   ?empty        start on an empty site (the Empty site button does the same, undoably)
- *   ?shared=1     the records go through the dev server (`.tekto/collab/house.json`), shared by
- *                 every window that opens the page with it
+ *   ?shared=1     the records and notes go through the dev server (`.tekto/collab/house.json`),
+ *                 shared by every window that opens the page with it: who is online, what they
+ *                 have selected, and the agent at work through one of the windows
  */
 import {
-  appShell, Doc, bindBuilding, agentDoc, buildingSchema, Selection, selectOnClick, localAdapter, devServerAdapter, download,
-  type BuildingData, type BuildingRecords, type BuildingIssue, type DocJSON,
+  appShell, Doc, bindBuilding, agentDoc, buildingSchema, Selection, selectOnClick, shareSelection, PresenceBar, ProposalBar, realizeBuilding,
+  localAdapter, devServerAdapter, download, ObjFile, stampName,
+  type BuildingData, type BuildingRecords, type BuildingIssue, type DocJSON, type Note,
 } from "../../src";
 
 const rect = (x0: number, y0: number, x1: number, y1: number): [number, number][] => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
@@ -41,7 +48,7 @@ const EXAMPLE: BuildingData = {
     roof: { storey: "og", kind: "gable", pitch: 35, footprint: rect(-0.125, -0.125, 10.125, 8.125), overhang: 0.5, gableOverhang: 0.3, name: "Roof" },
   },
   stairs: {
-    stair: { storey: "eg", at: [0.6, 7.3], direction: [1, 0], shape: "half_turn", turn: "right", name: "Stair" },
+    stair: { storey: "eg", at: [0.6, 7.3], direction: [1, 0], shape: "half_turn", turn: "right", structure: "timber", name: "Stair" },
   },
   walls: {
     s: { storey: "eg", path: [[0, 0], [10, 0]], name: "South" }, e: { storey: "eg", path: [[10, 0], [10, 8]], name: "East" },
@@ -82,35 +89,23 @@ const EXAMPLE: BuildingData = {
 export default function (container: HTMLElement) {
   const query = new URLSearchParams(location.search);
   const shared = query.get("shared");
-  const doc = new Doc<BuildingRecords>({ name: "house", adapter: shared ? devServerAdapter() : localAdapter() });
+  const doc = new Doc<BuildingRecords & { notes: Note }>({ name: "house", adapter: shared ? devServerAdapter() : localAdapter() });
   const selection = new Selection();
 
   const app = appShell({
     title: "House",
     container,
-    topBar: false,
-    navGizmo: true,
-    shadingBar: true,
     units: "m",
+    // Notes with the model: Markup's marks are kept in the doc's `notes`, for people and the agent.
+    notes: doc,
     renderer: { gridStyle: "fading" },
     camera: [22, -18, 16],
     target: [5, 4, 2.5],
     params: {
       framing: { type: "bool", default: false, label: "Framing" },
       issues: { type: "bool", default: true, label: "Show issues", display: true },
-      undo: { type: "button", label: "Undo", action: () => doc.undo() },
-      redo: { type: "button", label: "Redo", action: () => doc.redo() },
-      reset: { type: "button", label: "Example house", action: () => load(EXAMPLE, "Example house") },
-      empty: { type: "button", label: "Empty site", action: () => load({}, "Clear the site") },
-      ifc: { type: "button", label: "Export IFC", action: () => download(house.building.toIfc({ projectName: "House" }), "house.ifc", { stamp: true }) },
-      save: { type: "button", label: "Save JSON", action: () => download(JSON.stringify(doc.toJSON(), null, 2), "house.json", { stamp: true }) },
-      open: { type: "button", label: "Open JSON", action: () => openJson() },
     },
-    groups: {
-      Show: ["framing", "issues"],
-      History: ["undo", "redo"],
-      File: ["reset", "empty", "ifc", "save", "open"],
-    },
+    groups: { Show: ["framing", "issues"] },
   });
 
   // Walls and slabs are flat: their tessellation says nothing, so no wire overlay.
@@ -130,7 +125,23 @@ export default function (container: HTMLElement) {
   const stopSelecting = selectOnClick(app.renderer, app.scene, selection);
   selection.onChange(status);
   // Agents edit the same records: checked against the schema, one undo step, answered with the issues.
-  const stopAgent = agentDoc(doc, { schema: buildingSchema(), check: () => house.issues });
+  const stopAgent = agentDoc(doc, {
+    schema: buildingSchema(), check: () => house.issues,
+    // What the check would say of a proposal, before anyone accepts it.
+    preview: (c) => realizeBuilding({ storeys: c.storeys, walls: c.walls, openings: c.openings, slabs: c.slabs, spaces: c.spaces, roofs: c.roofs, stairs: c.stairs } as BuildingData).check(),
+  });
+  // What an agent proposes waits here for a person: what it changes, Accept (one undo step) or Reject.
+  const proposals = new ProposalBar(doc, app.renderer.canvasEl.parentElement!, {
+    schema: buildingSchema(),
+    onFocus: (keys) => selection.select(keys.filter((k) => house.objectsOf(k).length)),
+  });
+  // Shared (`?shared=1`): each window outlines what the others have selected, and the bar shows
+  // who is online — and the agent, beside the person whose window it works through.
+  const stopSharing = shared ? shareSelection(selection, doc.store, app.renderer, app.scene) : null;
+  const presence = shared ? new PresenceBar(doc.store, app.renderer.canvasEl.parentElement!, { describe: (p) => {
+    const n = Array.isArray(p.state.selection) ? p.state.selection.length : 0;
+    return n ? `${n} selected` : undefined;
+  } }) : null;
 
   /** Each issue as a callout on the records it concerns: red for an error, amber for a warning. */
   function showIssues(issues: BuildingIssue[]) {
@@ -167,7 +178,23 @@ export default function (container: HTMLElement) {
     input.click();
   }
 
+  /** The house as OBJ grouped by layer, and the .mtl its groups' colours are in — two downloads. */
+  function exportObj() {
+    const now = new Date();
+    const obj = stampName("house.obj", now), mtl = stampName("house.mtl", now);
+    const data = app.scene.toMeshData({ groupBy: "layer" });
+    download(ObjFile.serializeMtl(data.materials ?? []), mtl);
+    download(ObjFile.serialize(data, { mtllib: mtl }), obj);
+  }
+
+  // The menu bar is these commands: File and Edit over the document (the sidebar is the model's own).
   app.commands.add([
+    { id: "file.new.example", label: "New: example house", group: "File", run: () => load(EXAMPLE, "Example house") },
+    { id: "file.new.empty", label: "New: empty site", group: "File", run: () => load({}, "Clear the site") },
+    { id: "file.open", label: "Open JSON…", keys: "Mod+O", group: "File", run: () => openJson() },
+    { id: "file.save", label: "Save JSON", keys: "Mod+S", group: "File", run: () => download(JSON.stringify(doc.toJSON(), null, 2), "house.json", { stamp: true }) },
+    { id: "file.export.ifc", label: "Export IFC", group: "File", run: () => download(house.building.toIfc({ projectName: "House" }), "house.ifc", { stamp: true }) },
+    { id: "file.export.obj", label: "Export OBJ", group: "File", run: () => exportObj() },
     { id: "edit.undo", label: "Undo", keys: "Mod+Z", group: "Edit", run: () => { doc.undo(); }, enabled: () => doc.canUndo() },
     { id: "edit.redo", label: "Redo", keys: ["Shift+Mod+Z", "Mod+Y"], group: "Edit", run: () => { doc.redo(); }, enabled: () => doc.canRedo() },
   ]);
@@ -202,11 +229,14 @@ export default function (container: HTMLElement) {
   });
 
   // For agents and tests: the document, the building and its issues.
-  (window as unknown as { house: unknown }).house = { doc, selection, get building() { return house.building; }, get issues() { return house.issues; } };
+  (window as unknown as { house: unknown }).house = { doc, selection, notes: app.notes, get building() { return house.building; }, get issues() { return house.issues; } };
 
   return {
     dispose() {
       stopSelecting();
+      stopSharing?.();
+      presence?.destroy();
+      proposals.destroy();
       stopAgent();
       house.dispose();
       doc.dispose();

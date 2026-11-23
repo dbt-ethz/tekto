@@ -2,11 +2,11 @@
 
 > AI-first platform for online CAD experiments — one-function interactive geometry apps in the browser that coding agents can write, see and take markup on (meshes, NURBS, SDF, voxels, graphs, BIM/IFC)
 
-tekto 0.9.5. One function becomes an interactive CAD app in the browser; people point at what to change on the viewport (✎ Markup) and agents check their own work (`npm run snap`). Docs: [README](README.md) · [agent rules (CLAUDE.md)](CLAUDE.md) · [changelog](CHANGELOG.md) · [full API index (llms-full.txt)](llms-full.txt) · examples in [playground/pages](playground/pages/).
+tekto 0.11.0. One function becomes an interactive CAD app in the browser; people point at what to change on the viewport (✎ Markup) and agents check their own work (`npm run snap`). Docs: [README](README.md) · [rules for editing tekto itself (CLAUDE.md, on GitHub)](https://github.com/dbt-ethz/tekto/blob/main/CLAUDE.md) · [changelog](CHANGELOG.md) · [full API index (llms-full.txt)](llms-full.txt) · examples in [playground/pages](playground/pages/).
 
 ## Start here
 
-About 30 names cover most apps. **Apps:** `sketch` (3D, rebuilt each run), `sketch2d` (2D canvas), `appShell` (retained: users build, select and save). **Geometry:** `Vec2`, `Vec3`, `Mesh`, `MeshFactory`, `MeshTransform`, `Polygon2D`, `PolygonBool`, `NurbsCurve`, `NurbsSurface`, `CurveUtils`. **Data:** `Scene`, `ParamStore`, `Doc` + `bindScene` + `Selection` (retained apps), `SharedStore`. **Buildings:** records (`BUILDING_SCHEMA`) built by `realizeBuilding` / `bindBuilding`. **Files:** `Sheet` (drawings), `writeDxf2D`, `writePdf2D`, `writeDxf3D`, `DxfExporter`, `IfcWriter`, `ObjFile`, `download`.
+About 30 names cover most apps. **Apps:** `sketch` (3D, rebuilt each run), `sketch2d` (2D canvas), `appShell` (retained: users build, select and save). **Geometry:** `Vec2`, `Vec3`, `Mesh`, `MeshFactory`, `MeshTransform`, `Polygon2D`, `PolygonBool`, `NurbsCurve`, `NurbsSurface`, `CurveUtils`. **Data:** `Scene`, `ParamStore`, `Doc` + `bindScene` + `Selection` (retained apps), `SharedStore`. **Buildings:** records (`BUILDING_SCHEMA`) built by `realizeBuilding` / `bindBuilding`. **Generators:** write each part as a step, `lab.step(name, inputs, fn)` (`app.step` in an `appShell`), so a person reads the program as a graph of its steps and marks the one to change (`StepTrace`). **Files:** `Sheet` (drawings), `writeDxf2D`, `writePdf2D`, `writeDxf3D`, `DxfExporter`, `IfcWriter`, `ObjFile`, `download`.
 
 | To … | use | not |
 |---|---|---|
@@ -17,6 +17,10 @@ About 30 names cover most apps. **Apps:** `sketch` (3D, rebuilt each run), `sket
 | measure or smooth a mesh | `mesh.volume()`, `mesh.smooth()` | the older `MeshAnalysis` / `Algo` wrappers |
 | check a mesh | `mesh.validate()` | judging a double-sided render |
 | 2D booleans, with holes | `PolygonBool` | `polygonIntersection` (two simple rings only) |
+| 3D booleans (CSG) of closed solids | `BspTree.fromMesh(a)` → `BspTree.union` / `.subtract` / `.intersect` → `toMesh()` → `Mesh.fromArrays(positions, indices)` | `PolygonBool` (2D only) |
+| contours, isolines of a 2D field | `MarchingSquares.contours(…)` (polylines, closed or open) | tracing grid cells by hand |
+| blobs, distance fields, lattices | `SdfSphere`, `SdfOps.blend` … → `VoxelGrid.fillFromSdf` → `MarchingCubes` (a `Mesh`) | — |
+| hidden-line drawings of meshes | on screen `scene.setRenderMode("hiddenline")`; as lines `DxfExporter`; polylines in front of a mesh `extractVisiblePolylines` | drawing every edge |
 | draw plans, elevations, details — dimensioned, to scale — and export them | `Sheet` (`sheet.toDXF()`, `sheet.toSVG()`) + `download`; on screen `SheetCanvas` (see the Drawing Sheet page) | a second export path that repeats the screen's transforms; a hand-written DXF or Blob |
 | export 3D lines / views of meshes / BIM | `writeDxf3D` / `DxfExporter` / `IfcWriter` | — |
 | set a control from code | `handle.set(value)` on any control | clicking the panel's DOM |
@@ -33,9 +37,9 @@ Five rules that catch agents out:
 
 ## Entry points
 
-- `import … from "tekto/core"` — geometry and data — no three.js, no DOM; runs in Node, workers and tests (184 values, 183 types)
-- `import … from "tekto"` — everything in tekto/core plus the browser layer: renderers, panels, sketch(), appShell() (239 values, 259 types)
-- `import … from "tekto/2d"` — sketch2d and the 2D geometry a first sketch needs — no three.js (20 values, 33 types)
+- `import … from "tekto/core"` — geometry and data — no three.js, no DOM; runs in Node, workers and tests (202 values, 206 types)
+- `import … from "tekto"` — everything in tekto/core plus the browser layer: renderers, panels, sketch(), appShell() (270 values, 300 types)
+- `import … from "tekto/2d"` — sketch2d and the 2D geometry a first sketch needs — no three.js (21 values, 37 types)
 - `import … from "tekto/react"` — React components (needs react, react-dom)
 
 ## Read more
@@ -43,4 +47,5 @@ Five rules that catch agents out:
 - [README → Two scene models](README.md#two-scene-models-rebuilt-vs-retained): rebuilt (`sketch`) or retained (`appShell`).
 - [README → One mesh](README.md#one-mesh): the `Mesh` class — ids, connectivity, arrays, `validate()`.
 - [README → Markup](README.md#markup--instructions-for-an-ai-drawn-on-the-view): reading a person's marks; `snap` for your own.
-- [CLAUDE.md](CLAUDE.md): conventions, gotchas and what never to do without asking.
+- [CHANGELOG.md](CHANGELOG.md): what changed in each release — read it when you upgrade (renames, moved functions, changed defaults).
+- [CLAUDE.md on GitHub](https://github.com/dbt-ethz/tekto/blob/main/CLAUDE.md): conventions and gotchas for working on tekto itself.

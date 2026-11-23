@@ -21,7 +21,7 @@ test("keys and agents run the same commands; typing in a field is left alone", a
   const before = await count();
   expect(await page.evaluate(() => (window as any).__tekto.run("edit.add"))).toBe(true);
   expect(await count()).toBe(before + 1);
-  await page.locator("canvas").first().click({ position: { x: 5, y: 5 } });   // focus the app, clear the selection
+  await page.locator("canvas").first().click({ position: { x: 5, y: 60 } });   // focus the app, clear the selection (under the viewer header)
   await page.keyboard.press("ControlOrMeta+z");
   expect(await count()).toBe(before);
 
@@ -58,7 +58,7 @@ test("a sketch declares commands per run with lab.command", async ({ page }) => 
   expect(await ids()).toEqual(expect.arrayContaining(["view.fitAll", "subdiv.more", "subdiv.less"]));
   const level = () => page.evaluate(() => (window as any).__tekto.params()["Subdivision Levels"] ?? Object.values((window as any).__tekto.params())[0]);
   const l0 = await level();
-  await page.locator("canvas").first().click({ position: { x: 5, y: 5 } });
+  await page.locator("canvas").first().click({ position: { x: 5, y: 60 } });
   await page.keyboard.press("]");                                    // a key runs it; the sketch re-runs
   await expect.poll(level).toBe(l0 + 1);
   expect((await ids()).filter((i: string) => i === "subdiv.more")).toHaveLength(1);   // re-declared, not doubled

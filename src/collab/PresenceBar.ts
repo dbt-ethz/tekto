@@ -1,16 +1,29 @@
 /**
  * PresenceBar — who is online in a SharedStore document: a dot for the connection, one round
  * badge per person (their colour, initials or GitHub avatar; tooltip = name and what they are
- * on), and a Sign in / Sign out button. Sits in the viewport's top bar row, left of ✎ Markup.
+ * on), and a Sign in / Sign out button. In a view with the viewer header it sits in the header's
+ * row, left of ✎ Markup, where nothing can lie over it; without a header it floats top right.
+ * An agent working through someone's window (their presence `state.agent`, set by `agentDoc`)
+ * gets a square badge beside that person: "Claude, through Ana's window: Agent: east window".
  */
 import type { CollabStatus, Presence, SharedStore } from "./SharedStore";
 
 /** Options for `PresenceBar`: where it sits and what each person's tooltip says. */
 export interface PresenceBarOptions {
-  /** CSS for the bar's position inside the host; default: top right, left of ✎ Markup. */
+  /** CSS for the bar's position inside the host, which then floats there (`"top:10px;right:100px;"`).
+   *  Default: in the viewer header's row when the view has one, else floating top right. */
   position?: string;
   /** Tooltip line per person, from their presence state (e.g. "editing ch218.0"). */
   describe?: (p: Presence) => string | undefined;
+}
+
+/** The viewer header's slot for the app's controls, if the view `host` belongs to has a header. */
+function headerSlot(host: HTMLElement): HTMLElement | null {
+  for (let el: HTMLElement | null = host, up = 0; el && up < 4; el = el.parentElement, up++) {
+    const slot = el.querySelector<HTMLElement>(":scope > [data-tekto-viewer-header] > [data-tekto-header-slot=right]");
+    if (slot) return slot;
+  }
+  return null;
 }
 
 const STATUS_COL: Record<CollabStatus, string> = { online: "#2f9e44", connecting: "#f08c00", offline: "#adb5bd", error: "#e03131" };
@@ -25,20 +38,31 @@ export class PresenceBar {
   private people: HTMLDivElement;
   private btn: HTMLButtonElement;
   private unsubs: (() => void)[] = [];
+  /** In the viewer header's (dark) row, not floating on its own white card. */
+  private inHeader = false;
 
   constructor(private store: SharedStore<unknown>, host: HTMLElement, private opts: PresenceBarOptions = {}) {
     this.el = document.createElement("div");
-    this.el.style.cssText = `position:absolute;${opts.position ?? "top:10px;right:100px;"}z-index:22;display:flex;gap:6px;align-items:center;`
-      + "font:12px system-ui,sans-serif;background:#fff;border:1px solid #d0d0d6;border-radius:7px;padding:3px 6px;box-shadow:0 2px 8px rgba(0,0,0,.12);";
+    // The viewer header has a slot for the app's own controls: in its row the bar cannot collide
+    // with the view's tools, whatever they are. A given `position` floats it as before.
+    const slot = opts.position ? null : headerSlot(host);
+    this.inHeader = !!slot;
+    this.el.dataset.tektoPresence = slot ? "header" : "floating";
+    this.el.style.cssText = slot
+      ? "display:flex;gap:6px;align-items:center;font:12px system-ui,sans-serif;"
+      : `position:absolute;${opts.position ?? "top:10px;right:100px;"}z-index:22;display:flex;gap:6px;align-items:center;`
+        + "font:12px system-ui,sans-serif;background:#fff;border:1px solid #d0d0d6;border-radius:7px;padding:3px 6px;box-shadow:0 2px 8px rgba(0,0,0,.12);";
     this.dot = document.createElement("span");
     this.dot.style.cssText = "width:8px;height:8px;border-radius:50%;display:inline-block;";
     this.people = document.createElement("div");
     this.people.style.cssText = "display:flex;gap:3px;align-items:center;";
     this.btn = document.createElement("button");
-    this.btn.style.cssText = "font:12px system-ui,sans-serif;padding:3px 8px;border-radius:5px;border:1px solid #d0d0d6;background:#fff;color:#222;cursor:pointer;";
+    this.btn.style.cssText = slot
+      ? "font:11px system-ui,sans-serif;padding:3px 8px;border-radius:5px;border:1px solid rgba(255,255,255,.22);background:transparent;color:#e8ebf0;cursor:pointer;"
+      : "font:12px system-ui,sans-serif;padding:3px 8px;border-radius:5px;border:1px solid #d0d0d6;background:#fff;color:#222;cursor:pointer;";
     this.btn.addEventListener("click", () => void (store.user ? store.signOut() : store.signIn()));
     this.el.append(this.dot, this.people, this.btn);
-    host.appendChild(this.el);
+    (slot ?? host).appendChild(this.el);
     this.unsubs.push(store.onPresence(() => this.render()), store.onStatus(() => this.render()), store.onUser(() => this.render()));
     this.render();
   }
@@ -63,7 +87,7 @@ export class PresenceBar {
       const b = document.createElement("span");
       const me = p.session === this.store.session;
       b.style.cssText = `width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;`
-        + `font:600 10px system-ui,sans-serif;color:#fff;background:${p.color};box-shadow:0 0 0 2px ${me ? "#222" : "#fff"};overflow:hidden;`;
+        + `font:600 10px system-ui,sans-serif;color:#fff;background:${p.color};box-shadow:0 0 0 2px ${this.inHeader ? (me ? "#fff" : "transparent") : (me ? "#222" : "#fff")};overflow:hidden;`;
       if (p.user.avatarUrl) {
         const img = document.createElement("img");
         img.src = p.user.avatarUrl; img.alt = ""; img.style.cssText = "width:100%;height:100%;object-fit:cover;";
@@ -73,6 +97,19 @@ export class PresenceBar {
       }
       const what = this.opts.describe?.(p);
       b.title = `${p.user.name}${me ? " (you)" : ""}${what ? ` — ${what}` : ""}`;
+      this.people.appendChild(b);
+    }
+    // Agents at work, one badge per agent and window.
+    for (const p of this.store.presence) {
+      const agent = p.state.agent as { name?: string; doing?: string } | null | undefined;
+      if (!agent?.name) continue;
+      const b = document.createElement("span");
+      b.dataset.agent = agent.name;
+      b.style.cssText = "height:22px;padding:0 6px;border-radius:5px;display:inline-flex;align-items:center;"
+        + "font:600 10px system-ui,sans-serif;color:#1e1e1e;background:#ffb020;white-space:nowrap;";
+      b.textContent = agent.name;
+      const me = p.session === this.store.session;
+      b.title = `${agent.name}, through ${me ? "your" : `${p.user.name}'s`} window${agent.doing ? `: ${agent.doing}` : ""}`;
       this.people.appendChild(b);
     }
   }

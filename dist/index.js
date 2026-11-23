@@ -44,6 +44,7 @@ __export(index_exports, {
   Callouts: () => Callouts,
   Capsule2D: () => Capsule2D,
   CltConstruction: () => CltConstruction,
+  ColorRamp: () => ColorRamp,
   Commands: () => Commands,
   ControlPanel: () => ControlPanel,
   CubicBezierCurve: () => CubicBezierCurve,
@@ -207,6 +208,7 @@ __export(index_exports, {
   closestPointOnSegment: () => closestPointOnSegment,
   cltLayers: () => cltLayers,
   collabColor: () => collabColor,
+  colorLegend: () => colorLegend,
   computeEffectiveLock: () => computeEffectiveLock,
   computeEffectiveVisibility: () => computeEffectiveVisibility,
   contactBetween: () => contactBetween,
@@ -745,10 +747,10 @@ var VecMath = {
   pointsAlongSegment(a, b, spacing) {
     const len = a.distTo(b);
     const n = Math.max(1, Math.floor(len / spacing));
-    const step = b.sub(a).div(n);
+    const step2 = b.sub(a).div(n);
     const pts2 = [];
     for (let i = 0; i <= n; i++)
-      pts2.push(a.add(step.mul(i)));
+      pts2.push(a.add(step2.mul(i)));
     return pts2;
   },
   // ================================================================
@@ -1482,6 +1484,211 @@ function createRandom(seed) {
     }
   };
 }
+
+// src/core/math/ColorRamp.ts
+var BLUE = [
+  "#cde2fb",
+  "#b7d3f6",
+  "#9ec5f4",
+  "#86b6ef",
+  "#6da7ec",
+  "#5598e7",
+  "#3987e5",
+  "#2a78d6",
+  "#256abf",
+  "#1c5cab",
+  "#184f95",
+  "#104281",
+  "#0d366b"
+];
+var RED = [
+  "#ffd4d0",
+  "#fac0ba",
+  "#f8aaa3",
+  "#f3958d",
+  "#ef7e76",
+  "#e86761",
+  "#e34948",
+  "#d33739",
+  "#bc2f32",
+  "#a82428",
+  "#921d21",
+  "#7e1419",
+  "#681013"
+];
+var step = (ramp, s) => ramp[(s - 100) / 50];
+var MID = { light: "#f0efec", dark: "#383835" };
+var MISSING = "#898781";
+var CATEGORICAL = {
+  light: ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948"],
+  dark: ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", "#9085e9", "#e66767"]
+};
+var toLinear = (c) => c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+var toSrgb = (c) => c <= 31308e-7 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055;
+var clamp01 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
+function oklab([r, g, b]) {
+  const lr = toLinear(r), lg = toLinear(g), lb = toLinear(b);
+  const l = Math.cbrt(0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb);
+  const m = Math.cbrt(0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb);
+  const s = Math.cbrt(0.0883024619 * lr + 0.2817188376 * lg + 0.6299787005 * lb);
+  return [
+    0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s
+  ];
+}
+function linearFromOklab([L, a, b]) {
+  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+  const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+  const s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;
+  return [
+    clamp01(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
+    clamp01(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
+    clamp01(-0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s)
+  ];
+}
+var HEX = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i;
+function parseStop(c, call) {
+  if (typeof c === "string") {
+    const m = HEX.exec(c.trim());
+    if (!m) throw new Error(`${call}: bad colour ${JSON.stringify(c)} \u2014 need "#rgb", "#rrggbb" or [r, g, b] in 0..1`);
+    const h = m[1].length === 3 ? m[1].replace(/./g, (d) => d + d) : m[1];
+    return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+  }
+  if (!Array.isArray(c) || c.length !== 3 || !c.every((v) => typeof v === "number" && v >= 0 && v <= 1)) {
+    throw new Error(`${call}: bad colour ${JSON.stringify(c)} \u2014 need "#rgb", "#rrggbb" or [r, g, b] in 0..1`);
+  }
+  return [c[0], c[1], c[2]];
+}
+var hexOf = (c) => "#" + c.map((v) => Math.round(clamp01(v) * 255).toString(16).padStart(2, "0")).join("");
+function modeOf(mode, call) {
+  if (mode !== "dark" && mode !== "light") throw new Error(`${call}: mode must be "dark" or "light", got ${JSON.stringify(mode)}`);
+  return mode;
+}
+var ColorRamp = class _ColorRamp {
+  /** A ramp through `stops`, evenly spaced over 0..1: hex strings or [r, g, b] in 0..1 (sRGB). */
+  constructor(stops) {
+    if (!Array.isArray(stops) || stops.length === 0) {
+      throw new Error(`new ColorRamp: needs at least one colour stop, got ${JSON.stringify(stops)}`);
+    }
+    this.rgb = stops.map((s, i) => parseStop(s, `new ColorRamp (stop ${i})`));
+    this.lab = this.rgb.map(oklab);
+  }
+  /** The colour at `t` (clamped to 0..1), as sRGB 0..1. */
+  at(t) {
+    return this.srgbAt(t, "ColorRamp.at");
+  }
+  /** The colour at `t` (clamped to 0..1) as "#rrggbb". */
+  hex(t) {
+    return hexOf(this.srgbAt(t, "ColorRamp.hex"));
+  }
+  /**
+   * Per-value RGBA (length 4·n, alpha 1), ready for `Mesh.setColors` when the values are per
+   * node; NaN, ±Infinity or a missing entry get `missing` (default the muted grey #898781).
+   * `range` maps `min` to the ramp's start and `max` to its end (default the finite values'
+   * min..max; equal ends put every value mid-ramp). For a diverging ramp pass a range
+   * symmetric about your baseline, `{ min: -m, max: m }`, so the grey sits at zero.
+   *
+   * The channels are LINEAR light, which is how the renderer reads node colours (three.js
+   * takes vertex colours as linear and encodes them for the screen), so the view shows the
+   * same colours as `hex()` and the legend. `at()` and `hex()` are sRGB, for CSS and canvas.
+   */
+  colors(values, range, missing) {
+    const n = values.length;
+    let min = Infinity, max = -Infinity;
+    if (range) {
+      if (!Number.isFinite(range.min) || !Number.isFinite(range.max)) {
+        throw new Error(`ColorRamp.colors: range must be finite, got { min: ${range.min}, max: ${range.max} }`);
+      }
+      ({ min, max } = range);
+    } else {
+      for (let i = 0; i < n; i++) {
+        const v = values[i];
+        if (Number.isFinite(v)) {
+          if (v < min) min = v;
+          if (v > max) max = v;
+        }
+      }
+    }
+    const lost = parseStop(missing ?? MISSING, "ColorRamp.colors (missing)").map(toLinear);
+    const span = max - min;
+    const out = new Float32Array(n * 4);
+    for (let i = 0; i < n; i++) {
+      const v = values[i];
+      const c = Number.isFinite(v) ? this.linearAt(span !== 0 ? (v - min) / span : 0.5) : lost;
+      out[i * 4] = c[0];
+      out[i * 4 + 1] = c[1];
+      out[i * 4 + 2] = c[2];
+      out[i * 4 + 3] = 1;
+    }
+    return out;
+  }
+  /** A CSS `linear-gradient` of the ramp (sampled densely, so CSS's sRGB mix follows the OKLab ramp), e.g. for a legend bar. */
+  css(direction = "to right") {
+    const n = Math.max(2, (this.lab.length - 1) * 4 + 1);
+    const stops = [];
+    for (let i = 0; i < n; i++) {
+      const t = i / (n - 1);
+      stops.push(`${this.hex(t)} ${+(t * 100).toFixed(2)}%`);
+    }
+    return `linear-gradient(${direction}, ${stops.join(", ")})`;
+  }
+  /** `n` evenly spaced hex colours from start to end (one: the middle), for an ordinal or stepped scale. */
+  steps(n) {
+    if (!Number.isInteger(n) || n < 1) throw new Error(`ColorRamp.steps: n must be a whole number \u2265 1, got ${n}`);
+    if (n === 1) return [this.hex(0.5)];
+    return Array.from({ length: n }, (_, i) => this.hex(i / (n - 1)));
+  }
+  /** The same ramp run the other way. */
+  reversed() {
+    return new _ColorRamp([...this.rgb].reverse());
+  }
+  /**
+   * Magnitude: blue, one hue, its near-zero end receding into the background. `"dark"`
+   * (default; tekto's 3D view is dark) runs from step 600 #184f95 (low) up to step 100 #cde2fb
+   * (high), 11 stops; `"light"` from step 100 (low) to step 700 #0d366b (high), 13 stops, so
+   * `at(k / 12)` is step 100 + 50·k. As separate marks on a light surface (ordinal classes)
+   * start at step 300 (t = 0.33), where a class still clears 2:1 against the background.
+   */
+  static sequential(mode = "dark") {
+    return modeOf(mode, "ColorRamp.sequential") === "light" ? new _ColorRamp(BLUE) : new _ColorRamp(BLUE.slice(0, 11).reverse());
+  }
+  /**
+   * Polarity: blue (low) – neutral grey (t = 0.5) – red (high), the same number of steps on
+   * each arm and the two arms on the same lightness. `"dark"` (default): steps 200 → 600 of
+   * each arm meeting at #383835, extremes light; `"light"`: steps 700 → 100 meeting at
+   * #f0efec, extremes dark. Map with a range symmetric about the baseline.
+   */
+  static diverging(mode = "dark") {
+    const light = modeOf(mode, "ColorRamp.diverging") === "light";
+    const arm = light ? [700, 600, 500, 400, 300, 200, 100] : [200, 300, 400, 500, 600];
+    return new _ColorRamp([...arm.map((s) => step(BLUE, s)), MID[light ? "light" : "dark"], ...[...arm].reverse().map((s) => step(RED, s))]);
+  }
+  /** The 8 categorical colours in their fixed order (blue, orange, aqua, yellow, magenta, green, violet, red); assign in order, fold past 8 into "other". */
+  static categorical(mode = "dark") {
+    return [...CATEGORICAL[modeOf(mode, "ColorRamp.categorical")]];
+  }
+  /** sRGB at t: the stop itself where t lands on one, else the OKLab mix of the two around it. */
+  srgbAt(t, call) {
+    const [i, f2] = this.locate(t, call);
+    return f2 === 0 ? [...this.rgb[i]] : this.mix(i, f2).map(toSrgb);
+  }
+  linearAt(t) {
+    const [i, f2] = this.locate(t, "ColorRamp.colors");
+    return f2 === 0 ? this.rgb[i].map(toLinear) : this.mix(i, f2);
+  }
+  /** The stop before t (clamped to 0..1) and how far t is past it, 0 ≤ f < 1. */
+  locate(t, call) {
+    if (typeof t !== "number" || Number.isNaN(t)) throw new Error(`${call}: t must be a number, got ${t}`);
+    const k = this.lab.length - 1, x = clamp01(t) * k, i = Math.floor(x);
+    return i >= k ? [k, 0] : [i, x - i];
+  }
+  /** Linear RGB a share `f` of the way from stop i to stop i + 1, mixed in OKLab. */
+  mix(i, f2) {
+    const a = this.lab[i], b = this.lab[i + 1];
+    return linearFromOklab([a[0] + (b[0] - a[0]) * f2, a[1] + (b[1] - a[1]) * f2, a[2] + (b[2] - a[2]) * f2]);
+  }
+};
 
 // src/core/geometry/Ray.ts
 var Ray = class {
@@ -4748,9 +4955,9 @@ var ArcLengthCache = class {
     this.table = [0];
     let currentLen = 0;
     let prevPos = getPoint(0);
-    const step = 1 / this.steps;
+    const step2 = 1 / this.steps;
     for (let i = 1; i <= this.steps; i++) {
-      const t = i * step;
+      const t = i * step2;
       const currentPos = getPoint(t);
       currentLen += prevPos.distTo(currentPos);
       this.table.push(currentLen);
@@ -6601,7 +6808,7 @@ function traceEuler(mesh, cache, startFaceId, startDir, field, maxSteps, dt, lif
   let currDir = startDir;
   let normal = normalFor(currFace);
   points.push(currPos.add(normal.mul(lift)));
-  for (let step = 0; step < maxSteps; step++) {
+  for (let step2 = 0; step2 < maxSteps; step2++) {
     let target = field.get(currFace);
     if (!target || target.lenSq() < 1e-12) break;
     if (target.dot(currDir) < 0) target = target.neg();
@@ -6912,7 +7119,10 @@ var BspTree = class _BspTree {
   toPolygons() {
     return allPolygons(this.root);
   }
-  /** Triangulate all polygons and return as typed arrays (shared vertices). */
+  /**
+   * Triangulate all polygons and return them as typed arrays (shared vertices) — not a `Mesh`.
+   * For a `Mesh`: `const { positions, indices } = tree.toMesh(); Mesh.fromArrays(positions, indices)`.
+   */
   toMesh() {
     return polygonsToMesh(this.toPolygons());
   }
@@ -15092,23 +15302,23 @@ function segSegClosest2D(a0, a1, b0, b1) {
     t = 0;
   } else if (aa < 1e-8) {
     s = 0;
-    t = clamp01(ff / ee);
+    t = clamp012(ff / ee);
   } else {
     const cc = da.dot(r0);
     if (ee < 1e-8) {
       t = 0;
-      s = clamp01(-cc / aa);
+      s = clamp012(-cc / aa);
     } else {
       const bb = da.dot(db);
       const denom = aa * ee - bb * bb;
-      s = denom !== 0 ? clamp01((bb * ff - cc * ee) / denom) : 0;
+      s = denom !== 0 ? clamp012((bb * ff - cc * ee) / denom) : 0;
       t = (bb * s + ff) / ee;
       if (t < 0) {
         t = 0;
-        s = clamp01(-cc / aa);
+        s = clamp012(-cc / aa);
       } else if (t > 1) {
         t = 1;
-        s = clamp01((bb - cc) / aa);
+        s = clamp012((bb - cc) / aa);
       }
     }
   }
@@ -15117,7 +15327,7 @@ function segSegClosest2D(a0, a1, b0, b1) {
     pB: b0.add(db.mul(t))
   };
 }
-function clamp01(v) {
+function clamp012(v) {
   return Math.max(0, Math.min(1, v));
 }
 
@@ -16622,10 +16832,10 @@ function rasterizeSheet(sheet, opts = {}) {
       const len = Math.hypot(bx - ax, by - ay);
       let t = 0;
       while (t < len - 1e-9) {
-        const step = Math.min(pattern[idx] - phase, len - t);
-        if (idx % 2 === 0) segment(ax + (bx - ax) * t / len, ay + (by - ay) * t / len, ax + (bx - ax) * (t + step) / len, ay + (by - ay) * (t + step) / len, w, c, true);
-        t += step;
-        phase += step;
+        const step2 = Math.min(pattern[idx] - phase, len - t);
+        if (idx % 2 === 0) segment(ax + (bx - ax) * t / len, ay + (by - ay) * t / len, ax + (bx - ax) * (t + step2) / len, ay + (by - ay) * (t + step2) / len, w, c, true);
+        t += step2;
+        phase += step2;
         if (phase >= pattern[idx] - 1e-9) {
           phase = 0;
           idx = (idx + 1) % pattern.length;
@@ -22820,9 +23030,9 @@ var Building = class {
         if (!met) warn("wall-end-free", `walls/${id}: its end at (${fmt(end.x)}, ${fmt(end.y)}) meets no other wall.`, keyOf("walls", id));
       });
       for (const [id, st] of s.stairs) {
-        const r = st.actualRiser, g = st.treadDepth, step = 2 * r + g;
-        if (r > 0.2 || step < 0.59 || step > 0.65) {
-          warn("stair-step", `stairs/${id}: risers of ${fmt(r * 1e3)} mm and goings of ${fmt(g * 1e3)} mm make a step of ${fmt(step * 1e3)} mm (comfortable: 590\u2013650 mm, risers up to 200 mm).`, keyOf("stairs", id));
+        const r = st.actualRiser, g = st.treadDepth, step2 = 2 * r + g;
+        if (r > 0.2 || step2 < 0.59 || step2 > 0.65) {
+          warn("stair-step", `stairs/${id}: risers of ${fmt(r * 1e3)} mm and goings of ${fmt(g * 1e3)} mm make a step of ${fmt(step2 * 1e3)} mm (comfortable: 590\u2013650 mm, risers up to 200 mm).`, keyOf("stairs", id));
         }
       }
       const spaces = [...s.spaces];
@@ -22980,7 +23190,7 @@ function bindBuilding(doc, scene, opts = {}) {
     }
     return out;
   };
-  const draw = () => {
+  const draw2 = () => {
     for (const ids of objects.values()) for (const id of ids) scene.remove(id);
     objects.clear();
     building = new Building(data(), types);
@@ -23043,13 +23253,13 @@ function bindBuilding(doc, scene, opts = {}) {
     scheduled = true;
     queueMicrotask(() => {
       scheduled = false;
-      draw();
+      draw2();
     });
   };
   const off = doc.onChange((changes) => {
     if (changes.some((c) => BUILDING_COLLECTIONS.includes(c.collection))) schedule();
   });
-  draw();
+  draw2();
   return {
     get building() {
       return building;
@@ -23065,7 +23275,7 @@ function bindBuilding(doc, scene, opts = {}) {
     setDetail: (d) => {
       if (d !== detail) {
         detail = d;
-        draw();
+        draw2();
       }
     },
     onBuild: (cb) => {
@@ -23073,7 +23283,7 @@ function bindBuilding(doc, scene, opts = {}) {
       cb(building, issues);
       return () => listeners.delete(cb);
     },
-    refresh: draw,
+    refresh: draw2,
     dispose: () => {
       off();
       for (const ids of objects.values()) for (const id of ids) scene.remove(id);
@@ -23867,9 +24077,9 @@ var Doc = class {
     } finally {
       this.depth--;
       if (outer) {
-        const step = this.open;
+        const step2 = this.open;
         this.open = null;
-        if (step.changes.size && opts.undoable !== false) this.record(step);
+        if (step2.changes.size && opts.undoable !== false) this.record(step2);
         const keys = [...this.pendingKeys];
         this.pendingKeys.clear();
         if (keys.length) this.emit(keys, this.pendingSource);
@@ -23957,39 +24167,39 @@ var Doc = class {
       this.store.set(key, value ?? null);
     }, { coalesce: opts.coalesce, undoable: opts.undoable });
   }
-  track(step, key, after) {
-    const prev = step.changes.get(key);
+  track(step2, key, after) {
+    const prev = step2.changes.get(key);
     const before = prev ? prev.before : this.store.get(key) ?? null;
-    step.changes.set(key, { before, after: after ?? null });
+    step2.changes.set(key, { before, after: after ?? null });
   }
-  record(step) {
+  record(step2) {
     const top = this.past[this.past.length - 1];
-    if (step.coalesce && top && top.coalesce === step.coalesce && step.at - top.at < this.coalesceMs) {
-      for (const [k, c] of step.changes) {
+    if (step2.coalesce && top && top.coalesce === step2.coalesce && step2.at - top.at < this.coalesceMs) {
+      for (const [k, c] of step2.changes) {
         const t = top.changes.get(k);
         top.changes.set(k, { before: t ? t.before : c.before, after: c.after });
       }
-      top.at = step.at;
+      top.at = step2.at;
     } else {
-      this.past.push(step);
+      this.past.push(step2);
       if (this.past.length > this.historyLimit) this.past.shift();
     }
     this.future = [];
     this.notifyHistory();
   }
   travel(from, to, side) {
-    const step = from.pop();
-    if (!step) return false;
+    const step2 = from.pop();
+    if (!step2) return false;
     this.applying = "history";
     try {
       this.depth++;
-      for (const [k, c] of step.changes) this.store.set(k, c[side] ?? null);
+      for (const [k, c] of step2.changes) this.store.set(k, c[side] ?? null);
     } finally {
       this.depth--;
       this.applying = null;
     }
-    step.coalesce = void 0;
-    to.push(step);
+    step2.coalesce = void 0;
+    to.push(step2);
     const keys = [...this.pendingKeys];
     this.pendingKeys.clear();
     if (keys.length) this.emit(keys, "history");
@@ -24136,7 +24346,7 @@ function applyPatch(doc, patch, opts = {}) {
   if (!plan.length) return { ok: true, rejected, changed };
   const n = plan.length;
   doc.transact(opts.label ?? `Apply ${n} change${n === 1 ? "" : "s"}`, () => {
-    for (const step of plan) step();
+    for (const step2 of plan) step2();
   });
   return { ok: true, rejected, changed, undo: doc.undoLabel() };
 }
@@ -24152,7 +24362,7 @@ function bindScene(doc, collection, scene, render) {
     for (const sid of objects.get(id) ?? []) scene.remove(sid);
     objects.delete(id);
   };
-  const draw = (id, record) => {
+  const draw2 = (id, record) => {
     drop(id);
     if (record === void 0) return;
     const added = [];
@@ -24166,9 +24376,9 @@ function bindScene(doc, collection, scene, render) {
     }
     objects.set(id, added);
   };
-  for (const [id, rec] of doc.all(collection)) draw(id, rec);
+  for (const [id, rec] of doc.all(collection)) draw2(id, rec);
   const unsubDoc = doc.onChange((changes) => {
-    for (const c of changes) if (c.collection === collection) draw(c.id, c.value);
+    for (const c of changes) if (c.collection === collection) draw2(c.id, c.value);
   });
   return {
     collection,
@@ -24178,8 +24388,8 @@ function bindScene(doc, collection, scene, render) {
       return key && key.startsWith(collection + SEP) ? key.slice(collection.length + 1) : void 0;
     },
     refresh: (id) => {
-      if (id !== void 0) draw(id, doc.get(collection, id));
-      else for (const [rid, rec] of doc.all(collection)) draw(rid, rec);
+      if (id !== void 0) draw2(id, doc.get(collection, id));
+      else for (const [rid, rec] of doc.all(collection)) draw2(rid, rec);
     },
     dispose: () => {
       unsubDoc();
@@ -27123,8 +27333,9 @@ var Commands = class {
     return void 0;
   }
   /**
-   * Run commands from their keys on `target` (default: the window). Keys typed into a
-   * field stay with the field; a matched key's default is prevented. Returns the unbind.
+   * Run commands from their keys on `target`: the window (default), or an element, which hears
+   * only the keys typed while focus is inside it. Keys typed into a field stay with the field;
+   * a matched key's default is prevented. Returns the unbind.
    */
   bindKeys(target = window) {
     const onKey = (ev) => {
@@ -27442,6 +27653,156 @@ function viewModeIconSvg(mode, size = 16) {
   return `<svg xmlns="${a.xmlns}" viewBox="${a.viewBox}" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="${a.strokeWidth}" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">${body}</svg>`;
 }
 
+// src/gui/ColorLegend.ts
+var PAD = 8;
+var FONT_PX = 11;
+var TITLE_GAP = 6;
+var BAR_H = 10;
+var TICK_H = 4;
+var LABEL_GAP = 6;
+var EDGE = 5;
+var ROW_H = 17;
+var SWATCH = 10;
+var INSET = 12;
+function colorLegend(options) {
+  const el = document.createElement("div");
+  el.dataset.tektoColorLegend = "";
+  const canvas = document.createElement("canvas");
+  canvas.dataset.tektoOverlay = "";
+  canvas.setAttribute("role", "img");
+  canvas.style.display = "block";
+  el.appendChild(canvas);
+  let current = options;
+  const update = (next) => {
+    current = next;
+    const c = next.corner;
+    el.style.cssText = "pointer-events:none;user-select:none;line-height:0;" + (c ? `position:absolute;z-index:4;${c.startsWith("top") ? "top" : "bottom"}:${INSET}px;${c.endsWith("left") ? "left" : "right"}:${INSET}px;` : "display:inline-block;");
+    draw(canvas, next);
+  };
+  update(options);
+  document.fonts?.ready.then(() => {
+    if (canvas.isConnected) draw(canvas, current);
+  });
+  return { el, update };
+}
+function draw(canvas, o) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const t = getTheme(o.mode ?? "dark");
+  const fontTitle = `600 ${FONT_PX}px ${t.font}`, fontLabel = `${FONT_PX}px ${t.font}`;
+  const title = o.title ? o.unit ? `${o.title} (${o.unit})` : o.title : o.unit ?? "";
+  ctx.font = fontTitle;
+  const titleW = title ? ctx.measureText(title).width : 0;
+  const top = PAD + (title ? FONT_PX + TITLE_GAP : 0);
+  ctx.font = fontLabel;
+  let W2, H2, paint, aria;
+  const items = o.items?.length ? o.items : null;
+  if (items) {
+    const labelW = Math.max(...items.map((it) => ctx.measureText(it.label).width));
+    W2 = Math.ceil(Math.max(titleW, SWATCH + 6 + labelW) + 2 * PAD);
+    H2 = Math.ceil(top + (items.length - 1) * ROW_H + Math.max(SWATCH, FONT_PX) + PAD);
+    aria = `${title ? title + ": " : ""}${items.map((it) => it.label).join(", ")}`;
+    paint = () => items.forEach((it, i) => {
+      const cy = top + i * ROW_H + SWATCH / 2;
+      ctx.fillStyle = it.color;
+      roundRect(ctx, PAD, cy - SWATCH / 2, SWATCH, SWATCH, 2);
+      ctx.fill();
+      ctx.fillStyle = t.text;
+      ctx.textBaseline = "middle";
+      ctx.fillText(it.label, PAD + SWATCH + 6, cy + 0.5);
+    });
+  } else {
+    const min = o.min ?? 0, max = o.max ?? 1;
+    const fmt2 = o.format ?? formatFor(niceStep(min, max, o.ticks ?? 5));
+    W2 = Math.ceil(Math.max(o.width ?? 200, titleW + 2 * PAD));
+    const barX = PAD, barW = W2 - 2 * PAD, labelY = top + BAR_H + TICK_H + 2;
+    H2 = labelY + FONT_PX + PAD;
+    const x = (v) => barX + (max === min ? 0.5 : (v - min) / (max - min)) * barW;
+    const labels = fitLabels(niceTicks(min, max, o.ticks ?? 5).map((v) => ({ v, text: fmt2(v), x: x(v), w: ctx.measureText(fmt2(v)).width })), W2);
+    aria = `${title ? title + ": " : ""}${fmt2(min)} to ${fmt2(max)}`;
+    paint = () => {
+      const ramp = o.ramp;
+      if (ramp) {
+        const SAMPLES = 64;
+        const g = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+        for (let i = 0; i <= SAMPLES; i++) g.addColorStop(i / SAMPLES, ramp.hex(i / SAMPLES));
+        ctx.fillStyle = g;
+      } else ctx.fillStyle = t.textFaint;
+      roundRect(ctx, barX, top, barW, BAR_H, 2);
+      ctx.fill();
+      ctx.textBaseline = "top";
+      for (const l of labels) {
+        ctx.fillStyle = t.textFaint;
+        ctx.fillRect(Math.round(l.x) - 0.5, top + BAR_H, 1, TICK_H);
+        ctx.fillStyle = t.textDim;
+        ctx.fillText(l.text, l.left, labelY);
+      }
+    };
+  }
+  const dpr = Math.max(1, globalThis.devicePixelRatio || 1);
+  canvas.width = Math.round(W2 * dpr);
+  canvas.height = Math.round(H2 * dpr);
+  canvas.style.width = `${W2}px`;
+  canvas.style.height = `${H2}px`;
+  canvas.setAttribute("aria-label", aria);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W2, H2);
+  ctx.fillStyle = withAlpha(t.panelBg, 0.9);
+  roundRect(ctx, 0.5, 0.5, W2 - 1, H2 - 1, 6);
+  ctx.fill();
+  ctx.strokeStyle = t.border;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  if (title) {
+    ctx.font = fontTitle;
+    ctx.fillStyle = t.text;
+    ctx.textBaseline = "top";
+    ctx.fillText(title, PAD, PAD);
+  }
+  ctx.font = fontLabel;
+  paint();
+}
+function niceStep(min, max, count) {
+  const span = Math.abs(max - min);
+  if (!(span > 0) || !Number.isFinite(span)) return 1;
+  const raw = span / Math.max(1, count);
+  const p = 10 ** Math.floor(Math.log10(raw)), m = raw / p;
+  return (m >= Math.sqrt(50) ? 10 : m >= Math.sqrt(10) ? 5 : m >= Math.SQRT2 ? 2 : 1) * p;
+}
+function niceTicks(min, max, count) {
+  const lo = Math.min(min, max), hi = Math.max(min, max);
+  if (!(hi > lo)) return [lo];
+  const s = niceStep(lo, hi, count);
+  const out = [];
+  for (let i = Math.ceil(lo / s - 1e-9); i * s <= hi + s * 1e-9; i++) out.push(+(i * s).toPrecision(12));
+  return out.length >= 2 ? out : [lo, hi];
+}
+function formatFor(step2) {
+  const decimals = Math.max(0, -Math.floor(Math.log10(step2) + 1e-9));
+  return (v) => {
+    const s = v.toFixed(Math.min(decimals, 20));
+    return /^-0(\.0*)?$/.test(s) ? s.slice(1) : s.replace(/^-/, "\u2212");
+  };
+}
+function fitLabels(ticks, W2) {
+  const placed = ticks.map((l) => ({ ...l, left: Math.min(Math.max(l.x - l.w / 2, EDGE), W2 - EDGE - l.w) }));
+  const zero = Math.max(0, placed.findIndex((l) => l.v === 0));
+  for (let k = 1; k <= placed.length; k++) {
+    const keep = placed.filter((_, i) => (i - zero) % k === 0);
+    if (keep.every((l, i) => i === 0 || l.left >= keep[i - 1].left + keep[i - 1].w + LABEL_GAP)) return keep;
+  }
+  return placed.slice(0, 1);
+}
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(x, y, w, h, r);
+  else ctx.rect(x, y, w, h);
+}
+function withAlpha(color, a) {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(color);
+  return m ? `rgba(${parseInt(m[1], 16)},${parseInt(m[2], 16)},${parseInt(m[3], 16)},${a})` : color;
+}
+
 // src/gui/ControlPanel.ts
 var DEFAULT_GROUP = "Parameters";
 var LABEL_MIN = 56;
@@ -27563,9 +27924,10 @@ var ControlPanel = class {
     for (const it of items) if (inTab(it.tab, it.menu)) groupOf(it.group).items.push(it);
     for (const b of buttons) if (inTab(b.tab, b.menu)) groupOf(b.group).buttons.push(b);
     for (const r of customRows) if (inTab(r.tab)) groupOf(r.group).rows.push(r);
-    const bare = groups.size === 1 && groups.has(DEFAULT_GROUP);
+    let first = true;
     for (const [name, content] of groups) {
-      body.appendChild(this.buildSection(name, content, bare));
+      body.appendChild(this.buildSection(name, content, first && name === DEFAULT_GROUP));
+      first = false;
     }
     if (activeExtra) {
       const host = document.createElement("div");
@@ -27945,25 +28307,25 @@ var ControlPanel = class {
     const row = document.createElement("div");
     row.style.cssText = "display:flex;align-items:center;gap:8px;margin-bottom:5px;min-height:26px;";
     const label = document.createElement("span");
-    label.style.cssText = `width:var(--tekto-label-w,80px);flex-shrink:0;font-size:11px;color:${t.textDim};`;
+    label.style.cssText = `width:min(var(--tekto-label-w,80px),max(40%,100% - ${CONTROL_MIN + 8}px));flex-shrink:0;font-size:11px;color:${t.textDim};`;
     label.textContent = def.label ?? labelFromKey(it.key);
     row.appendChild(label);
     switch (def.type) {
       case "float":
       case "int": {
-        const step = def.step ?? (def.type === "int" ? 1 : (def.max - def.min) / 100);
+        const step2 = def.step ?? (def.type === "int" ? 1 : (def.max - def.min) / 100);
         const input = document.createElement("input");
         input.type = "range";
         input.min = String(def.min);
         input.max = String(def.max);
-        input.step = String(step);
+        input.step = String(step2);
         input.value = String(this.store.get(it.key));
         input.className = "tekto-slider";
         input.style.cssText = `flex:1;width:0;min-width:40px;--tekto-track:${t.controlBorder};--tekto-thumb:${it.accent || t.accent};`;
         const valueSpan = document.createElement("span");
-        valueSpan.style.cssText = `width:42px;text-align:right;font-size:10px;color:${t.accent};`;
-        const isInt = def.type === "int" || step >= 1;
-        const rawDec = isInt ? 0 : Math.max(2, -Math.floor(Math.log10(step) - 1e-3));
+        valueSpan.style.cssText = `width:42px;flex-shrink:0;white-space:nowrap;text-align:right;font-size:10px;color:${t.accent};`;
+        const isInt = def.type === "int" || step2 >= 1;
+        const rawDec = isInt ? 0 : Math.max(2, -Math.floor(Math.log10(step2) - 1e-3));
         const decimals = Math.min(Math.max(0, rawDec), 20);
         const fmt2 = (v) => isInt ? String(Math.round(v)) : Number(v).toFixed(decimals);
         valueSpan.textContent = fmt2(this.store.get(it.key));
@@ -29615,12 +29977,12 @@ var CameraRig = class {
     const c = this.core.controls;
     if (!c) return false;
     const pos = c.object.position;
-    const step = pos.distanceTo(this._lastCamPos);
+    const step2 = pos.distanceTo(this._lastCamPos);
     this._lastCamPos.copy(pos);
-    if (!(step > 1e-9 * Math.max(pos.distanceTo(c.target), 1))) return false;
+    if (!(step2 > 1e-9 * Math.max(pos.distanceTo(c.target), 1))) return false;
     if (c.enableDamping && c.dampingFactor > 0) {
       const f2 = c.dampingFactor;
-      const rest = step * (1 - f2) / f2 / Math.max(pos.distanceTo(c.target), 1e-9);
+      const rest = step2 * (1 - f2) / f2 / Math.max(pos.distanceTo(c.target), 1e-9);
       if (rest < 1e-4) {
         c.enableDamping = false;
         c.update();
@@ -33922,8 +34284,8 @@ function panelFrame(o) {
   top.style.cssText = `
     position:absolute; left:0; top:${o.top}px; height:${PANEL_TOP_H}px; box-sizing:border-box; z-index:9;
     display:flex; align-items:center; padding:0 32px 0 14px; overflow:hidden; user-select:none;
-    background:${t.panelBg}; border-right:1px solid ${t.border};
-    border-bottom:1px solid ${t.plain && !named ? "transparent" : t.border};
+    background:var(--tekto-panel-bg, ${t.panelBg}); border-right:1px solid var(--tekto-panel-border, ${t.border});
+    border-bottom:1px solid ${t.plain && !named ? "transparent" : `var(--tekto-panel-border, ${t.border})`};
   `;
   const name = document.createElement("span");
   name.textContent = o.title ?? "";
@@ -33931,6 +34293,9 @@ function panelFrame(o) {
   name.style.cssText = t.plain ? `font:600 13px/1 ${t.font};color:${t.text};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;` : `font:500 10px/1 ${t.font};letter-spacing:1.6px;text-transform:uppercase;color:${t.textDim};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;`;
   top.appendChild(name);
   panelEl.style.marginTop = `${PANEL_TOP_H}px`;
+  panelEl.dataset.tektoControls = "";
+  panelEl.style.background = `var(--tekto-panel-bg, ${t.panelBg})`;
+  panelEl.style.borderRightColor = `var(--tekto-panel-border, ${t.border})`;
   const chevron = document.createElement("button");
   chevron.type = "button";
   chevron.dataset.tektoPanelFold = "";
@@ -35274,10 +35639,10 @@ function pathLength(s) {
 function dist(a, b) {
   return Math.hypot(a[0] - b[0], a[1] - b[1]);
 }
-function resample(s, step, max) {
+function resample(s, step2, max) {
   const L = pathLength(s);
   if (s.length < 2 || L === 0) return s.slice(0, 1);
-  const d = Math.max(step, L / max);
+  const d = Math.max(step2, L / max);
   const out = [s[0]];
   let carry = 0;
   for (let i = 1; i < s.length; i++) {
@@ -35299,10 +35664,10 @@ function gridInside(ring2, target) {
     const q = ring2[(i + 1) % ring2.length];
     return a + p[0] * q[1] - q[0] * p[1];
   }, 0)) / 2;
-  const step = Math.max(4, Math.sqrt(area / target));
+  const step2 = Math.max(4, Math.sqrt(area / target));
   const out = [];
-  for (let y = y0 + step / 2; y < y1; y += step) {
-    for (let x = x0 + step / 2; x < x1; x += step) if (inside([x, y], ring2)) out.push([x, y]);
+  for (let y = y0 + step2 / 2; y < y1; y += step2) {
+    for (let x = x0 + step2 / 2; x < x1; x += step2) if (inside([x, y], ring2)) out.push([x, y]);
   }
   return out;
 }
@@ -35391,7 +35756,7 @@ var W = 172;
 var H = 60;
 var GAP_X = 60;
 var GAP_Y = 14;
-var PAD = 16;
+var PAD2 = 16;
 var StepsPanel = class {
   constructor(host, opts) {
     this.host = host;
@@ -35521,16 +35886,16 @@ var StepsPanel = class {
       const span = (depth.get(e.to) ?? 0) - (depth.get(e.from) ?? 0);
       return span > 1 ? 40 + (span - 2) * 8 : 0;
     };
-    const top0 = PAD + Math.min(90, Math.max(0, ...[...edges.values()].map(lift)));
+    const top0 = PAD2 + Math.min(90, Math.max(0, ...[...edges.values()].map(lift)));
     const rows = /* @__PURE__ */ new Map();
     const at = /* @__PURE__ */ new Map();
     for (const s of top) {
       const d = depth.get(s.id), r = rows.get(d) ?? 0;
       rows.set(d, r + 1);
-      at.set(s.id, { x: PAD + d * (W + GAP_X), y: top0 + r * (H + GAP_Y) });
+      at.set(s.id, { x: PAD2 + d * (W + GAP_X), y: top0 + r * (H + GAP_Y) });
     }
-    const width = PAD * 2 + (Math.max(...depth.values()) + 1) * (W + GAP_X) - GAP_X;
-    const height = top0 + PAD + Math.max(...rows.values()) * (H + GAP_Y) - GAP_Y;
+    const width = PAD2 * 2 + (Math.max(...depth.values()) + 1) * (W + GAP_X) - GAP_X;
+    const height = top0 + PAD2 + Math.max(...rows.values()) * (H + GAP_Y) - GAP_Y;
     this.graph.textContent = "";
     const canvas = document.createElement("div");
     canvas.style.cssText = `position:relative;width:${width}px;height:${height}px;`;
@@ -35600,8 +35965,8 @@ var StepsPanel = class {
     const t = this.opts.theme;
     const d = this.details;
     d.textContent = "";
-    const step = this.trace?.steps.find((s) => s.id === this.selected);
-    if (!step) {
+    const step2 = this.trace?.steps.find((s) => s.id === this.selected);
+    if (!step2) {
       d.style.color = t.textFaint;
       d.textContent = "Click a step for its inputs, output and code, and to leave a note for the agent. Click geometry to find the step that made it.";
       return;
@@ -35620,20 +35985,20 @@ var StepsPanel = class {
       d.append(row);
     };
     const h = document.createElement("div");
-    h.textContent = step.id;
+    h.textContent = step2.id;
     h.style.cssText = `color:${t.text};font-weight:600;margin-bottom:6px;`;
     d.append(h);
-    if (step.src) line("code", shortSrc(step.src));
-    line("time", `${step.ms.toFixed(2)} ms`);
-    for (const i of step.inputs) line(`in ${i.name}`, `${i.summary}${i.from ? ` \u2190 ${i.from.join(", ")}` : ""}`);
-    line("out", step.error ? `threw: ${step.error}` : step.output, true);
-    const inner2 = this.trace.steps.filter((c) => c.parent === step.id);
+    if (step2.src) line("code", shortSrc(step2.src));
+    line("time", `${step2.ms.toFixed(2)} ms`);
+    for (const i of step2.inputs) line(`in ${i.name}`, `${i.summary}${i.from ? ` \u2190 ${i.from.join(", ")}` : ""}`);
+    line("out", step2.error ? `threw: ${step2.error}` : step2.output, true);
+    const inner2 = this.trace.steps.filter((c) => c.parent === step2.id);
     if (inner2.length) line("inside", `${inner2.length} steps (${[...new Set(inner2.map((c) => c.name))].join(", ")})`);
-    if (step.objects.length) line("drew", `${step.objects.length} objects`);
+    if (step2.objects.length) line("drew", `${step2.objects.length} objects`);
     const note = document.createElement("textarea");
     note.placeholder = "What should change in this step?";
     note.rows = 3;
-    const existing = this.marks.find((m) => m.step === step.id);
+    const existing = this.marks.find((m) => m.step === step2.id);
     note.value = existing?.note ?? "";
     note.style.cssText = `width:100%;box-sizing:border-box;margin-top:8px;resize:vertical;background:rgba(255,255,255,.05);
       border:1px solid rgba(255,255,255,.15);border-radius:5px;color:${t.text};font:11px/1.4 ${t.font};padding:5px 7px;`;
@@ -35644,8 +36009,8 @@ var StepsPanel = class {
     mark.style.cssText = button(t) + "margin-top:6px;";
     mark.addEventListener("click", () => {
       const text = note.value.trim();
-      this.marks = this.marks.filter((m) => m.step !== step.id);
-      if (text) this.marks.push({ step: step.id, note: text, name: step.name, inputs: step.inputs, output: step.output, ms: step.ms, ...step.src ? { src: step.src } : {} });
+      this.marks = this.marks.filter((m) => m.step !== step2.id);
+      if (text) this.marks.push({ step: step2.id, note: text, name: step2.name, inputs: step2.inputs, output: step2.output, ms: step2.ms, ...step2.src ? { src: step2.src } : {} });
       this.paint();
     });
     d.append(note, mark);
@@ -35668,10 +36033,10 @@ var StepsPanel = class {
       this.opts.onSelect(null, []);
       return;
     }
-    const step = trace.steps.find((s) => s.id === this.selected) ?? null;
+    const step2 = trace.steps.find((s) => s.id === this.selected) ?? null;
     const ids = /* @__PURE__ */ new Set([this.selected]);
     for (const s of trace.steps) if (s.parent && ids.has(s.parent)) ids.add(s.id);
-    this.opts.onSelect(step, trace.steps.filter((s) => ids.has(s.id)).flatMap((s) => s.objects));
+    this.opts.onSelect(step2, trace.steps.filter((s) => ids.has(s.id)).flatMap((s) => s.objects));
   }
 };
 function button(t) {
@@ -37041,8 +37406,8 @@ var SketchInstance = class {
         const panel = this._stepsPanel;
         if (!down2 || !panel?.isOpen || Math.hypot(e.clientX - down2.x, e.clientY - down2.y) > 4) return;
         const hit = this.renderer.hitAt(e.clientX, e.clientY);
-        const step = hit ? panel.stepOfObject(hit.id) : void 0;
-        if (step) panel.select(step);
+        const step2 = hit ? panel.stepOfObject(hit.id) : void 0;
+        if (step2) panel.select(step2);
       });
     }
     this._stepsPanel.show(this._trace.steps.length ? this._trace.toJSON() : null);
@@ -37303,7 +37668,7 @@ function buildSun(renderer, t) {
     const deg = (r) => Math.round(r * 180 / Math.PI);
     readout.textContent = `alt ${deg(sun.altitude)}\xB0  az ${deg(sun.azimuth)}\xB0  ${sun.isDaytime ? "day" : "night"}`;
   };
-  const num2 = (label, value, min, max, step, onCh) => {
+  const num2 = (label, value, min, max, step2, onCh) => {
     const r = document.createElement("label");
     r.style.cssText = `display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:11px; color:${t.textDim};`;
     const sp = document.createElement("span");
@@ -37313,7 +37678,7 @@ function buildSun(renderer, t) {
     i.value = String(value);
     i.min = String(min);
     i.max = String(max);
-    i.step = String(step);
+    i.step = String(step2);
     i.style.cssText = `width:84px; padding:2px 5px; background:${t.fieldBg}; border:1px solid ${t.border}; border-radius:4px; color:inherit; font:inherit; font-size:11px;`;
     i.oninput = () => onCh(Number(i.value));
     r.append(sp, i);
@@ -37949,8 +38314,8 @@ function appShell(config) {
       renderer.canvasEl.addEventListener("pointerup", (e) => {
         if (!down2 || !stepsPanel?.isOpen || Math.hypot(e.clientX - down2.x, e.clientY - down2.y) > 4) return;
         const hit = renderer.hitAt(e.clientX, e.clientY);
-        const step = hit ? stepsPanel.stepOfObject(hit.id) : void 0;
-        if (step) stepsPanel.select(step);
+        const step2 = hit ? stepsPanel.stepOfObject(hit.id) : void 0;
+        if (step2) stepsPanel.select(step2);
       });
     }
     stepsPanel.show(trace.steps.length ? trace.toJSON() : null);
@@ -38111,7 +38476,7 @@ var ProposalBar = class {
     const head = make("div", `display:flex;align-items:center;gap:6px;color:${t.textDim};font-size:11px;`);
     head.append(make("span", "flex:1;", `${p.by} proposes${open.length > 1 ? ` \xB7 ${this.index + 1} of ${open.length}` : ""}`));
     if (open.length > 1) {
-      const step = (d, label, name) => {
+      const step2 = (d, label, name) => {
         const b = button2(label, false, () => {
           this.index = (this.index + d + open.length) % open.length;
           this.render();
@@ -38120,7 +38485,7 @@ var ProposalBar = class {
         b.setAttribute("aria-label", name);
         return b;
       };
-      head.append(step(-1, "\u2039", "Previous proposal"), step(1, "\u203A", "Next proposal"));
+      head.append(step2(-1, "\u2039", "Previous proposal"), step2(1, "\u203A", "Next proposal"));
     }
     const title = make("div", "font-weight:600;font-size:13px;margin:3px 0 2px;", p.label);
     title.dataset.proposal = p.id;
@@ -38289,7 +38654,12 @@ var Sketch2DInstance = class {
       menuHost = header;
     }
     this.commands.add(this.history.commands());
-    this.unbindKeys = this.commands.bindKeys();
+    const keys = this.config.keys ?? "page";
+    if (keys === "app") {
+      root.tabIndex = -1;
+      root.style.outline = "none";
+    }
+    if (keys) this.unbindKeys = this.commands.bindKeys(keys === "app" ? root : window);
     const slot = paper ? null : menuSlot(menuHost);
     if (slot) {
       this.menus = menuBar(this.commands, { theme: t });
@@ -38327,7 +38697,7 @@ var Sketch2DInstance = class {
     this.logEl.dataset.tektoStatus = "";
     this.logEl.style.cssText = `
       flex:none; display:none; flex-wrap:wrap; column-gap:20px; padding:5px 12px;
-      background:${t.panelBg}; border-top:1px solid ${t.border};
+      background:var(--tekto-status-bg, ${t.panelBg}); border-top:1px solid var(--tekto-panel-border, ${t.border});
       font-size:11px; line-height:1.55; color:${t.text};
     `;
     this.logColors = [t.textFaint, t.text];
@@ -38759,6 +39129,7 @@ var Sketch2DInstance = class {
   Callouts,
   Capsule2D,
   CltConstruction,
+  ColorRamp,
   Commands,
   ControlPanel,
   CubicBezierCurve,
@@ -38922,6 +39293,7 @@ var Sketch2DInstance = class {
   closestPointOnSegment,
   cltLayers,
   collabColor,
+  colorLegend,
   computeEffectiveLock,
   computeEffectiveVisibility,
   contactBetween,

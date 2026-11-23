@@ -1,3 +1,7 @@
+/**
+ * tekto — API index for agents: ../llms.txt (start here: names, "use Y, not Z", five rules),
+ * ../llms-full.txt (every export with its one-line doc), ../CHANGELOG.md (what changed per release).
+ */
 import { V as Vec3, d as Vec2, h as Mat4, T as Triangle, A as AABB, M as Mesh, e as MeshData, S as Scene } from './Scene-D4ExzRe1.mjs';
 export { F as ColoredMeshData, f as LegacyMeshJSON, g as LightSpec, L as LightingMode, i as MeshEdge, j as MeshFace, k as MeshJSON, l as MeshNode, m as MeshValidation, O as ObjFile, n as ObjMaterial, o as ObjMeshData, P as Projection, R as RenderMode, p as SceneEvent, q as SceneEventListener, r as SceneJSON, a as SceneObject, s as SceneObjectType, b as SectionRequest, c as StandardView, t as Vec4, u as VisualStyle } from './Scene-D4ExzRe1.mjs';
 import { G as Ring2, z as MultiPoly2, S as SeededRandom, k as Dxf2DContent, I as Segment, J as Sheet, T as SheetRasterOptions } from './download-Bf3TpYkF.mjs';
@@ -139,6 +143,98 @@ declare const VecMath: {
         py: number;
     };
 };
+
+/**
+ * Colour ramps for analysis values: a scale over 0..1 built from stops and interpolated in
+ * OKLab, so equal steps in t look like equal steps in colour. The built-in ramps follow the
+ * data-viz rules:
+ *
+ *   sequential   magnitude — ONE hue (blue), light→dark. The near-zero end recedes toward the
+ *                background: low is the light step on a light background and the dark step on
+ *                a dark one. Dark mode is its own selected steps, not a flip of light.
+ *   diverging    polarity — blue and red arms, as many steps each, meeting at a NEUTRAL GREY
+ *                (never a hue at the midpoint). The red arm sits on the blue arm's lightness.
+ *   categorical  identity — 8 colours in a fixed order. Never cycled, never generated: past 8,
+ *                fold the rest into "other".
+ *
+ * No rainbow. No DOM, no three.js: the legend that shows a ramp is `colorLegend` in "tekto".
+ */
+/** An sRGB colour, each channel in 0..1. */
+type RGB = [number, number, number];
+type Mode = "dark" | "light";
+/**
+ * A colour scale over 0..1 built from stops, interpolated in OKLab (perceptually even, unlike
+ * a mix in sRGB, which dips grey and dark between distant hues).
+ *
+ *   const ramp = ColorRamp.sequential();                       // blue, for the dark 3D view
+ *   mesh.setColors(ramp.colors(heights));                      // per node, range = min..max
+ *   scene.addMesh(mesh);                                       // drawn in its node colours
+ *   ramp.hex(0.5);                                             // "#5598e7" (step 350), for CSS
+ *
+ * A mesh with node colours is drawn in them (`addMesh`, `lab.mesh`, `addFlatMesh`), not in its
+ * style colour.
+ *
+ * Lit faces darken their colour; the renderer config `flatLighting: "plain"` (e.g.
+ * `appShell({ renderer: { flatLighting: "plain" } })`) keeps a face toward the sky true to the
+ * legend. Show the scale with `colorLegend` (from "tekto").
+ *
+ * @experimental No app uses this yet; it may still change.
+ */
+declare class ColorRamp {
+    private readonly rgb;
+    private readonly lab;
+    /** A ramp through `stops`, evenly spaced over 0..1: hex strings or [r, g, b] in 0..1 (sRGB). */
+    constructor(stops: (string | RGB)[]);
+    /** The colour at `t` (clamped to 0..1), as sRGB 0..1. */
+    at(t: number): RGB;
+    /** The colour at `t` (clamped to 0..1) as "#rrggbb". */
+    hex(t: number): string;
+    /**
+     * Per-value RGBA (length 4·n, alpha 1), ready for `Mesh.setColors` when the values are per
+     * node; NaN, ±Infinity or a missing entry get `missing` (default the muted grey #898781).
+     * `range` maps `min` to the ramp's start and `max` to its end (default the finite values'
+     * min..max; equal ends put every value mid-ramp). For a diverging ramp pass a range
+     * symmetric about your baseline, `{ min: -m, max: m }`, so the grey sits at zero.
+     *
+     * The channels are LINEAR light, which is how the renderer reads node colours (three.js
+     * takes vertex colours as linear and encodes them for the screen), so the view shows the
+     * same colours as `hex()` and the legend. `at()` and `hex()` are sRGB, for CSS and canvas.
+     */
+    colors(values: ArrayLike<number>, range?: {
+        min: number;
+        max: number;
+    }, missing?: RGB): Float32Array;
+    /** A CSS `linear-gradient` of the ramp (sampled densely, so CSS's sRGB mix follows the OKLab ramp), e.g. for a legend bar. */
+    css(direction?: string): string;
+    /** `n` evenly spaced hex colours from start to end (one: the middle), for an ordinal or stepped scale. */
+    steps(n: number): string[];
+    /** The same ramp run the other way. */
+    reversed(): ColorRamp;
+    /**
+     * Magnitude: blue, one hue, its near-zero end receding into the background. `"dark"`
+     * (default; tekto's 3D view is dark) runs from step 600 #184f95 (low) up to step 100 #cde2fb
+     * (high), 11 stops; `"light"` from step 100 (low) to step 700 #0d366b (high), 13 stops, so
+     * `at(k / 12)` is step 100 + 50·k. As separate marks on a light surface (ordinal classes)
+     * start at step 300 (t = 0.33), where a class still clears 2:1 against the background.
+     */
+    static sequential(mode?: Mode): ColorRamp;
+    /**
+     * Polarity: blue (low) – neutral grey (t = 0.5) – red (high), the same number of steps on
+     * each arm and the two arms on the same lightness. `"dark"` (default): steps 200 → 600 of
+     * each arm meeting at #383835, extremes light; `"light"`: steps 700 → 100 meeting at
+     * #f0efec, extremes dark. Map with a range symmetric about the baseline.
+     */
+    static diverging(mode?: Mode): ColorRamp;
+    /** The 8 categorical colours in their fixed order (blue, orange, aqua, yellow, magenta, green, violet, red); assign in order, fold past 8 into "other". */
+    static categorical(mode?: Mode): string[];
+    /** sRGB at t: the stop itself where t lands on one, else the OKLab mix of the two around it. */
+    private srgbAt;
+    private linearAt;
+    /** The stop before t (clamped to 0..1) and how far t is past it, 0 ≤ f < 1. */
+    private locate;
+    /** Linear RGB a share `f` of the way from stop i to stop i + 1, mixed in OKLab. */
+    private mix;
+}
 
 /**
  * Tekto Plane — Infinite plane (ax + by + cz + d = 0).
@@ -710,7 +806,7 @@ type TraversalCallback = (polygons: BspPolygon[]) => void;
 /**
  * A BSP tree of convex polygons, for CSG on closed solids: build with `fromPolygons`/`fromMesh`,
  * combine with `union`/`subtract`/`intersect` (new trees, inputs unchanged), read back with `toMesh()`
- * (indexed typed arrays, not a `Mesh`). Also classifies points and walks polygons in depth order.
+ * (indexed typed arrays, not a `Mesh`; `Mesh.fromArrays(positions, indices)` makes one). Also classifies points and walks polygons in depth order.
  */
 declare class BspTree {
     root: BspNode | null;
@@ -721,7 +817,10 @@ declare class BspTree {
     static fromMesh(positions: Float32Array, indices: Uint32Array): BspTree;
     /** Collect all polygons in the tree. */
     toPolygons(): BspPolygon[];
-    /** Triangulate all polygons and return as typed arrays (shared vertices). */
+    /**
+     * Triangulate all polygons and return them as typed arrays (shared vertices) — not a `Mesh`.
+     * For a `Mesh`: `const { positions, indices } = tree.toMesh(); Mesh.fromArrays(positions, indices)`.
+     */
     toMesh(): {
         positions: Float32Array;
         indices: Uint32Array;
@@ -5018,4 +5117,4 @@ declare function neighboursOf(id: number, all: Adjacency[]): {
     tolerance: number;
 }[];
 
-export { AABB, type AddWallSystemOptions, type Adjacency, type AdjacencyOptions, ArcCurve, type Axis, BUILDING_COLLECTIONS, BUILDING_SCHEMA, BalloonFrame, type BalloonFrameOptions, type BindBuildingOptions, BlobDetect, type Box, type BspNode, type BspPolygon, BspTree, Building, type BuildingBinding, type BuildingCollection, type BuildingData, type BuildingDetail, type BuildingIssue, type BuildingPlanOptions, type BuildingRecords, BuildingSession, type BuildingSessionOptions, type BuildingSlabType, type BuildingSpaceType, type BuildingSummary, type BuildingTypes, type BuildingWallType, Capsule2D, CltConstruction, type CltOptions, type ConnectionType, type Contact, CubicBezierCurve, Curvature, CurveUtils, type CutListItem, Delaunay2D, DistanceTransform, Doc, DocJSON, DocPatch, type DoorOperation, Dxf2DContent, ExtrudedRibbon, type ExtrudedRibbonOptions, MeshData as FlatMeshData, FloodFill, Graph, GridGraph, HelixCurve, HolzrahmenBau, HolzrahmenBauJointStyle, type HolzrahmenBauOptions, type ICurve, type IMetricCurve, type ISdf, type IfcElementData, IfcFile, IfcModel, type IfcModelData, type IfcParseElementsOptions, type IfcParseOptions, type IfcRelations, type IfcSpatialNode, IfcWriter, type IfcWriterOptions, type Intersect2DResult, Intersections, type JointKind, type JointParticipant, type JointStyle, type JointTrim, type JoistOrientationOptions, JoistedSlab, type JoistedSlabOptions, type LatticeType, type LayerPosition, LineCurve, MITER_LIMIT, MarchingCubes, MarchingSquares, Mat4, type MaterialLayer, Mesh, MeshAnalysis, type MeshBuffers, MeshCleanup, MeshSubdivide, MeshTransform, type MicroPatternType, MultiPoly2, NoFitPolygon, NurbsCurve, NurbsSurface, type OpeningFillPart, type OpeningRecord, OpeningType, type OpeningTypeOptions, PGFace, PGHalfEdge, PGVertex, PROPOSALS, type PartProfile, Particles2D, type Particles2DSpring, PatchResult, type Pdf2DOptions, type PerpSegment, PixelView, PlanarGraph, PlanarGraphCleanup, PlanarGraphRepair, Plane, type PointClassification, PolylineCurve, type PropertyMap, type Proposal, type ProposalChange, type ProposalInfo, Ray, type RealizedSlab, type RealizedStorey, type RealizedWall, RecordSchema, RibbonEndTrim, RibbonFrame, RibbonJoint, RibbonOpening, RibbonSystem, RigidBody2D, type RigidBodyConfig, Ring2, Roof, type RoofGable, type RoofKind, type RoofOptions, type RoofPlane, type RoofRecord, Scene, SdfBlend, SdfBoundedExtrude, SdfBox, SdfCapsule, SdfCone, SdfCylinder, SdfEllipsoid, SdfExtrude, SdfGradient, SdfIntersect, SdfLattice, SdfLine as SdfLineField, SdfMicrostructure, SdfMirror, SdfOffset, SdfOnion, SdfOps, SdfPlane as SdfPlaneField, SdfRadialArray, SdfRevolution, SdfShell, SdfSmoothSubtract, SdfSmoothUnion, SdfSphere, SdfSubtract, SdfTorus, SdfTransform, SdfTwist, SdfUnion, SdfUtils, SdfVoronoi, SeededRandom, Segment, Sheet, SheetRasterOptions, Slab, type SlabConstruction, type SlabContext, SlabOpening, type SlabOpeningRecord, type SlabOptions, type SlabPart, type SlabPartRole, type SlabRecord, SlabType, type SlabTypeOptions, SolidConstruction, SolidSlabConstruction, Space, type SpaceOptions, type SpaceRecord, Sphere, type Spring, Spring2D, type SpringConfig, SpringSystem3D, Stair, type StairFlight, type StairOpeningOptions, type StairOptions, type StairPart, type StairRecord, type StairShape, type StairStructure, StairType, type StairTypeOptions, type StepAnalysis, type StepEdge, type StepInput, type StepRecord, StepTrace, type StepTraceJSON, type StoreyRecord, type StreamlineOptions, StreamlineTracer, Triangle, type UpAxis, Vec2, Vec3, VecMath, type VertexCurvature, Voronoi2D, type VoronoiCell, type VoronoiOptions, VoxelGrid, VoxelGrid2D, Wall, type WallConstruction, WallJoint, type WallJointOptions, WallOpening, type WallOptions, type WallPart, type WallPartRole, type WallRecord, WallSystem, WallType, type WindowPartitioning, type XY, acceptProposal, bindBuilding, boundingWalls, boxOf, buildCutList, buildingPlan, buildingSchema, chooseJoistDirection, clampedUniformKnots, cltLayers, contactBetween, defaultBuildingTypes, describeValue, edgeOutwardVisibility, findAdjacent, holzrahmenbauLayers, joistDirectionFromBounds, joistDirectionFromPCA, joistDirectionFromSupports, lineClipPolygon, listProposals, neighboursOf, openingFill, patchChanges, patchedCollections, perpVisibility, perpVisibilityOfPolys, polygonFromVertices, propose, realize, realizeBuilding, realizeSlab, rejectProposal, repelBodies, reverse as reverseContact, validateBuilding, writePdf2D };
+export { AABB, type AddWallSystemOptions, type Adjacency, type AdjacencyOptions, ArcCurve, type Axis, BUILDING_COLLECTIONS, BUILDING_SCHEMA, BalloonFrame, type BalloonFrameOptions, type BindBuildingOptions, BlobDetect, type Box, type BspNode, type BspPolygon, BspTree, Building, type BuildingBinding, type BuildingCollection, type BuildingData, type BuildingDetail, type BuildingIssue, type BuildingPlanOptions, type BuildingRecords, BuildingSession, type BuildingSessionOptions, type BuildingSlabType, type BuildingSpaceType, type BuildingSummary, type BuildingTypes, type BuildingWallType, Capsule2D, CltConstruction, type CltOptions, ColorRamp, type ConnectionType, type Contact, CubicBezierCurve, Curvature, CurveUtils, type CutListItem, Delaunay2D, DistanceTransform, Doc, DocJSON, DocPatch, type DoorOperation, Dxf2DContent, ExtrudedRibbon, type ExtrudedRibbonOptions, MeshData as FlatMeshData, FloodFill, Graph, GridGraph, HelixCurve, HolzrahmenBau, HolzrahmenBauJointStyle, type HolzrahmenBauOptions, type ICurve, type IMetricCurve, type ISdf, type IfcElementData, IfcFile, IfcModel, type IfcModelData, type IfcParseElementsOptions, type IfcParseOptions, type IfcRelations, type IfcSpatialNode, IfcWriter, type IfcWriterOptions, type Intersect2DResult, Intersections, type JointKind, type JointParticipant, type JointStyle, type JointTrim, type JoistOrientationOptions, JoistedSlab, type JoistedSlabOptions, type LatticeType, type LayerPosition, LineCurve, MITER_LIMIT, MarchingCubes, MarchingSquares, Mat4, type MaterialLayer, Mesh, MeshAnalysis, type MeshBuffers, MeshCleanup, MeshSubdivide, MeshTransform, type MicroPatternType, MultiPoly2, NoFitPolygon, NurbsCurve, NurbsSurface, type OpeningFillPart, type OpeningRecord, OpeningType, type OpeningTypeOptions, PGFace, PGHalfEdge, PGVertex, PROPOSALS, type PartProfile, Particles2D, type Particles2DSpring, PatchResult, type Pdf2DOptions, type PerpSegment, PixelView, PlanarGraph, PlanarGraphCleanup, PlanarGraphRepair, Plane, type PointClassification, PolylineCurve, type PropertyMap, type Proposal, type ProposalChange, type ProposalInfo, type RGB, Ray, type RealizedSlab, type RealizedStorey, type RealizedWall, RecordSchema, RibbonEndTrim, RibbonFrame, RibbonJoint, RibbonOpening, RibbonSystem, RigidBody2D, type RigidBodyConfig, Ring2, Roof, type RoofGable, type RoofKind, type RoofOptions, type RoofPlane, type RoofRecord, Scene, SdfBlend, SdfBoundedExtrude, SdfBox, SdfCapsule, SdfCone, SdfCylinder, SdfEllipsoid, SdfExtrude, SdfGradient, SdfIntersect, SdfLattice, SdfLine as SdfLineField, SdfMicrostructure, SdfMirror, SdfOffset, SdfOnion, SdfOps, SdfPlane as SdfPlaneField, SdfRadialArray, SdfRevolution, SdfShell, SdfSmoothSubtract, SdfSmoothUnion, SdfSphere, SdfSubtract, SdfTorus, SdfTransform, SdfTwist, SdfUnion, SdfUtils, SdfVoronoi, SeededRandom, Segment, Sheet, SheetRasterOptions, Slab, type SlabConstruction, type SlabContext, SlabOpening, type SlabOpeningRecord, type SlabOptions, type SlabPart, type SlabPartRole, type SlabRecord, SlabType, type SlabTypeOptions, SolidConstruction, SolidSlabConstruction, Space, type SpaceOptions, type SpaceRecord, Sphere, type Spring, Spring2D, type SpringConfig, SpringSystem3D, Stair, type StairFlight, type StairOpeningOptions, type StairOptions, type StairPart, type StairRecord, type StairShape, type StairStructure, StairType, type StairTypeOptions, type StepAnalysis, type StepEdge, type StepInput, type StepRecord, StepTrace, type StepTraceJSON, type StoreyRecord, type StreamlineOptions, StreamlineTracer, Triangle, type UpAxis, Vec2, Vec3, VecMath, type VertexCurvature, Voronoi2D, type VoronoiCell, type VoronoiOptions, VoxelGrid, VoxelGrid2D, Wall, type WallConstruction, WallJoint, type WallJointOptions, WallOpening, type WallOptions, type WallPart, type WallPartRole, type WallRecord, WallSystem, WallType, type WindowPartitioning, type XY, acceptProposal, bindBuilding, boundingWalls, boxOf, buildCutList, buildingPlan, buildingSchema, chooseJoistDirection, clampedUniformKnots, cltLayers, contactBetween, defaultBuildingTypes, describeValue, edgeOutwardVisibility, findAdjacent, holzrahmenbauLayers, joistDirectionFromBounds, joistDirectionFromPCA, joistDirectionFromSupports, lineClipPolygon, listProposals, neighboursOf, openingFill, patchChanges, patchedCollections, perpVisibility, perpVisibilityOfPolys, polygonFromVertices, propose, realize, realizeBuilding, realizeSlab, rejectProposal, repelBodies, reverse as reverseContact, validateBuilding, writePdf2D };

@@ -6,6 +6,13 @@ before 1.0, breaking changes bump the minor version. See
 
 ## Unreleased
 
+## 0.11.1 — 2026-11-23
+
+Colour scales for analysis values, and what the lecture apps' upgrade to 0.11.0 asked for: the
+agent docs reachable from a consuming project, Undo per app when several share a page, stable
+panel styling hooks. Additive only: nothing breaks, and no default changes except the panel's
+heading and label column below.
+
 From the lecture apps' upgrade to 0.11.0 (29 `sketch2d` figures in one book):
 
 - **Agents find the docs from a consuming project.** The README's first screen says to read `node_modules/tekto/llms.txt`; every entry's `.d.ts` starts with a pointer to `llms.txt`, `llms-full.txt` and `CHANGELOG.md`; the package now ships `CHANGELOG.md` and exports `tekto/llms.txt`, `tekto/llms-full.txt`, `tekto/CHANGELOG.md` and `tekto/package.json`. The llms.txt link to CLAUDE.md (rules for editing tekto itself) goes to GitHub, as the file is not shipped.

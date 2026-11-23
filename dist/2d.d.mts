@@ -1,4 +1,8 @@
-export { A as AnimateFn, D as DragHandle2DOpts, c as DrawFn, d as DrawSheetOptions, e as Lab2D, m as Pointer2D, n as PointerFn, R as Reactive, o as SelectOpts, r as SheetCanvas, s as SheetCanvasOptions, t as SheetTransform, u as Sketch2DConfig, v as Sketch2DFn, w as Sketch2DInstance, x as SliderOpts, V as View2D, G as drawSheet, H as fitSheet, O as sketch2d } from './2d-BHFZ2dGk.mjs';
+/**
+ * tekto — API index for agents: ../llms.txt (start here: names, "use Y, not Z", five rules),
+ * ../llms-full.txt (every export with its one-line doc), ../CHANGELOG.md (what changed per release).
+ */
+export { A as AnimateFn, D as DragHandle2DOpts, c as DrawFn, d as DrawSheetOptions, e as Lab2D, m as Pointer2D, n as PointerFn, R as Reactive, o as SelectOpts, r as SheetCanvas, s as SheetCanvasOptions, t as SheetTransform, u as Sketch2DConfig, v as Sketch2DFn, w as Sketch2DInstance, x as SliderOpts, V as View2D, G as drawSheet, H as fitSheet, O as sketch2d } from './2d-BZgKMuQB.mjs';
 export { d as Vec2, V as Vec3 } from './Scene-D4ExzRe1.mjs';
 export { a as AxoPolygon, b as Axonometric, c as AxonometricOptions, g as DimOptions, h as DrawOptions, i as Dxf2DArc, j as Dxf2DCircle, k as Dxf2DContent, l as Dxf2DLine, n as Dxf2DPoint, o as Dxf2DPolyline, q as Dxf2DText, D as DxfLayerDef, F as FilletResult, L as LevelOptions, z as MultiPoly2, P as Poly2, B as Polygon2D, C as PolygonBool, G as Ring2, S as SeededRandom, I as Segment, J as Sheet, K as SheetOptions, N as SheetPrim, U as SheetView, V as TextOptions, X as ViewOptions, Z as closestPointOnSegment, _ as createRandom, $ as download, a1 as noise, a2 as pickPrim, a5 as segmentSegmentClosest, a8 as stampName, a9 as writeDxf2D } from './download-Bf3TpYkF.mjs';
 import './ShadingBar-hs0G1nnA.mjs';

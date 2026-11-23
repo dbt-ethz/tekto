@@ -137,9 +137,10 @@ var ControlPanel = class {
     for (const it of items) if (inTab(it.tab, it.menu)) groupOf(it.group).items.push(it);
     for (const b of buttons) if (inTab(b.tab, b.menu)) groupOf(b.group).buttons.push(b);
     for (const r of customRows) if (inTab(r.tab)) groupOf(r.group).rows.push(r);
-    const bare = groups.size === 1 && groups.has(DEFAULT_GROUP);
+    let first = true;
     for (const [name, content] of groups) {
-      body.appendChild(this.buildSection(name, content, bare));
+      body.appendChild(this.buildSection(name, content, first && name === DEFAULT_GROUP));
+      first = false;
     }
     if (activeExtra) {
       const host = document.createElement("div");
@@ -519,7 +520,7 @@ var ControlPanel = class {
     const row = document.createElement("div");
     row.style.cssText = "display:flex;align-items:center;gap:8px;margin-bottom:5px;min-height:26px;";
     const label = document.createElement("span");
-    label.style.cssText = `width:var(--tekto-label-w,80px);flex-shrink:0;font-size:11px;color:${t.textDim};`;
+    label.style.cssText = `width:min(var(--tekto-label-w,80px),max(40%,100% - ${CONTROL_MIN + 8}px));flex-shrink:0;font-size:11px;color:${t.textDim};`;
     label.textContent = def.label ?? labelFromKey(it.key);
     row.appendChild(label);
     switch (def.type) {
@@ -535,7 +536,7 @@ var ControlPanel = class {
         input.className = "tekto-slider";
         input.style.cssText = `flex:1;width:0;min-width:40px;--tekto-track:${t.controlBorder};--tekto-thumb:${it.accent || t.accent};`;
         const valueSpan = document.createElement("span");
-        valueSpan.style.cssText = `width:42px;text-align:right;font-size:10px;color:${t.accent};`;
+        valueSpan.style.cssText = `width:42px;flex-shrink:0;white-space:nowrap;text-align:right;font-size:10px;color:${t.accent};`;
         const isInt = def.type === "int" || step >= 1;
         const rawDec = isInt ? 0 : Math.max(2, -Math.floor(Math.log10(step) - 1e-3));
         const decimals = Math.min(Math.max(0, rawDec), 20);
@@ -787,8 +788,9 @@ var Commands = class {
     return void 0;
   }
   /**
-   * Run commands from their keys on `target` (default: the window). Keys typed into a
-   * field stay with the field; a matched key's default is prevented. Returns the unbind.
+   * Run commands from their keys on `target`: the window (default), or an element, which hears
+   * only the keys typed while focus is inside it. Keys typed into a field stay with the field;
+   * a matched key's default is prevented. Returns the unbind.
    */
   bindKeys(target = window) {
     const onKey = (ev) => {
@@ -1125,8 +1127,8 @@ function panelFrame(o) {
   top.style.cssText = `
     position:absolute; left:0; top:${o.top}px; height:${PANEL_TOP_H}px; box-sizing:border-box; z-index:9;
     display:flex; align-items:center; padding:0 32px 0 14px; overflow:hidden; user-select:none;
-    background:${t.panelBg}; border-right:1px solid ${t.border};
-    border-bottom:1px solid ${t.plain && !named ? "transparent" : t.border};
+    background:var(--tekto-panel-bg, ${t.panelBg}); border-right:1px solid var(--tekto-panel-border, ${t.border});
+    border-bottom:1px solid ${t.plain && !named ? "transparent" : `var(--tekto-panel-border, ${t.border})`};
   `;
   const name = document.createElement("span");
   name.textContent = o.title ?? "";
@@ -1134,6 +1136,9 @@ function panelFrame(o) {
   name.style.cssText = t.plain ? `font:600 13px/1 ${t.font};color:${t.text};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;` : `font:500 10px/1 ${t.font};letter-spacing:1.6px;text-transform:uppercase;color:${t.textDim};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;`;
   top.appendChild(name);
   panelEl.style.marginTop = `${PANEL_TOP_H}px`;
+  panelEl.dataset.tektoControls = "";
+  panelEl.style.background = `var(--tekto-panel-bg, ${t.panelBg})`;
+  panelEl.style.borderRightColor = `var(--tekto-panel-border, ${t.border})`;
   const chevron = document.createElement("button");
   chevron.type = "button";
   chevron.dataset.tektoPanelFold = "";
@@ -1322,7 +1327,12 @@ var Sketch2DInstance = class {
       menuHost = header;
     }
     this.commands.add(this.history.commands());
-    this.unbindKeys = this.commands.bindKeys();
+    const keys = this.config.keys ?? "page";
+    if (keys === "app") {
+      root.tabIndex = -1;
+      root.style.outline = "none";
+    }
+    if (keys) this.unbindKeys = this.commands.bindKeys(keys === "app" ? root : window);
     const slot = paper ? null : menuSlot(menuHost);
     if (slot) {
       this.menus = menuBar(this.commands, { theme: t });
@@ -1360,7 +1370,7 @@ var Sketch2DInstance = class {
     this.logEl.dataset.tektoStatus = "";
     this.logEl.style.cssText = `
       flex:none; display:none; flex-wrap:wrap; column-gap:20px; padding:5px 12px;
-      background:${t.panelBg}; border-top:1px solid ${t.border};
+      background:var(--tekto-status-bg, ${t.panelBg}); border-top:1px solid var(--tekto-panel-border, ${t.border});
       font-size:11px; line-height:1.55; color:${t.text};
     `;
     this.logColors = [t.textFaint, t.text];

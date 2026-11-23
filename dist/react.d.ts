@@ -1,3 +1,7 @@
+/**
+ * tekto — API index for agents: ../llms.txt (start here: names, "use Y, not Z", five rules),
+ * ../llms-full.txt (every export with its one-line doc), ../CHANGELOG.md (what changed per release).
+ */
 import { P as ParamStore, a as ParamLayout, b as ParamSchema, c as ParamValues } from './Doc-Da9Dok4-.js';
 import * as React from 'react';
 import React__default, { ReactNode, CSSProperties, SVGProps } from 'react';

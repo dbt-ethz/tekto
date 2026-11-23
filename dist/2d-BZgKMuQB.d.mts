@@ -1,6 +1,6 @@
-import { c as StandardView, M as Mesh, u as VisualStyle, V as Vec3, F as FlatMeshData, d as Vec2, g as LightSpec, b as SectionRequest, R as RenderMode, L as LightingMode, S as Scene } from './Scene-D4ExzRe1.js';
-import { S as ShadingBarPlacement, V as ViewerTools, U as UiStyle } from './ShadingBar-hs0G1nnA.js';
-import { A as Algo, y as MeshFactory, M as MathUtils, N as SheetPrim, J as Sheet, E as Pt } from './download-qR7cCR-E.js';
+import { c as StandardView, M as Mesh, u as VisualStyle, V as Vec3, F as FlatMeshData, d as Vec2, g as LightSpec, b as SectionRequest, R as RenderMode, L as LightingMode, S as Scene } from './Scene-D4ExzRe1.mjs';
+import { S as ShadingBarPlacement, V as ViewerTools, U as UiStyle } from './ShadingBar-hs0G1nnA.mjs';
+import { A as Algo, y as MeshFactory, M as MathUtils, N as SheetPrim, J as Sheet, E as Pt } from './download-Bf3TpYkF.mjs';
 
 /**
  * Commands — what a user (or an agent) can do in an app, with the keys that do it.
@@ -79,10 +79,11 @@ declare class Commands {
     /** The command a key event presses, if any (and enabled). */
     match(e: Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey" | "altKey" | "shiftKey">, mac?: boolean): Command | undefined;
     /**
-     * Run commands from their keys on `target` (default: the window). Keys typed into a
-     * field stay with the field; a matched key's default is prevented. Returns the unbind.
+     * Run commands from their keys on `target`: the window (default), or an element, which hears
+     * only the keys typed while focus is inside it. Keys typed into a field stay with the field;
+     * a matched key's default is prevented. Returns the unbind.
      */
-    bindKeys(target?: Pick<Window, "addEventListener" | "removeEventListener">): () => void;
+    bindKeys(target?: EventTarget): () => void;
     /** Hear when commands are added or removed. Returns the unsubscribe. */
     onChange(cb: () => void): () => void;
     private canRun;
@@ -920,6 +921,13 @@ interface Sketch2DConfig {
     style?: UiStyle;
     /** Tabs as a bar on top of the panel (default) or as a list down its left side. */
     tabs?: "top" | "side";
+    /**
+     * Where the app's keys (Undo, Redo, its commands) are heard. "page" (default): anywhere on
+     * the page. "app": only while the app has focus (a click in it gives it) — for several
+     * apps on one page, a book chapter, where one Cmd-Z must not undo them all. false: nowhere
+     * (the menus still run them).
+     */
+    keys?: "page" | "app" | false;
     /** Show the 44 px title bar. Default: yes, except on paper and inside a shell that has its own bar (`<div data-shell>`). */
     showHeader?: boolean;
 }

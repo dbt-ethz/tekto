@@ -14,7 +14,7 @@ import {
   panelFrame,
   sketch2d,
   viewCommands
-} from "./chunk-3L2FI4NP.mjs";
+} from "./chunk-HC74KIE6.mjs";
 import {
   Algo,
   ArcCurve,
@@ -27,6 +27,7 @@ import {
   BuildingSession,
   Capsule2D,
   CltConstruction,
+  ColorRamp,
   CubicBezierCurve,
   Curvature,
   CurveUtils,
@@ -156,7 +157,7 @@ import {
   repelBodies,
   reverse,
   validateBuilding
-} from "./chunk-NVFBXJTP.mjs";
+} from "./chunk-2M2SXGQW.mjs";
 import {
   Axonometric,
   DASH_PATTERNS,
@@ -1759,6 +1760,156 @@ function polylinesToSVG(segments, bounds, options) {
   parts.push(`</svg>
 `);
   return parts.join("\n");
+}
+
+// src/gui/ColorLegend.ts
+var PAD = 8;
+var FONT_PX = 11;
+var TITLE_GAP = 6;
+var BAR_H = 10;
+var TICK_H = 4;
+var LABEL_GAP = 6;
+var EDGE = 5;
+var ROW_H = 17;
+var SWATCH = 10;
+var INSET = 12;
+function colorLegend(options) {
+  const el = document.createElement("div");
+  el.dataset.tektoColorLegend = "";
+  const canvas = document.createElement("canvas");
+  canvas.dataset.tektoOverlay = "";
+  canvas.setAttribute("role", "img");
+  canvas.style.display = "block";
+  el.appendChild(canvas);
+  let current = options;
+  const update = (next) => {
+    current = next;
+    const c = next.corner;
+    el.style.cssText = "pointer-events:none;user-select:none;line-height:0;" + (c ? `position:absolute;z-index:4;${c.startsWith("top") ? "top" : "bottom"}:${INSET}px;${c.endsWith("left") ? "left" : "right"}:${INSET}px;` : "display:inline-block;");
+    draw(canvas, next);
+  };
+  update(options);
+  document.fonts?.ready.then(() => {
+    if (canvas.isConnected) draw(canvas, current);
+  });
+  return { el, update };
+}
+function draw(canvas, o) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const t = getTheme(o.mode ?? "dark");
+  const fontTitle = `600 ${FONT_PX}px ${t.font}`, fontLabel = `${FONT_PX}px ${t.font}`;
+  const title = o.title ? o.unit ? `${o.title} (${o.unit})` : o.title : o.unit ?? "";
+  ctx.font = fontTitle;
+  const titleW = title ? ctx.measureText(title).width : 0;
+  const top = PAD + (title ? FONT_PX + TITLE_GAP : 0);
+  ctx.font = fontLabel;
+  let W2, H2, paint, aria;
+  const items = o.items?.length ? o.items : null;
+  if (items) {
+    const labelW = Math.max(...items.map((it) => ctx.measureText(it.label).width));
+    W2 = Math.ceil(Math.max(titleW, SWATCH + 6 + labelW) + 2 * PAD);
+    H2 = Math.ceil(top + (items.length - 1) * ROW_H + Math.max(SWATCH, FONT_PX) + PAD);
+    aria = `${title ? title + ": " : ""}${items.map((it) => it.label).join(", ")}`;
+    paint = () => items.forEach((it, i) => {
+      const cy = top + i * ROW_H + SWATCH / 2;
+      ctx.fillStyle = it.color;
+      roundRect(ctx, PAD, cy - SWATCH / 2, SWATCH, SWATCH, 2);
+      ctx.fill();
+      ctx.fillStyle = t.text;
+      ctx.textBaseline = "middle";
+      ctx.fillText(it.label, PAD + SWATCH + 6, cy + 0.5);
+    });
+  } else {
+    const min = o.min ?? 0, max = o.max ?? 1;
+    const fmt = o.format ?? formatFor(niceStep(min, max, o.ticks ?? 5));
+    W2 = Math.ceil(Math.max(o.width ?? 200, titleW + 2 * PAD));
+    const barX = PAD, barW = W2 - 2 * PAD, labelY = top + BAR_H + TICK_H + 2;
+    H2 = labelY + FONT_PX + PAD;
+    const x = (v) => barX + (max === min ? 0.5 : (v - min) / (max - min)) * barW;
+    const labels = fitLabels(niceTicks(min, max, o.ticks ?? 5).map((v) => ({ v, text: fmt(v), x: x(v), w: ctx.measureText(fmt(v)).width })), W2);
+    aria = `${title ? title + ": " : ""}${fmt(min)} to ${fmt(max)}`;
+    paint = () => {
+      const ramp = o.ramp;
+      if (ramp) {
+        const SAMPLES = 64;
+        const g = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+        for (let i = 0; i <= SAMPLES; i++) g.addColorStop(i / SAMPLES, ramp.hex(i / SAMPLES));
+        ctx.fillStyle = g;
+      } else ctx.fillStyle = t.textFaint;
+      roundRect(ctx, barX, top, barW, BAR_H, 2);
+      ctx.fill();
+      ctx.textBaseline = "top";
+      for (const l of labels) {
+        ctx.fillStyle = t.textFaint;
+        ctx.fillRect(Math.round(l.x) - 0.5, top + BAR_H, 1, TICK_H);
+        ctx.fillStyle = t.textDim;
+        ctx.fillText(l.text, l.left, labelY);
+      }
+    };
+  }
+  const dpr = Math.max(1, globalThis.devicePixelRatio || 1);
+  canvas.width = Math.round(W2 * dpr);
+  canvas.height = Math.round(H2 * dpr);
+  canvas.style.width = `${W2}px`;
+  canvas.style.height = `${H2}px`;
+  canvas.setAttribute("aria-label", aria);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W2, H2);
+  ctx.fillStyle = withAlpha(t.panelBg, 0.9);
+  roundRect(ctx, 0.5, 0.5, W2 - 1, H2 - 1, 6);
+  ctx.fill();
+  ctx.strokeStyle = t.border;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  if (title) {
+    ctx.font = fontTitle;
+    ctx.fillStyle = t.text;
+    ctx.textBaseline = "top";
+    ctx.fillText(title, PAD, PAD);
+  }
+  ctx.font = fontLabel;
+  paint();
+}
+function niceStep(min, max, count) {
+  const span = Math.abs(max - min);
+  if (!(span > 0) || !Number.isFinite(span)) return 1;
+  const raw = span / Math.max(1, count);
+  const p = 10 ** Math.floor(Math.log10(raw)), m = raw / p;
+  return (m >= Math.sqrt(50) ? 10 : m >= Math.sqrt(10) ? 5 : m >= Math.SQRT2 ? 2 : 1) * p;
+}
+function niceTicks(min, max, count) {
+  const lo = Math.min(min, max), hi = Math.max(min, max);
+  if (!(hi > lo)) return [lo];
+  const s = niceStep(lo, hi, count);
+  const out = [];
+  for (let i = Math.ceil(lo / s - 1e-9); i * s <= hi + s * 1e-9; i++) out.push(+(i * s).toPrecision(12));
+  return out.length >= 2 ? out : [lo, hi];
+}
+function formatFor(step) {
+  const decimals = Math.max(0, -Math.floor(Math.log10(step) + 1e-9));
+  return (v) => {
+    const s = v.toFixed(Math.min(decimals, 20));
+    return /^-0(\.0*)?$/.test(s) ? s.slice(1) : s.replace(/^-/, "\u2212");
+  };
+}
+function fitLabels(ticks, W2) {
+  const placed = ticks.map((l) => ({ ...l, left: Math.min(Math.max(l.x - l.w / 2, EDGE), W2 - EDGE - l.w) }));
+  const zero = Math.max(0, placed.findIndex((l) => l.v === 0));
+  for (let k = 1; k <= placed.length; k++) {
+    const keep = placed.filter((_, i) => (i - zero) % k === 0);
+    if (keep.every((l, i) => i === 0 || l.left >= keep[i - 1].left + keep[i - 1].w + LABEL_GAP)) return keep;
+  }
+  return placed.slice(0, 1);
+}
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(x, y, w, h, r);
+  else ctx.rect(x, y, w, h);
+}
+function withAlpha(color, a) {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(color);
+  return m ? `rgba(${parseInt(m[1], 16)},${parseInt(m[2], 16)},${parseInt(m[3], 16)},${a})` : color;
 }
 
 // src/render/ThreeRenderer.ts
@@ -7601,7 +7752,7 @@ var W = 172;
 var H = 60;
 var GAP_X = 60;
 var GAP_Y = 14;
-var PAD = 16;
+var PAD2 = 16;
 var StepsPanel = class {
   constructor(host, opts) {
     this.host = host;
@@ -7731,16 +7882,16 @@ var StepsPanel = class {
       const span = (depth.get(e.to) ?? 0) - (depth.get(e.from) ?? 0);
       return span > 1 ? 40 + (span - 2) * 8 : 0;
     };
-    const top0 = PAD + Math.min(90, Math.max(0, ...[...edges.values()].map(lift)));
+    const top0 = PAD2 + Math.min(90, Math.max(0, ...[...edges.values()].map(lift)));
     const rows = /* @__PURE__ */ new Map();
     const at = /* @__PURE__ */ new Map();
     for (const s of top) {
       const d = depth.get(s.id), r = rows.get(d) ?? 0;
       rows.set(d, r + 1);
-      at.set(s.id, { x: PAD + d * (W + GAP_X), y: top0 + r * (H + GAP_Y) });
+      at.set(s.id, { x: PAD2 + d * (W + GAP_X), y: top0 + r * (H + GAP_Y) });
     }
-    const width = PAD * 2 + (Math.max(...depth.values()) + 1) * (W + GAP_X) - GAP_X;
-    const height = top0 + PAD + Math.max(...rows.values()) * (H + GAP_Y) - GAP_Y;
+    const width = PAD2 * 2 + (Math.max(...depth.values()) + 1) * (W + GAP_X) - GAP_X;
+    const height = top0 + PAD2 + Math.max(...rows.values()) * (H + GAP_Y) - GAP_Y;
     this.graph.textContent = "";
     const canvas = document.createElement("div");
     canvas.style.cssText = `position:relative;width:${width}px;height:${height}px;`;
@@ -10141,6 +10292,7 @@ export {
   Callouts,
   Capsule2D,
   CltConstruction,
+  ColorRamp,
   Commands,
   ControlPanel,
   CubicBezierCurve,
@@ -10304,6 +10456,7 @@ export {
   closestPointOnSegment,
   cltLayers,
   collabColor,
+  colorLegend,
   computeEffectiveLock,
   computeEffectiveVisibility,
   contactBetween,

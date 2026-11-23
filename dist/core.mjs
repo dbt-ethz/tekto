@@ -10,6 +10,7 @@ import {
   BuildingSession,
   Capsule2D,
   CltConstruction,
+  ColorRamp,
   CubicBezierCurve,
   Curvature,
   CurveUtils,
@@ -139,7 +140,7 @@ import {
   repelBodies,
   reverse,
   validateBuilding
-} from "./chunk-NVFBXJTP.mjs";
+} from "./chunk-2M2SXGQW.mjs";
 import {
   Axonometric,
   DASH_PATTERNS,
@@ -221,6 +222,7 @@ export {
   BuildingSession,
   Capsule2D,
   CltConstruction,
+  ColorRamp,
   CubicBezierCurve,
   Curvature,
   CurveUtils,

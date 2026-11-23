@@ -261,7 +261,7 @@ export class ObjectBuilder {
     geo.setAttribute("position", new THREE.BufferAttribute(data.positions, 3));
     geo.setAttribute("normal", new THREE.BufferAttribute(data.normals, 3));
     geo.setIndex(new THREE.BufferAttribute(data.indices, 1));
-    // Node colours (`Mesh.setColors`) win over the style colour.
+    // Node colours (`Mesh.setColors`, e.g. from a `ColorRamp`) win over the style colour.
     const hasColors = !!data.colors?.length;
     if (hasColors) geo.setAttribute("color", new THREE.BufferAttribute(data.colors!, 4));
 

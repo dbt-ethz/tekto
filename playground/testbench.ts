@@ -60,6 +60,7 @@ const GROUPS: PageGroup[] = [
     { slug: "lines-points", label: "Lines & Points", docs: "geometry/vectors", load: () => import("./pages/lines-points") },
     { slug: "shape-modes",  label: "Shape Modes",    docs: "viewer/render-modes", load: () => import("./pages/shape-modes") },
     { slug: "colors",       label: "Colors",         load: () => import("./pages/colors") },
+    { slug: "color-ramps",  label: "Colour Ramps",   load: () => import("./pages/color-ramps") },
     { slug: "layers",       label: "Layers",         load: () => import("./pages/layers") },
   ]},
   { name: "Geometry", pages: [

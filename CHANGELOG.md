@@ -14,6 +14,21 @@ From the lecture apps' upgrade to 0.11.0 (29 `sketch2d` figures in one book):
 - **Panel styling hooks, stable:** `[data-tekto-controls]` on the controls column, and the CSS variables `--tekto-panel-bg`, `--tekto-panel-border`, `--tekto-status-bg` beside the existing `data-tekto-panel*`, `data-tekto-status` and `--tekto-label-w` (docs: Sketch 2D → Several apps on one page).
 - **Panel:** the first group, when it is the default "Parameters", has no heading under the panel's own "Parameters" row. In a narrow panel the label column gives way to the control (down to 40 % of the row), so a long label wraps instead of cutting the slider's value off; the value never shrinks.
 
+Also new:
+
+- **Colour ramps and a legend**: `ColorRamp` (in `tekto/core`) colours analysis values by the
+  job the colour does — `sequential()` for magnitude (one blue, light → dark; the near-zero end
+  recedes into the background, so on tekto's dark view low is the dark step), `diverging()` for
+  polarity (blue and red arms of equal steps on the same lightness, meeting at a neutral grey),
+  `categorical()` for identity (8 colours in a fixed order; past 8, fold into "other"). No
+  rainbow; dark and light are each their own validated steps (`"dark"` is the default). Stops are
+  interpolated in OKLab; `colors(values, range)` gives per-node RGBA for `Mesh.setColors` in the
+  linear light the renderer reads, so the view shows the legend's colours. `colorLegend` draws
+  the key — a bar with round-number ticks, or labelled swatches — in theme ink, over a corner of
+  the view (in snapshots and ✎ Markup) or in a panel row. Lit faces darken their colour: the
+  renderer config `flatLighting: "plain"` keeps them true to the legend. New page *Colour
+  Ramps*; *Voxel Grid 2D*'s Blur scene uses the sequential ramp in place of its own rainbow.
+
 ## 0.11.0 — 2026-11-22
 
 An agent on the live model and a person who decides: the MCP server joins a shared document with nobody's app open (or works on a file), looks at floor plans it draws itself, and proposes changes that wait for a person to accept or reject. One interface for every app: a shared panel frame, a paper style for 2D figures, a menu bar with Undo, the viewer header in every 3D view, a grey dark theme, the sun by date and place, hidden line on paper. Also: closed round meshes, contours as polylines, drag handles and axonometric views for 2D sketches, timber/steel/concrete stairs, drawings in an architectural graphic language, and the 28 lecture apps in the playground.
@@ -385,6 +400,8 @@ A building as data that an agent can write, read and correct in the app a person
   layer's faces together, with materials named by colour (`c_rrggbb`) and listed in `materials`;
   without options the output is unchanged. The House page has an **Export OBJ** button: the house
   by layer, with its .mtl.
+
+
 - **Fix: callouts on a large model fill the margins.** On BuildGraph's 446-element IFC with
   every element labelled, 4 labels showed and the rest never did: the visibility check
   restarted every few seconds and got through one element per frame.

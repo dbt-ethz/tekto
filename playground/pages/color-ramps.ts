@@ -10,7 +10,7 @@
  * `flatLighting: "plain"` keeps a face toward the sky the colour its legend says; the default
  * Flat lighting would dim it. An appShell, because its renderer config takes that option.
  */
-import { appShell, colorLegend, ColorRamp, MeshFactory, createRandom, noise } from "../../src";
+import { appShell, colorLegend, ColorRamp, MeshFactory, createRandom, getTheme, noise } from "../../src";
 
 const SIZE = 12;          // terrain, metres square
 const DIVISIONS = 96;     // grid cells per side
@@ -88,7 +88,7 @@ export default function (container: HTMLElement) {
       legend.update({ title: "Elevation", unit: "m", ramp, min, max, mode, corner: "bottom-right" });
     }
 
-    app.renderer.setBackground(mode === "light" ? 0xf5f7fa : 0x0a0b14);
+    app.renderer.setBackground(getTheme(mode).bg);      // the view colour of every tekto app in that theme
     app.scene.clear();
     app.scene.addMesh(terrain, { label: "terrain" });   // drawn in its node colours
     app.status(`${kind} · ${mode} · ${n} nodes`);
